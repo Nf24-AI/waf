@@ -10,7 +10,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "setup:notion": "tsx scripts/setup-notion.ts"
+    "setup:notion": "tsx scripts/setup-notion.ts",
+    "build:client": "vite build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
