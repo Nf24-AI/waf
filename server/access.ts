@@ -20,7 +20,16 @@ import { ENV } from "./_core/env";
  */
 
 export const ACCESS_COOKIE = "meeting-prep-session";
-const SESSION_DAYS = 30;
+/**
+ * The session lasts the browsing session, not a month.
+ *
+ * A 30-day cookie meant returning to the workspace never asked for the
+ * password again, which for a single-password gate on a public URL is the
+ * whole protection quietly lapsing. The cookie now carries no expiry, so the
+ * browser drops it on close, and the token itself expires after this window
+ * as a backstop for a browser left running.
+ */
+const SESSION_HOURS = 8;
 
 function secret() {
   const value = ENV.cookieSecret || ENV.appPassword;
@@ -36,7 +45,7 @@ export async function createSessionToken() {
   return new SignJWT({ scope: "owner" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_DAYS}d`)
+    .setExpirationTime(`${SESSION_HOURS}h`)
     .sign(secret());
 }
 
@@ -55,12 +64,12 @@ export async function hasValidSession(cookieHeader: string | undefined) {
 }
 
 export function sessionCookieOptions(secure: boolean) {
+  // No maxAge and no expires: a session cookie, discarded when the browser closes.
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     secure,
     path: "/",
-    maxAge: SESSION_DAYS * 24 * 60 * 60 * 1000,
   };
 }
 

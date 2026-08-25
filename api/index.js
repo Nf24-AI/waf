@@ -73,7 +73,7 @@ var ENV = {
 
 // server/access.ts
 var ACCESS_COOKIE = "meeting-prep-session";
-var SESSION_DAYS = 30;
+var SESSION_HOURS = 8;
 function secret() {
   const value = ENV.cookieSecret || ENV.appPassword;
   if (!value) throw new Error("JWT_SECRET must be set when APP_PASSWORD is used.");
@@ -83,7 +83,7 @@ function accessIsOpen() {
   return !ENV.appPassword;
 }
 async function createSessionToken() {
-  return new SignJWT({ scope: "owner" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${SESSION_DAYS}d`).sign(secret());
+  return new SignJWT({ scope: "owner" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${SESSION_HOURS}h`).sign(secret());
 }
 async function hasValidSession(cookieHeader) {
   if (accessIsOpen()) return true;
@@ -101,8 +101,7 @@ function sessionCookieOptions(secure) {
     httpOnly: true,
     sameSite: "lax",
     secure,
-    path: "/",
-    maxAge: SESSION_DAYS * 24 * 60 * 60 * 1e3
+    path: "/"
   };
 }
 function passwordMatches(candidate) {
