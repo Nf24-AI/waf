@@ -117,3 +117,8 @@ client/public/__manus__/version.json
 .manus-logs/
 .manus/
 
+
+# thmanyah font sources — licence forbids redistribution.
+# The build needs only the generated tokens/fonts.css.
+# Regenerate with `pnpm fonts:embed` after placing the .woff2 files here.
+client/src/design-system/assets/fonts/
