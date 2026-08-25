@@ -88,7 +88,7 @@ describe("meeting workspace interactions", () => {
 
   it("opens and persists the UI customization panel", async () => {
     render(<Home />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
     fireEvent.click(screen.getByLabelText("تخصيص الواجهة"));
     expect(screen.getByText("تخصيص الواجهة")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "ليلي" }));
@@ -104,7 +104,7 @@ describe("meeting workspace interactions", () => {
 
   it("opens the presentation mode from preparation", async () => {
     render(<Home />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
     fireEvent.click(screen.getAllByText("وضع العرض")[0]);
     expect(await screen.findByText("محاور النقاش")).toBeInTheDocument();
     expect(screen.queryByText("حفظ التغييرات")).not.toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("meeting workspace interactions", () => {
 
   it("offers full-screen presentation and handles unsupported browsers safely", async () => {
     render(<Home />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
     fireEvent.click(screen.getAllByText("وضع العرض")[0]);
     const fullscreenButton = await screen.findByRole("button", { name: /ملء الشاشة/ });
     Object.defineProperty(document, "fullscreenEnabled", { configurable: true, value: true });
@@ -167,20 +167,20 @@ describe("meeting workspace interactions", () => {
     mocks.meQuery.mockReturnValue({ data: { id: 1, name: "N", role: "user" } as unknown, isLoading: false, error: null as unknown });
     mocks.notionListQuery.mockReturnValue({ ...notionSuccess(), isLoading: false, isSuccess: false });
     render(<Home />);
-    expect(await screen.findByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "القائمة" })).toBeInTheDocument();
     expect(screen.getAllByText("جاري المزامنة...").length).toBeGreaterThan(0);
   });
 
   it("blocks with a loading screen on the very first Notion load", async () => {
     mocks.notionListQuery.mockReturnValue({ data: undefined as unknown, isLoading: true, isError: false, isSuccess: false, refetch: vi.fn() });
     render(<Home />);
-    expect(await screen.findByText("نجهّز مساحتك...")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "الاجتماعات" })).not.toBeInTheDocument();
+    expect(await screen.findByText("جارٍ التحميل")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "القائمة" })).not.toBeInTheDocument();
   });
 
   it("shows today's real date, not a hard-coded one", async () => {
     render(<Home />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
     // The header used to always read "الثلاثاء، ٢٧ أغسطس ٢٠٢٦".
     expect(screen.queryByText("الثلاثاء، ٢٧ أغسطس ٢٠٢٦")).not.toBeInTheDocument();
     expect(document.querySelector(".eyebrow")?.textContent).toMatch(/٠|١|٢|٣|٤|٥|٦|٧|٨|٩/);
@@ -188,7 +188,7 @@ describe("meeting workspace interactions", () => {
 
   it("renders counts in one numeral system", async () => {
     render(<Home />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
     // padStart(2, "٠") produced "٠3" — an Arabic zero next to a Western digit.
     const counts = Array.from(document.querySelectorAll(".stat-card strong")).map((n) => n.textContent ?? "");
     expect(counts.length).toBeGreaterThan(0);
@@ -200,7 +200,7 @@ describe("meeting workspace interactions", () => {
     mocks.notionCreateMutation.mockReturnValue({ isPending: false, mutate });
 
     render(<Home />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /اجتماع جديد/ }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -221,14 +221,14 @@ describe("meeting workspace interactions", () => {
     window.history.pushState({}, "", "/display");
     render(<Home />);
     // Display mode is a shared screen — the worst place for fake data.
-    expect(await screen.findByText("لا توجد اجتماعات بعد")).toBeInTheDocument();
+    expect(await screen.findByText("لا اجتماعات")).toBeInTheDocument();
     expect(screen.queryByText("مراجعة شراكة الربع الثالث")).not.toBeInTheDocument();
   });
 
   it("shows an empty state instead of samples when the database has no meetings", async () => {
     mocks.notionListQuery.mockReturnValue(notionSuccess([]));
     render(<Home />);
-    expect(await screen.findByText("لا توجد اجتماعات بعد")).toBeInTheDocument();
+    expect(await screen.findByText("لا اجتماعات")).toBeInTheDocument();
     // The old sample data must never appear as if it were the user's own.
     expect(screen.queryByText("مراجعة شراكة الربع الثالث")).not.toBeInTheDocument();
   });

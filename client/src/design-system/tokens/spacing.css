@@ -1,0 +1,6 @@
+:root{
+--space-0:0px;--space-1:2px;--space-2:4px;--space-3:6px;--space-4:8px;--space-5:12px;--space-6:16px;--space-7:20px;--space-8:24px;--space-9:32px;--space-10:40px;--space-11:56px;--space-12:72px;--space-13:96px;--space-14:128px;
+--gutter-inline:24px;--gutter-inline-wide:48px;--section-y:96px;
+--control-h-sm:28px;--control-h-md:36px;--control-h-lg:44px;
+--sidebar-w:248px;--topbar-h:56px;--content-max:1120px;--prose-max:68ch;
+}

@@ -1,0 +1,21 @@
+:root{
+--font-sans:"Thmanyah Sans",system-ui,"Segoe UI",sans-serif;
+--font-serif-display:"Thmanyah Serif Display","Thmanyah Serif Text",Georgia,serif;
+--font-serif-text:"Thmanyah Serif Text",Georgia,serif;
+--font-mono:ui-monospace,"SF Mono",Menlo,monospace;
+--fw-light:300; /* @kind font */--fw-regular:400; /* @kind font */--fw-medium:500; /* @kind font */--fw-bold:700; /* @kind font */--fw-black:900; /* @kind font */
+--fs-11:11px;--fs-12:12px;--fs-13:13px;--fs-14:14px;--fs-15:15px;--fs-16:16px;--fs-18:18px;--fs-21:21px;--fs-26:26px;--fs-32:32px;--fs-42:42px;--fs-56:56px;--fs-72:72px;
+--lh-tight:1.05; /* @kind font */--lh-snug:1.2; /* @kind font */--lh-normal:1.45; /* @kind font */--lh-relaxed:1.6; /* @kind font */
+--ls-tighter:-0.03em; /* @kind font */--ls-tight:-0.015em; /* @kind font */--ls-normal:0; /* @kind font */--ls-wide:0.06em; /* @kind font */--ls-widest:0.14em; /* @kind font */
+--text-display:var(--fw-medium) var(--fs-56)/var(--lh-tight) var(--font-serif-display);
+--text-title-1:var(--fw-medium) var(--fs-32)/var(--lh-snug) var(--font-sans);
+--text-title-2:var(--fw-medium) var(--fs-21)/var(--lh-snug) var(--font-sans);
+--text-title-3:var(--fw-medium) var(--fs-16)/var(--lh-snug) var(--font-sans);
+--text-body-lg:var(--fw-regular) var(--fs-16)/var(--lh-relaxed) var(--font-sans);
+--text-body-md:var(--fw-regular) var(--fs-14)/var(--lh-normal) var(--font-sans);
+--text-body-sm:var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-sans);
+--text-label:var(--fw-medium) var(--fs-13)/1.3 var(--font-sans);
+--text-caption:var(--fw-regular) var(--fs-12)/1.35 var(--font-sans);
+--text-eyebrow:var(--fw-medium) var(--fs-11)/1.2 var(--font-sans);
+--text-quote:var(--fw-regular) var(--fs-26)/1.35 var(--font-serif-text);
+}
