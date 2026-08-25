@@ -23,13 +23,20 @@ function decodeAgendaField(value: string) {
   return value.split(AGENDA_ESCAPED).join(AGENDA_SEPARATOR);
 }
 
-/** Split into exactly three fields, keeping any extra separators in the goal. */
-function parseAgendaLine(line: string) {
-  const parts = line.split(AGENDA_SEPARATOR);
+/**
+ * title :: context :: goal :: decision :: owner
+ *
+ * Older lines hold only the first three; the extras simply read as empty, so a
+ * meeting written before decisions existed still loads.
+ */
+function parseAgendaLine(line: string): MeetingAgendaItem {
+  const parts = line.split(AGENDA_SEPARATOR).map(decodeAgendaField);
   return {
-    title: decodeAgendaField(parts[0] ?? ""),
-    context: decodeAgendaField(parts[1] ?? ""),
-    goal: decodeAgendaField(parts.slice(2).join(AGENDA_SEPARATOR)),
+    title: parts[0] ?? "",
+    context: parts[1] ?? "",
+    goal: parts[2] ?? "",
+    decision: parts[3] ?? "",
+    owner: parts[4] ?? "",
   };
 }
 
@@ -42,6 +49,7 @@ type NotionProperty = {
   select?: { name?: string } | null;
   multi_select?: Array<{ name?: string }> | null;
   people?: Array<{ name?: string }> | null;
+  files?: Array<{ external?: { url?: string }; file?: { url?: string } }> | null;
   status?: { name?: string } | null;
   date?: { start?: string } | null;
   url?: string | null;
@@ -144,12 +152,13 @@ function text(content: string) {
 // reads and writes always target the same real property.
 // ---------------------------------------------------------------------------
 
-type FieldKey = "title" | "date" | "time" | "type" | "attendees" | "status" | "summary" | "link";
+type FieldKey = "title" | "date" | "time" | "type" | "attendees" | "status" | "summary" | "link" | "image";
 
 const ALIASES: Record<FieldKey, string[]> = {
   title: ["name", "title", "العنوان", "الاسم", "اسم الاجتماع", "عنوان الاجتماع"],
   date: ["date", "التاريخ", "تاريخ"],
   time: ["time", "الوقت", "وقت"],
+  image: ["image", "الصورة", "صورة", "logo", "الشعار"],
   type: ["type", "النوع", "نوع الاجتماع"],
   attendees: ["attendees", "الحضور", "participants", "المشاركون"],
   status: ["status", "الحالة"],
@@ -161,6 +170,7 @@ const ACCEPTED_TYPES: Record<FieldKey, string[]> = {
   title: ["title"],
   date: ["date"],
   time: ["rich_text"],
+  image: ["url", "files"],
   type: ["select"],
   attendees: ["rich_text", "multi_select", "people"],
   status: ["status", "select"],
@@ -169,7 +179,7 @@ const ACCEPTED_TYPES: Record<FieldKey, string[]> = {
 };
 
 /** Fields matched only by name. A loose type match would steal another column. */
-const ALIAS_ONLY = new Set<FieldKey>(["time"]);
+const ALIAS_ONLY = new Set<FieldKey>(["time", "image"]);
 
 export type ResolvedField = { name: string; type: string } | null;
 export type DatabaseSchema = Record<FieldKey, ResolvedField> & {
@@ -218,6 +228,7 @@ function resolveSchema(raw: RawDatabase): DatabaseSchema {
   const title = pick("title");
   const date = pick("date");
   const time = pick("time");
+  const image = pick("image");
   const link = pick("link");
   const status = pick("status");
   const type = pick("type");
@@ -231,7 +242,7 @@ function resolveSchema(raw: RawDatabase): DatabaseSchema {
   };
 
   return {
-    title, date, time, type, attendees, status, summary, link,
+    title, date, time, type, attendees, status, summary, link, image,
     statusOptions: optionsOf(status),
     typeOptions: optionsOf(type),
   };
@@ -270,6 +281,10 @@ function propertyText(property: NotionProperty | undefined): string {
     case "url": return property.url ?? "";
     case "multi_select": return (property.multi_select ?? []).map((o) => o.name ?? "").filter(Boolean).join(", ");
     case "people": return (property.people ?? []).map((p) => p.name ?? "").filter(Boolean).join(", ");
+    case "files": {
+      const first = (property.files ?? [])[0];
+      return first?.external?.url ?? first?.file?.url ?? "";
+    }
     default: return "";
   }
 }
@@ -353,6 +368,7 @@ async function mapPage(page: NotionPage, schema: DatabaseSchema): Promise<Meetin
     actions: content.actions,
     note: content.note,
     link: readField(page, schema.link) || page.url || "",
+    image: readField(page, schema.image),
   };
 }
 
@@ -429,6 +445,10 @@ function buildProperties(meeting: Partial<MeetingRecord>, schema: DatabaseSchema
   if (schema.link && meeting.link !== undefined) {
     properties[schema.link.name] = { url: meeting.link || null };
   }
+  // A "files" property needs Notion's upload flow, so only a url one is written.
+  if (schema.image?.type === "url" && meeting.image !== undefined) {
+    properties[schema.image.name] = { url: meeting.image || null };
+  }
 
   return properties;
 }
@@ -443,7 +463,7 @@ function managedBlocks(meeting: MeetingRecord, hasTimeProperty: boolean) {
     ...(hasTimeProperty ? [] : [block("heading_2", "Time"), block("paragraph", meeting.time)]),
     block("heading_2", "Agenda"),
     ...meeting.agenda.map((item) =>
-      block("bulleted_list_item", [item.title, item.context, item.goal].map(encodeAgendaField).join(AGENDA_SEPARATOR))
+      block("bulleted_list_item", [item.title, item.context, item.goal, item.decision, item.owner].map(encodeAgendaField).join(AGENDA_SEPARATOR))
     ),
     block("heading_2", "Actions"),
     ...meeting.actions.map((action) => block("bulleted_list_item", action)),

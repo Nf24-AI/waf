@@ -26,6 +26,9 @@ const agendaItem = z.object({
   title: z.string(),
   context: z.string(),
   goal: z.string(),
+  // Captured during the meeting; older clients may omit them.
+  decision: z.string().default(""),
+  owner: z.string().default(""),
 });
 
 const meetingFields = {
@@ -40,6 +43,7 @@ const meetingFields = {
   actions: z.array(z.string()),
   note: z.string(),
   link: z.string(),
+  image: z.string().default(""),
 };
 
 const meetingInput = z.object(meetingFields);

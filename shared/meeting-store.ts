@@ -10,6 +10,9 @@ export interface MeetingAgendaItem {
   title: string;
   context: string;
   goal: string;
+  /** Captured live during the meeting — this is what turns a plan into minutes. */
+  decision: string;
+  owner: string;
 }
 
 export interface MeetingRecord {
@@ -25,4 +28,6 @@ export interface MeetingRecord {
   actions: string[];
   note: string;
   link: string;
+  /** Optional image shown on the meeting page: a partner logo, a diagram. */
+  image: string;
 }

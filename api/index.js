@@ -232,11 +232,13 @@ function decodeAgendaField(value) {
   return value.split(AGENDA_ESCAPED).join(AGENDA_SEPARATOR);
 }
 function parseAgendaLine(line) {
-  const parts = line.split(AGENDA_SEPARATOR);
+  const parts = line.split(AGENDA_SEPARATOR).map(decodeAgendaField);
   return {
-    title: decodeAgendaField(parts[0] ?? ""),
-    context: decodeAgendaField(parts[1] ?? ""),
-    goal: decodeAgendaField(parts.slice(2).join(AGENDA_SEPARATOR))
+    title: parts[0] ?? "",
+    context: parts[1] ?? "",
+    goal: parts[2] ?? "",
+    decision: parts[3] ?? "",
+    owner: parts[4] ?? ""
   };
 }
 var NotionConfigError = class extends Error {
@@ -295,6 +297,7 @@ var ALIASES = {
   title: ["name", "title", "\u0627\u0644\u0639\u0646\u0648\u0627\u0646", "\u0627\u0644\u0627\u0633\u0645", "\u0627\u0633\u0645 \u0627\u0644\u0627\u062C\u062A\u0645\u0627\u0639", "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0627\u062C\u062A\u0645\u0627\u0639"],
   date: ["date", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u062A\u0627\u0631\u064A\u062E"],
   time: ["time", "\u0627\u0644\u0648\u0642\u062A", "\u0648\u0642\u062A"],
+  image: ["image", "\u0627\u0644\u0635\u0648\u0631\u0629", "\u0635\u0648\u0631\u0629", "logo", "\u0627\u0644\u0634\u0639\u0627\u0631"],
   type: ["type", "\u0627\u0644\u0646\u0648\u0639", "\u0646\u0648\u0639 \u0627\u0644\u0627\u062C\u062A\u0645\u0627\u0639"],
   attendees: ["attendees", "\u0627\u0644\u062D\u0636\u0648\u0631", "participants", "\u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0648\u0646"],
   status: ["status", "\u0627\u0644\u062D\u0627\u0644\u0629"],
@@ -305,13 +308,14 @@ var ACCEPTED_TYPES = {
   title: ["title"],
   date: ["date"],
   time: ["rich_text"],
+  image: ["url", "files"],
   type: ["select"],
   attendees: ["rich_text", "multi_select", "people"],
   status: ["status", "select"],
   summary: ["rich_text"],
   link: ["url"]
 };
-var ALIAS_ONLY = /* @__PURE__ */ new Set(["time"]);
+var ALIAS_ONLY = /* @__PURE__ */ new Set(["time", "image"]);
 var SCHEMA_TTL_MS = 5 * 60 * 1e3;
 var schemaCache = null;
 function resolveSchema(raw) {
@@ -331,6 +335,7 @@ function resolveSchema(raw) {
   const title = pick("title");
   const date = pick("date");
   const time = pick("time");
+  const image = pick("image");
   const link = pick("link");
   const status = pick("status");
   const type = pick("type");
@@ -350,6 +355,7 @@ function resolveSchema(raw) {
     status,
     summary,
     link,
+    image,
     statusOptions: optionsOf(status),
     typeOptions: optionsOf(type)
   };
@@ -388,6 +394,10 @@ function propertyText(property) {
       return (property.multi_select ?? []).map((o) => o.name ?? "").filter(Boolean).join(", ");
     case "people":
       return (property.people ?? []).map((p) => p.name ?? "").filter(Boolean).join(", ");
+    case "files": {
+      const first = (property.files ?? [])[0];
+      return first?.external?.url ?? first?.file?.url ?? "";
+    }
     default:
       return "";
   }
@@ -460,7 +470,8 @@ async function mapPage(page, schema) {
     agenda: content.agenda,
     actions: content.actions,
     note: content.note,
-    link: readField(page, schema.link) || page.url || ""
+    link: readField(page, schema.link) || page.url || "",
+    image: readField(page, schema.image)
   };
 }
 async function listNotionMeetings() {
@@ -517,6 +528,9 @@ function buildProperties(meeting, schema) {
   if (schema.link && meeting.link !== void 0) {
     properties[schema.link.name] = { url: meeting.link || null };
   }
+  if (schema.image?.type === "url" && meeting.image !== void 0) {
+    properties[schema.image.name] = { url: meeting.image || null };
+  }
   return properties;
 }
 function block(type, content) {
@@ -528,7 +542,7 @@ function managedBlocks(meeting, hasTimeProperty) {
     ...hasTimeProperty ? [] : [block("heading_2", "Time"), block("paragraph", meeting.time)],
     block("heading_2", "Agenda"),
     ...meeting.agenda.map(
-      (item) => block("bulleted_list_item", [item.title, item.context, item.goal].map(encodeAgendaField).join(AGENDA_SEPARATOR))
+      (item) => block("bulleted_list_item", [item.title, item.context, item.goal, item.decision, item.owner].map(encodeAgendaField).join(AGENDA_SEPARATOR))
     ),
     block("heading_2", "Actions"),
     ...meeting.actions.map((action) => block("bulleted_list_item", action)),
@@ -596,7 +610,10 @@ async function deleteNotionMeeting(id) {
 var agendaItem = z2.object({
   title: z2.string(),
   context: z2.string(),
-  goal: z2.string()
+  goal: z2.string(),
+  // Captured during the meeting; older clients may omit them.
+  decision: z2.string().default(""),
+  owner: z2.string().default("")
 });
 var meetingFields = {
   title: z2.string(),
@@ -609,7 +626,8 @@ var meetingFields = {
   agenda: z2.array(agendaItem),
   actions: z2.array(z2.string()),
   note: z2.string(),
-  link: z2.string()
+  link: z2.string(),
+  image: z2.string().default("")
 };
 var meetingInput = z2.object(meetingFields);
 var meetingWithId = z2.object({ id: z2.string(), ...meetingFields });

@@ -38,6 +38,7 @@ const REQUIRED_PROPERTIES: Record<string, unknown> = {
   Attendees: { rich_text: {} },
   Summary: { rich_text: {} },
   "External link": { url: {} },
+  Image: { url: {} },
 };
 
 /** Add any property the adapter needs that the database does not have yet. */
@@ -116,6 +117,7 @@ async function main() {
         },
         Summary: { rich_text: {} },
         "External link": { url: {} },
+        Image: { url: {} },
       },
     }),
   });
