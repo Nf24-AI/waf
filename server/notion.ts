@@ -1,0 +1,483 @@
+import type { MeetingAgendaItem, MeetingRecord } from "@shared/meeting-store";
+import { fromIsoDate, toIsoDate } from "@shared/meeting-date";
+import { ENV } from "./_core/env";
+
+const NOTION_VERSION = "2022-06-28";
+const NOTION_API = "https://api.notion.com/v1";
+
+/** Sections this tool owns inside a meeting page. Anything else is left alone. */
+const MANAGED_SECTIONS = ["time", "agenda", "actions", "note"];
+const AGENDA_SEPARATOR = " :: ";
+
+type NotionRichText = Array<{ plain_text?: string; text?: { content?: string }; name?: string }>;
+
+type NotionProperty = {
+  type?: string;
+  title?: NotionRichText;
+  rich_text?: NotionRichText;
+  select?: { name?: string } | null;
+  multi_select?: Array<{ name?: string }> | null;
+  people?: Array<{ name?: string }> | null;
+  status?: { name?: string } | null;
+  date?: { start?: string } | null;
+  url?: string | null;
+};
+
+type NotionPage = {
+  id: string;
+  url?: string;
+  properties: Record<string, NotionProperty>;
+};
+
+type NotionBlock = {
+  id: string;
+  type?: string;
+  heading_2?: { rich_text?: NotionRichText };
+  paragraph?: { rich_text?: NotionRichText };
+  bulleted_list_item?: { rich_text?: NotionRichText };
+};
+
+export class NotionConfigError extends Error {}
+
+function getConfig() {
+  if (!ENV.notionApiToken || !ENV.notionDatabaseId) {
+    throw new NotionConfigError(
+      "Notion is not configured. Add NOTION_API_TOKEN and NOTION_DATABASE_ID."
+    );
+  }
+  return { token: ENV.notionApiToken, databaseId: ENV.notionDatabaseId };
+}
+
+export function isNotionConfigured() {
+  return Boolean(ENV.notionApiToken && ENV.notionDatabaseId);
+}
+
+// ---------------------------------------------------------------------------
+// Request plumbing
+// ---------------------------------------------------------------------------
+
+/**
+ * Notion allows roughly three requests per second per integration. Listing a
+ * workspace fans out to one request per meeting page, so serialise everything
+ * through a small spacing queue instead of hitting 429s under Promise.all.
+ */
+const MIN_REQUEST_GAP_MS = 340;
+let requestChain: Promise<unknown> = Promise.resolve();
+
+function schedule<T>(task: () => Promise<T>): Promise<T> {
+  const result = requestChain.then(task, task);
+  requestChain = result
+    .then(
+      () => new Promise((resolve) => setTimeout(resolve, MIN_REQUEST_GAP_MS)),
+      () => new Promise((resolve) => setTimeout(resolve, MIN_REQUEST_GAP_MS))
+    );
+  return result;
+}
+
+async function notionRequest<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
+  const authToken = token ?? getConfig().token;
+
+  return schedule(async () => {
+    const response = await fetch(`${NOTION_API}${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Notion API ${response.status}: ${body}`);
+    }
+
+    if (response.status === 204) return undefined as T;
+    const body = await response.text();
+    return (body ? JSON.parse(body) : undefined) as T;
+  });
+}
+
+function richText(items: NotionRichText | undefined) {
+  return items?.map((item) => item.plain_text ?? item.text?.content ?? "").join("") ?? "";
+}
+
+function text(content: string) {
+  return [{ type: "text" as const, text: { content: (content ?? "").slice(0, 2000) } }];
+}
+
+// ---------------------------------------------------------------------------
+// Adaptive schema mapping
+//
+// The database may use Arabic or English property names. Resolve each logical
+// field once by alias, falling back to the first property of the right type, so
+// reads and writes always target the same real property.
+// ---------------------------------------------------------------------------
+
+type FieldKey = "title" | "date" | "type" | "attendees" | "status" | "summary" | "link";
+
+const ALIASES: Record<FieldKey, string[]> = {
+  title: ["name", "title", "العنوان", "الاسم", "اسم الاجتماع", "عنوان الاجتماع"],
+  date: ["date", "التاريخ", "تاريخ"],
+  type: ["type", "النوع", "نوع الاجتماع"],
+  attendees: ["attendees", "الحضور", "participants", "المشاركون"],
+  status: ["status", "الحالة"],
+  summary: ["summary", "الملخص", "الملخص التنفيذي"],
+  link: ["external link", "link", "url", "الرابط", "مرجع خارجي"],
+};
+
+const ACCEPTED_TYPES: Record<FieldKey, string[]> = {
+  title: ["title"],
+  date: ["date"],
+  type: ["select"],
+  attendees: ["rich_text", "multi_select", "people"],
+  status: ["status", "select"],
+  summary: ["rich_text"],
+  link: ["url"],
+};
+
+export type ResolvedField = { name: string; type: string } | null;
+export type DatabaseSchema = Record<FieldKey, ResolvedField> & {
+  statusOptions: string[];
+  typeOptions: string[];
+};
+
+type RawDatabase = {
+  id: string;
+  title?: NotionRichText;
+  properties: Record<
+    string,
+    {
+      type: string;
+      status?: { options?: Array<{ name: string }> };
+      select?: { options?: Array<{ name: string }> };
+    }
+  >;
+};
+
+let schemaCache: { databaseId: string; schema: DatabaseSchema } | null = null;
+
+function resolveSchema(raw: RawDatabase): DatabaseSchema {
+  const entries = Object.entries(raw.properties);
+  const taken = new Set<string>();
+
+  const pick = (key: FieldKey): ResolvedField => {
+    const accepted = ACCEPTED_TYPES[key];
+    const aliases = ALIASES[key];
+
+    const byAlias = entries.find(
+      ([name, prop]) =>
+        !taken.has(name) && accepted.includes(prop.type) && aliases.includes(name.trim().toLowerCase())
+    );
+    const chosen =
+      byAlias ?? entries.find(([name, prop]) => !taken.has(name) && accepted.includes(prop.type));
+
+    if (!chosen) return null;
+    taken.add(chosen[0]);
+    return { name: chosen[0], type: chosen[1].type };
+  };
+
+  // Resolve the strongly-typed fields first so looser ones cannot steal them.
+  const title = pick("title");
+  const date = pick("date");
+  const link = pick("link");
+  const status = pick("status");
+  const type = pick("type");
+  const summary = pick("summary");
+  const attendees = pick("attendees");
+
+  const optionsOf = (field: ResolvedField) => {
+    if (!field) return [];
+    const prop = raw.properties[field.name];
+    return (prop?.status?.options ?? prop?.select?.options ?? []).map((option) => option.name);
+  };
+
+  return {
+    title, date, type, attendees, status, summary, link,
+    statusOptions: optionsOf(status),
+    typeOptions: optionsOf(type),
+  };
+}
+
+export async function getDatabaseSchema(force = false): Promise<DatabaseSchema> {
+  const { databaseId } = getConfig();
+  if (!force && schemaCache?.databaseId === databaseId) return schemaCache.schema;
+
+  const raw = await notionRequest<RawDatabase>(`/databases/${databaseId}`);
+  const schema = resolveSchema(raw);
+  schemaCache = { databaseId, schema };
+  return schema;
+}
+
+export async function getNotionDatabaseInfo() {
+  const { databaseId } = getConfig();
+  const raw = await notionRequest<RawDatabase>(`/databases/${databaseId}`);
+  return { id: raw.id, title: richText(raw.title), schema: resolveSchema(raw) };
+}
+
+// ---------------------------------------------------------------------------
+// Reading
+// ---------------------------------------------------------------------------
+
+function propertyText(property: NotionProperty | undefined): string {
+  if (!property) return "";
+  switch (property.type) {
+    case "title": return richText(property.title);
+    case "rich_text": return richText(property.rich_text);
+    case "select": return property.select?.name ?? "";
+    case "status": return property.status?.name ?? "";
+    case "date": return property.date?.start ?? "";
+    case "url": return property.url ?? "";
+    case "multi_select": return (property.multi_select ?? []).map((o) => o.name ?? "").filter(Boolean).join(", ");
+    case "people": return (property.people ?? []).map((p) => p.name ?? "").filter(Boolean).join(", ");
+    default: return "";
+  }
+}
+
+function readField(page: NotionPage, field: ResolvedField) {
+  return field ? propertyText(page.properties[field.name]) : "";
+}
+
+function mapStatus(status: string): MeetingRecord["status"] {
+  const normalized = status.trim().toLowerCase();
+  if (status === "تم الاجتماع" || ["done", "completed", "complete"].includes(normalized)) return "تم الاجتماع";
+  if (status === "جاهز للعرض" || ["ready", "in progress", "ready to present"].includes(normalized)) return "جاهز للعرض";
+  return "مسودة";
+}
+
+/** Walk the blocks of a page, collecting only the sections this tool manages. */
+async function readPageContent(pageId: string) {
+  let time = "";
+  let note = "";
+  const agenda: MeetingAgendaItem[] = [];
+  const actions: string[] = [];
+
+  try {
+    let section = "";
+    let cursor: string | undefined;
+
+    do {
+      const query = cursor ? `?page_size=100&start_cursor=${cursor}` : "?page_size=100";
+      const response = await notionRequest<{ results: NotionBlock[]; has_more?: boolean; next_cursor?: string }>(
+        `/blocks/${pageId}/children${query}`
+      );
+
+      for (const item of response.results) {
+        if (item.type === "heading_2") {
+          section = richText(item.heading_2?.rich_text).trim().toLowerCase();
+          continue;
+        }
+        if (!MANAGED_SECTIONS.includes(section)) continue;
+
+        if (item.type === "paragraph") {
+          const value = richText(item.paragraph?.rich_text);
+          if (!value) continue;
+          if (section === "time") time = time ? `${time} ${value}` : value;
+          if (section === "note") note = note ? `${note}\n${value}` : value;
+        } else if (item.type === "bulleted_list_item") {
+          const value = richText(item.bulleted_list_item?.rich_text);
+          if (!value) continue;
+          if (section === "agenda") {
+            const [title = "", context = "", goal = ""] = value.split(AGENDA_SEPARATOR);
+            agenda.push({ title, context, goal });
+          } else if (section === "actions") {
+            actions.push(value);
+          }
+        }
+      }
+
+      cursor = response.has_more ? response.next_cursor ?? undefined : undefined;
+    } while (cursor);
+  } catch (error) {
+    console.warn(`[Notion] Could not read content of page ${pageId}:`, error);
+  }
+
+  return { time, note, agenda, actions };
+}
+
+async function mapPage(page: NotionPage, schema: DatabaseSchema): Promise<MeetingRecord> {
+  const content = await readPageContent(page.id);
+  const isoDate = readField(page, schema.date);
+
+  return {
+    id: page.id,
+    title: readField(page, schema.title) || "اجتماع بدون عنوان",
+    // Notion stores a real date; the workspace shows a readable string.
+    date: isoDate ? fromIsoDate(isoDate) : "اختر التاريخ",
+    time: content.time,
+    type: readField(page, schema.type) || "أخرى",
+    status: mapStatus(readField(page, schema.status)),
+    attendees: readField(page, schema.attendees).split(/[,،]/).map((person) => person.trim()).filter(Boolean),
+    summary: readField(page, schema.summary),
+    agenda: content.agenda,
+    actions: content.actions,
+    note: content.note,
+    link: readField(page, schema.link) || page.url || "",
+  };
+}
+
+export async function listNotionMeetings(): Promise<MeetingRecord[]> {
+  const { databaseId } = getConfig();
+  const schema = await getDatabaseSchema();
+
+  const pages: NotionPage[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const response = await notionRequest<{ results: NotionPage[]; has_more?: boolean; next_cursor?: string }>(
+      `/databases/${databaseId}/query`,
+      { method: "POST", body: JSON.stringify({ page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }) }
+    );
+    pages.push(...response.results);
+    cursor = response.has_more ? response.next_cursor ?? undefined : undefined;
+  } while (cursor);
+
+  // Sequential on purpose: mapPage fetches blocks, and the scheduler already
+  // spaces requests, so Promise.all would queue them exactly the same way.
+  const meetings: MeetingRecord[] = [];
+  for (const page of pages) meetings.push(await mapPage(page, schema));
+  return meetings;
+}
+
+// ---------------------------------------------------------------------------
+// Writing
+// ---------------------------------------------------------------------------
+
+function statusValue(status: MeetingRecord["status"], options: string[]) {
+  const wanted =
+    status === "تم الاجتماع" ? ["Done", "تم الاجتماع", "Completed"]
+    : status === "جاهز للعرض" ? ["In progress", "جاهز للعرض", "Ready"]
+    : ["Not started", "مسودة", "Draft"];
+  // Prefer an option the database actually defines; Notion rejects unknown ones.
+  return options.find((option) => wanted.includes(option)) ?? wanted[0];
+}
+
+function buildProperties(meeting: Partial<MeetingRecord>, schema: DatabaseSchema) {
+  const properties: Record<string, unknown> = {};
+
+  if (schema.title && meeting.title !== undefined) {
+    properties[schema.title.name] = { title: text(meeting.title) };
+  }
+  if (schema.date && meeting.date !== undefined) {
+    const iso = toIsoDate(meeting.date);
+    // Placeholders such as "اختر التاريخ" clear the property instead of failing.
+    properties[schema.date.name] = { date: iso ? { start: iso } : null };
+  }
+  if (schema.type && meeting.type !== undefined) {
+    properties[schema.type.name] = { select: meeting.type ? { name: meeting.type } : null };
+  }
+  if (schema.attendees && meeting.attendees !== undefined) {
+    const names = meeting.attendees.filter(Boolean);
+    if (schema.attendees.type === "multi_select") {
+      properties[schema.attendees.name] = { multi_select: names.map((name) => ({ name })) };
+    } else if (schema.attendees.type === "rich_text") {
+      properties[schema.attendees.name] = { rich_text: text(names.join(", ")) };
+    }
+    // "people" needs Notion user ids, which plain names cannot supply.
+  }
+  if (schema.status && meeting.status !== undefined) {
+    const value = statusValue(meeting.status, schema.statusOptions);
+    properties[schema.status.name] =
+      schema.status.type === "status" ? { status: { name: value } } : { select: { name: value } };
+  }
+  if (schema.summary && meeting.summary !== undefined) {
+    properties[schema.summary.name] = { rich_text: text(meeting.summary) };
+  }
+  if (schema.link && meeting.link !== undefined) {
+    properties[schema.link.name] = { url: meeting.link || null };
+  }
+
+  return properties;
+}
+
+function block(type: "heading_2" | "paragraph" | "bulleted_list_item", content: string) {
+  return { object: "block", type, [type]: { rich_text: text(content) } };
+}
+
+function managedBlocks(meeting: MeetingRecord) {
+  return [
+    block("heading_2", "Time"),
+    block("paragraph", meeting.time),
+    block("heading_2", "Agenda"),
+    ...meeting.agenda.map((item) =>
+      block("bulleted_list_item", [item.title, item.context, item.goal].join(AGENDA_SEPARATOR))
+    ),
+    block("heading_2", "Actions"),
+    ...meeting.actions.map((action) => block("bulleted_list_item", action)),
+    block("heading_2", "Note"),
+    block("paragraph", meeting.note),
+  ];
+}
+
+/**
+ * Replace only the sections this tool owns. Blocks outside Time/Agenda/Actions/
+ * Note are notes the user wrote themselves and must survive a save.
+ */
+async function replaceManagedContent(meeting: MeetingRecord) {
+  const stale: string[] = [];
+  let section = "";
+  let cursor: string | undefined;
+
+  do {
+    const query = cursor ? `?page_size=100&start_cursor=${cursor}` : "?page_size=100";
+    const response = await notionRequest<{ results: NotionBlock[]; has_more?: boolean; next_cursor?: string }>(
+      `/blocks/${meeting.id}/children${query}`
+    );
+
+    for (const item of response.results) {
+      if (item.type === "heading_2") {
+        section = richText(item.heading_2?.rich_text).trim().toLowerCase();
+        if (MANAGED_SECTIONS.includes(section)) stale.push(item.id);
+        continue;
+      }
+      if (MANAGED_SECTIONS.includes(section)) stale.push(item.id);
+    }
+
+    cursor = response.has_more ? response.next_cursor ?? undefined : undefined;
+  } while (cursor);
+
+  for (const id of stale) {
+    await notionRequest(`/blocks/${id}`, { method: "DELETE" });
+  }
+
+  const children = managedBlocks(meeting);
+  // Notion caps children at 100 per request.
+  for (let index = 0; index < children.length; index += 100) {
+    await notionRequest(`/blocks/${meeting.id}/children`, {
+      method: "PATCH",
+      body: JSON.stringify({ children: children.slice(index, index + 100) }),
+    });
+  }
+}
+
+export async function updateNotionMeeting(meeting: MeetingRecord) {
+  const schema = await getDatabaseSchema();
+  await notionRequest(`/pages/${meeting.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ properties: buildProperties(meeting, schema) }),
+  });
+  await replaceManagedContent(meeting);
+}
+
+export async function createNotionMeeting(meeting: Omit<MeetingRecord, "id">): Promise<MeetingRecord> {
+  const { databaseId } = getConfig();
+  const schema = await getDatabaseSchema();
+
+  const page = await notionRequest<NotionPage>("/pages", {
+    method: "POST",
+    body: JSON.stringify({
+      parent: { database_id: databaseId },
+      properties: buildProperties(meeting, schema),
+    }),
+  });
+
+  const created: MeetingRecord = { ...meeting, id: page.id };
+  await replaceManagedContent(created);
+  return { ...created, link: created.link || page.url || "" };
+}
+
+/** Notion has no hard delete through the API; archiving is the delete action. */
+export async function deleteNotionMeeting(id: string) {
+  await notionRequest(`/pages/${id}`, { method: "PATCH", body: JSON.stringify({ archived: true }) });
+}

@@ -1,0 +1,99 @@
+# Meeting Prep Tool
+
+Arabic/English RTL meeting workspace. Prepare a meeting, then present it.
+
+**Notion is the database.** Meetings are Notion pages; there is no separate
+application database. Nothing is stored in the browser except UI preferences.
+
+## Setup
+
+### 1. Create a Notion integration
+
+Go to [notion.so/my-integrations](https://www.notion.so/my-integrations) →
+**New integration** → copy the *Internal Integration Secret* (starts with `ntn_`).
+
+Put it in `.env`:
+
+```
+NOTION_API_TOKEN=ntn_...
+```
+
+### 2. Create the database
+
+Open the Notion page that should hold the database. Connect your integration to
+it via the `•••` menu → **Connections**. Copy the 32-character id from the page
+URL into `.env` as `NOTION_PARENT_PAGE_ID`, then run:
+
+```bash
+pnpm setup:notion
+```
+
+It creates a **Meeting Prep** database with the exact schema the adapter needs
+and prints the `NOTION_DATABASE_ID` to add to `.env`.
+
+To use an existing database instead, skip this and set `NOTION_DATABASE_ID`
+yourself — but connect the integration to that database first, or every request
+returns 404. The adapter matches properties **by type**, so Arabic or English
+names both work. It needs: a `title`, a `date`, a `url`, a `select` or `status`,
+plus `rich_text` fields for the summary and attendees.
+
+### 3. Run
+
+```bash
+pnpm install
+pnpm dev          # http://localhost:3000
+```
+
+## Access control
+
+Single user, gated by one password:
+
+| `APP_PASSWORD` | Behaviour |
+|---|---|
+| empty | Open. Correct for `pnpm dev` on localhost. |
+| set | A signed session cookie is required for every meeting request. |
+
+**Set `APP_PASSWORD` and `JWT_SECRET` before deploying to any public URL.**
+Without it, anyone with the address can read and edit your meetings.
+
+The original Manus OAuth flow was removed — it only resolves inside the Manus
+platform, where it made every meeting request fail with `UNAUTHORIZED`.
+
+## Layout
+
+- `client/src/` — React workspace: preparation mode, display mode, UI customization
+- `server/notion.ts` — the Notion adapter (schema mapping, CRUD, rate limiting)
+- `server/access.ts` — single-user password gate
+- `server/routers.ts` — tRPC procedures
+- `shared/meeting-date.ts` — Arabic display date ↔ ISO conversion
+- `scripts/setup-notion.ts` — one-time database creation
+
+## How meetings map to Notion
+
+Database properties hold the metadata. The page body holds the detail, under
+four headings this tool owns:
+
+| Heading | Content |
+|---|---|
+| `Time` | Meeting time |
+| `Agenda` | `title :: context :: goal` per bullet |
+| `Actions` | One follow-up per bullet |
+| `Note` | Preparation notes |
+
+Anything you write **outside** those four sections is left alone on save.
+
+Deleting a meeting archives the Notion page — restore it from Notion's trash.
+
+## Commands
+
+```bash
+pnpm dev            # development with live reload
+pnpm check          # TypeScript, no emit
+pnpm test           # Vitest
+pnpm build          # production bundle
+pnpm start          # run the production build
+pnpm setup:notion   # create the Meeting Prep database
+```
+
+`pnpm test` skips the live Notion connection tests until `NOTION_API_TOKEN` and
+`NOTION_DATABASE_ID` are set.
