@@ -1,5 +1,15 @@
 # Deploying Waf to Vercel
 
+## Current deployment
+
+Project `waf` on the `NF` team, from the private repo `Nf24-AI/waf`.
+
+**Vercel Deployment Protection is on**, so every request redirects to Vercel SSO
+and only someone with access to the account can open the site. Keep it on: it is
+what keeps the bundled fonts from being downloadable by third parties, and what
+protects the meetings before `APP_PASSWORD` is set. Turning it off makes the
+site genuinely public — do not, until both blockers below are settled.
+
 ## Before you deploy — two things that are not optional
 
 **1. The fonts are not cleared for a public origin.**
