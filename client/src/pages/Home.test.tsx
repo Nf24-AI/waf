@@ -91,15 +91,21 @@ describe("meeting workspace interactions", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
     fireEvent.click(screen.getByLabelText("تخصيص الواجهة"));
     expect(screen.getByText("تخصيص الواجهة")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "ليلي" }));
-    fireEvent.click(screen.getByLabelText("blue"));
+
+    // Theme and accent were removed: they stored a preference and changed
+    // nothing, because no stylesheet backed them.
+    expect(screen.queryByRole("button", { name: "ليلي" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("blue")).not.toBeInTheDocument();
+
     const compactButtons = screen.getAllByRole("button", { name: "مضغوط" });
+    expect(compactButtons).toHaveLength(2);
     fireEvent.click(compactButtons[0]);
     fireEvent.click(compactButtons[1]);
-    expect(document.querySelector(".workspace-shell.theme-night.density-compact")).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toMatchObject({ theme: "night", accent: "blue", density: "compact", displayScale: "compact" });
+    expect(document.querySelector(".workspace-shell.density-compact")).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toEqual({ density: "compact", displayScale: "compact" });
+
     fireEvent.click(screen.getByRole("button", { name: "إعادة الإعدادات الافتراضية" }));
-    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toMatchObject({ theme: "light", accent: "sage", density: "comfortable", displayScale: "standard" });
+    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toEqual({ density: "comfortable", displayScale: "standard" });
   });
 
   it("opens the presentation mode from preparation", async () => {

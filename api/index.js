@@ -651,14 +651,7 @@ var appRouter = router({
         const missing = ["title", "date", "type", "attendees", "status", "summary", "link"].filter((field) => !info.schema[field]);
         return { configured: true, reachable: true, title: info.title, missing };
       } catch (error) {
-        const token = ENV.notionApiToken;
-        const shape = {
-          tokenLength: token.length,
-          tokenLooksLikeNotion: /^ntn_[A-Za-z0-9]+$/.test(token),
-          tokenHasWhitespace: /s/.test(token),
-          databaseIdLength: ENV.notionDatabaseId.length
-        };
-        return { configured: true, reachable: false, error: error instanceof Error ? error.message : String(error), shape };
+        return { configured: true, reachable: false, error: error instanceof Error ? error.message : String(error) };
       }
     }),
     list: appProcedure.query(async () => ({

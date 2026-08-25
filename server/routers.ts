@@ -90,16 +90,7 @@ export const appRouter = router({
           .filter((field) => !info.schema[field]);
         return { configured: true as const, reachable: true as const, title: info.title, missing };
       } catch (error) {
-        // Shape only — never the value. Enough to tell a truncated or wrong
-        // paste from a genuinely rejected token, without revealing either.
-        const token = ENV.notionApiToken;
-        const shape = {
-          tokenLength: token.length,
-          tokenLooksLikeNotion: /^ntn_[A-Za-z0-9]+$/.test(token),
-          tokenHasWhitespace: /s/.test(token),
-          databaseIdLength: ENV.notionDatabaseId.length,
-        };
-        return { configured: true as const, reachable: false as const, error: error instanceof Error ? error.message : String(error), shape };
+        return { configured: true as const, reachable: false as const, error: error instanceof Error ? error.message : String(error) };
       }
     }),
 
