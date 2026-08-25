@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "setup:notion": "tsx scripts/setup-notion.ts",
-    "build:client": "vite build"
+    "build:client": "vite build && pnpm run build:api",
+    "build:api": "esbuild server/vercel-entry.ts --platform=node --target=node20 --bundle --format=esm --outfile=api/index.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
