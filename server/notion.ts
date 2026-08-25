@@ -64,10 +64,15 @@ type NotionBlock = {
 export class NotionConfigError extends Error {}
 
 function getConfig() {
-  if (!ENV.notionApiToken || !ENV.notionDatabaseId) {
-    throw new NotionConfigError(
-      "Notion is not configured. Add NOTION_API_TOKEN and NOTION_DATABASE_ID."
-    );
+  // Name only what is actually missing. Reporting both sent us hunting for a
+  // token that was set while the database id was quietly empty.
+  const missing = [
+    !ENV.notionApiToken && "NOTION_API_TOKEN",
+    !ENV.notionDatabaseId && "NOTION_DATABASE_ID",
+  ].filter(Boolean);
+
+  if (missing.length > 0) {
+    throw new NotionConfigError(`Notion is not configured. Missing: ${missing.join(", ")}.`);
   }
   return { token: ENV.notionApiToken, databaseId: ENV.notionDatabaseId };
 }

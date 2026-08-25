@@ -242,10 +242,12 @@ function parseAgendaLine(line) {
 var NotionConfigError = class extends Error {
 };
 function getConfig() {
-  if (!ENV.notionApiToken || !ENV.notionDatabaseId) {
-    throw new NotionConfigError(
-      "Notion is not configured. Add NOTION_API_TOKEN and NOTION_DATABASE_ID."
-    );
+  const missing = [
+    !ENV.notionApiToken && "NOTION_API_TOKEN",
+    !ENV.notionDatabaseId && "NOTION_DATABASE_ID"
+  ].filter(Boolean);
+  if (missing.length > 0) {
+    throw new NotionConfigError(`Notion is not configured. Missing: ${missing.join(", ")}.`);
   }
   return { token: ENV.notionApiToken, databaseId: ENV.notionDatabaseId };
 }
@@ -638,7 +640,11 @@ var appRouter = router({
     /** Lets the workspace explain *why* Notion is unavailable instead of failing blankly. */
     status: appProcedure.query(async () => {
       if (!isNotionConfigured()) {
-        return { configured: false, reachable: false, error: "NOTION_API_TOKEN and NOTION_DATABASE_ID are not set." };
+        const missing = [
+          !ENV.notionApiToken && "NOTION_API_TOKEN",
+          !ENV.notionDatabaseId && "NOTION_DATABASE_ID"
+        ].filter(Boolean);
+        return { configured: false, reachable: false, error: `Not configured. Missing: ${missing.join(", ")}.` };
       }
       try {
         const info = await getNotionDatabaseInfo();

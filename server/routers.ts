@@ -78,7 +78,11 @@ export const appRouter = router({
     /** Lets the workspace explain *why* Notion is unavailable instead of failing blankly. */
     status: appProcedure.query(async () => {
       if (!isNotionConfigured()) {
-        return { configured: false as const, reachable: false as const, error: "NOTION_API_TOKEN and NOTION_DATABASE_ID are not set." };
+        const missing = [
+          !ENV.notionApiToken && "NOTION_API_TOKEN",
+          !ENV.notionDatabaseId && "NOTION_DATABASE_ID",
+        ].filter(Boolean);
+        return { configured: false as const, reachable: false as const, error: `Not configured. Missing: ${missing.join(", ")}.` };
       }
       try {
         const info = await getNotionDatabaseInfo();
