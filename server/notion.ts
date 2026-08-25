@@ -8,6 +8,30 @@ const NOTION_API = "https://api.notion.com/v1";
 /** Sections this tool owns inside a meeting page. Anything else is left alone. */
 const MANAGED_SECTIONS = ["time", "agenda", "actions", "note"];
 const AGENDA_SEPARATOR = " :: ";
+/**
+ * Agenda items are stored as one bullet per item: title :: context :: goal.
+ * A field containing the separator used to corrupt the line and lose text on
+ * read, so occurrences are escaped with an invisible separator on write.
+ */
+const AGENDA_ESCAPED = " ::⁣ ";
+
+function encodeAgendaField(value: string) {
+  return value.split(AGENDA_SEPARATOR).join(AGENDA_ESCAPED);
+}
+
+function decodeAgendaField(value: string) {
+  return value.split(AGENDA_ESCAPED).join(AGENDA_SEPARATOR);
+}
+
+/** Split into exactly three fields, keeping any extra separators in the goal. */
+function parseAgendaLine(line: string) {
+  const parts = line.split(AGENDA_SEPARATOR);
+  return {
+    title: decodeAgendaField(parts[0] ?? ""),
+    context: decodeAgendaField(parts[1] ?? ""),
+    goal: decodeAgendaField(parts.slice(2).join(AGENDA_SEPARATOR)),
+  };
+}
 
 type NotionRichText = Array<{ plain_text?: string; text?: { content?: string }; name?: string }>;
 
@@ -115,11 +139,12 @@ function text(content: string) {
 // reads and writes always target the same real property.
 // ---------------------------------------------------------------------------
 
-type FieldKey = "title" | "date" | "type" | "attendees" | "status" | "summary" | "link";
+type FieldKey = "title" | "date" | "time" | "type" | "attendees" | "status" | "summary" | "link";
 
 const ALIASES: Record<FieldKey, string[]> = {
   title: ["name", "title", "العنوان", "الاسم", "اسم الاجتماع", "عنوان الاجتماع"],
   date: ["date", "التاريخ", "تاريخ"],
+  time: ["time", "الوقت", "وقت"],
   type: ["type", "النوع", "نوع الاجتماع"],
   attendees: ["attendees", "الحضور", "participants", "المشاركون"],
   status: ["status", "الحالة"],
@@ -130,12 +155,16 @@ const ALIASES: Record<FieldKey, string[]> = {
 const ACCEPTED_TYPES: Record<FieldKey, string[]> = {
   title: ["title"],
   date: ["date"],
+  time: ["rich_text"],
   type: ["select"],
   attendees: ["rich_text", "multi_select", "people"],
   status: ["status", "select"],
   summary: ["rich_text"],
   link: ["url"],
 };
+
+/** Fields matched only by name. A loose type match would steal another column. */
+const ALIAS_ONLY = new Set<FieldKey>(["time"]);
 
 export type ResolvedField = { name: string; type: string } | null;
 export type DatabaseSchema = Record<FieldKey, ResolvedField> & {
@@ -156,7 +185,8 @@ type RawDatabase = {
   >;
 };
 
-let schemaCache: { databaseId: string; schema: DatabaseSchema } | null = null;
+const SCHEMA_TTL_MS = 5 * 60 * 1000;
+let schemaCache: { databaseId: string; schema: DatabaseSchema; fetchedAt: number } | null = null;
 
 function resolveSchema(raw: RawDatabase): DatabaseSchema {
   const entries = Object.entries(raw.properties);
@@ -170,8 +200,9 @@ function resolveSchema(raw: RawDatabase): DatabaseSchema {
       ([name, prop]) =>
         !taken.has(name) && accepted.includes(prop.type) && aliases.includes(name.trim().toLowerCase())
     );
-    const chosen =
-      byAlias ?? entries.find(([name, prop]) => !taken.has(name) && accepted.includes(prop.type));
+    const chosen = ALIAS_ONLY.has(key)
+      ? byAlias
+      : byAlias ?? entries.find(([name, prop]) => !taken.has(name) && accepted.includes(prop.type));
 
     if (!chosen) return null;
     taken.add(chosen[0]);
@@ -181,6 +212,7 @@ function resolveSchema(raw: RawDatabase): DatabaseSchema {
   // Resolve the strongly-typed fields first so looser ones cannot steal them.
   const title = pick("title");
   const date = pick("date");
+  const time = pick("time");
   const link = pick("link");
   const status = pick("status");
   const type = pick("type");
@@ -194,7 +226,7 @@ function resolveSchema(raw: RawDatabase): DatabaseSchema {
   };
 
   return {
-    title, date, type, attendees, status, summary, link,
+    title, date, time, type, attendees, status, summary, link,
     statusOptions: optionsOf(status),
     typeOptions: optionsOf(type),
   };
@@ -202,11 +234,13 @@ function resolveSchema(raw: RawDatabase): DatabaseSchema {
 
 export async function getDatabaseSchema(force = false): Promise<DatabaseSchema> {
   const { databaseId } = getConfig();
-  if (!force && schemaCache?.databaseId === databaseId) return schemaCache.schema;
+  if (!force && schemaCache?.databaseId === databaseId && Date.now() - schemaCache.fetchedAt < SCHEMA_TTL_MS) {
+    return schemaCache.schema;
+  }
 
   const raw = await notionRequest<RawDatabase>(`/databases/${databaseId}`);
   const schema = resolveSchema(raw);
-  schemaCache = { databaseId, schema };
+  schemaCache = { databaseId, schema, fetchedAt: Date.now() };
   return schema;
 }
 
@@ -279,8 +313,7 @@ async function readPageContent(pageId: string) {
           const value = richText(item.bulleted_list_item?.rich_text);
           if (!value) continue;
           if (section === "agenda") {
-            const [title = "", context = "", goal = ""] = value.split(AGENDA_SEPARATOR);
-            agenda.push({ title, context, goal });
+            agenda.push(parseAgendaLine(value));
           } else if (section === "actions") {
             actions.push(value);
           }
@@ -305,7 +338,8 @@ async function mapPage(page: NotionPage, schema: DatabaseSchema): Promise<Meetin
     title: readField(page, schema.title) || "اجتماع بدون عنوان",
     // Notion stores a real date; the workspace shows a readable string.
     date: isoDate ? fromIsoDate(isoDate) : "اختر التاريخ",
-    time: content.time,
+    // Prefer the Time property; older meetings only have it in the page body.
+    time: readField(page, schema.time) || content.time,
     type: readField(page, schema.type) || "أخرى",
     status: mapStatus(readField(page, schema.status)),
     attendees: readField(page, schema.attendees).split(/[,،]/).map((person) => person.trim()).filter(Boolean),
@@ -364,6 +398,9 @@ function buildProperties(meeting: Partial<MeetingRecord>, schema: DatabaseSchema
     // Placeholders such as "اختر التاريخ" clear the property instead of failing.
     properties[schema.date.name] = { date: iso ? { start: iso } : null };
   }
+  if (schema.time && meeting.time !== undefined) {
+    properties[schema.time.name] = { rich_text: text(meeting.time) };
+  }
   if (schema.type && meeting.type !== undefined) {
     properties[schema.type.name] = { select: meeting.type ? { name: meeting.type } : null };
   }
@@ -395,13 +432,13 @@ function block(type: "heading_2" | "paragraph" | "bulleted_list_item", content: 
   return { object: "block", type, [type]: { rich_text: text(content) } };
 }
 
-function managedBlocks(meeting: MeetingRecord) {
+function managedBlocks(meeting: MeetingRecord, hasTimeProperty: boolean) {
   return [
-    block("heading_2", "Time"),
-    block("paragraph", meeting.time),
+    // Skipped when Time is a real property, so the value has one home only.
+    ...(hasTimeProperty ? [] : [block("heading_2", "Time"), block("paragraph", meeting.time)]),
     block("heading_2", "Agenda"),
     ...meeting.agenda.map((item) =>
-      block("bulleted_list_item", [item.title, item.context, item.goal].join(AGENDA_SEPARATOR))
+      block("bulleted_list_item", [item.title, item.context, item.goal].map(encodeAgendaField).join(AGENDA_SEPARATOR))
     ),
     block("heading_2", "Actions"),
     ...meeting.actions.map((action) => block("bulleted_list_item", action)),
@@ -414,7 +451,7 @@ function managedBlocks(meeting: MeetingRecord) {
  * Replace only the sections this tool owns. Blocks outside Time/Agenda/Actions/
  * Note are notes the user wrote themselves and must survive a save.
  */
-async function replaceManagedContent(meeting: MeetingRecord) {
+async function replaceManagedContent(meeting: MeetingRecord, hasTimeProperty: boolean) {
   const stale: string[] = [];
   let section = "";
   let cursor: string | undefined;
@@ -441,7 +478,7 @@ async function replaceManagedContent(meeting: MeetingRecord) {
     await notionRequest(`/blocks/${id}`, { method: "DELETE" });
   }
 
-  const children = managedBlocks(meeting);
+  const children = managedBlocks(meeting, hasTimeProperty);
   // Notion caps children at 100 per request.
   for (let index = 0; index < children.length; index += 100) {
     await notionRequest(`/blocks/${meeting.id}/children`, {
@@ -457,7 +494,7 @@ export async function updateNotionMeeting(meeting: MeetingRecord) {
     method: "PATCH",
     body: JSON.stringify({ properties: buildProperties(meeting, schema) }),
   });
-  await replaceManagedContent(meeting);
+  await replaceManagedContent(meeting, Boolean(schema.time));
 }
 
 export async function createNotionMeeting(meeting: Omit<MeetingRecord, "id">): Promise<MeetingRecord> {
@@ -473,7 +510,7 @@ export async function createNotionMeeting(meeting: Omit<MeetingRecord, "id">): P
   });
 
   const created: MeetingRecord = { ...meeting, id: page.id };
-  await replaceManagedContent(created);
+  await replaceManagedContent(created, Boolean(schema.time));
   return { ...created, link: created.link || page.url || "" };
 }
 

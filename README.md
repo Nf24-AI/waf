@@ -31,11 +31,16 @@ pnpm setup:notion
 It creates a **Meeting Prep** database with the exact schema the adapter needs
 and prints the `NOTION_DATABASE_ID` to add to `.env`.
 
+Re-run it any time with `NOTION_DATABASE_ID` already set and it repairs the
+existing database instead, adding only the properties that are missing.
+
 To use an existing database instead, skip this and set `NOTION_DATABASE_ID`
 yourself — but connect the integration to that database first, or every request
 returns 404. The adapter matches properties **by type**, so Arabic or English
 names both work. It needs: a `title`, a `date`, a `url`, a `select` or `status`,
-plus `rich_text` fields for the summary and attendees.
+plus `rich_text` fields for the summary and attendees. A `rich_text` property
+named **Time** is matched by name only — add it and the meeting time becomes
+sortable and filterable in Notion instead of living in the page body.
 
 ### 3. Run
 
@@ -71,16 +76,19 @@ platform, where it made every meeting request fail with `UNAUTHORIZED`.
 ## How meetings map to Notion
 
 Database properties hold the metadata. The page body holds the detail, under
-four headings this tool owns:
+the headings this tool owns:
 
 | Heading | Content |
 |---|---|
-| `Time` | Meeting time |
 | `Agenda` | `title :: context :: goal` per bullet |
 | `Actions` | One follow-up per bullet |
 | `Note` | Preparation notes |
 
-Anything you write **outside** those four sections is left alone on save.
+Anything you write **outside** those sections is left alone on save. Agenda
+fields containing ` :: ` are escaped, so the separator never corrupts an item.
+
+If the database has no **Time** property, the time falls back to a `Time`
+heading in the page body.
 
 Deleting a meeting archives the Notion page — restore it from Notion's trash.
 

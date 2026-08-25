@@ -32,12 +32,42 @@ async function notion<T>(path: string, init?: RequestInit): Promise<T> {
   return (body ? JSON.parse(body) : undefined) as T;
 }
 
+const REQUIRED_PROPERTIES: Record<string, unknown> = {
+  Date: { date: {} },
+  Time: { rich_text: {} },
+  Attendees: { rich_text: {} },
+  Summary: { rich_text: {} },
+  "External link": { url: {} },
+};
+
+/** Add any property the adapter needs that the database does not have yet. */
+async function addMissingProperties(databaseId: string) {
+  const database = await notion<{ properties: Record<string, { type: string }> }>(
+    `/databases/${databaseId}`
+  );
+  const existing = new Set(Object.keys(database.properties).map((name) => name.toLowerCase()));
+  const missing = Object.entries(REQUIRED_PROPERTIES).filter(
+    ([name]) => !existing.has(name.toLowerCase())
+  );
+
+  if (missing.length === 0) {
+    console.log("Database already has every property the adapter needs.");
+    return;
+  }
+
+  await notion(`/databases/${databaseId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ properties: Object.fromEntries(missing) }),
+  });
+  console.log(`Added: ${missing.map(([name]) => name).join(", ")}`);
+}
+
 async function main() {
   if (!token) {
     console.error("NOTION_API_TOKEN is not set. Add it to .env first.");
     process.exit(1);
   }
-  if (!parentPageId) {
+  if (!parentPageId && !process.env.NOTION_DATABASE_ID) {
     console.error(
       "NOTION_PARENT_PAGE_ID is not set.\n" +
         "Open the Notion page that should hold the database, copy the 32-character\n" +
@@ -49,6 +79,14 @@ async function main() {
   const me = await notion<{ name?: string }>("/users/me");
   console.log(`Authenticated as integration: ${me.name ?? "(unnamed)"}`);
 
+  // An existing database is repaired in place rather than duplicated.
+  const existingDatabaseId = (process.env.NOTION_DATABASE_ID ?? "").replace(/-/g, "");
+  if (existingDatabaseId) {
+    console.log(`Checking existing database ${existingDatabaseId}`);
+    await addMissingProperties(existingDatabaseId);
+    return;
+  }
+
   const database = await notion<{ id: string; url?: string }>("/databases", {
     method: "POST",
     body: JSON.stringify({
@@ -58,6 +96,7 @@ async function main() {
         // Property names and types match what server/notion.ts reads and writes.
         Name: { title: {} },
         Date: { date: {} },
+        Time: { rich_text: {} },
         Type: {
           select: {
             options: [

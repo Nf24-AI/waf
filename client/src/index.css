@@ -182,3 +182,20 @@ input, textarea, select { outline: none; }
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Paired time inputs for the meeting range */
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.time-range input {
+  flex: 1;
+  min-width: 0;
+}
+
+.time-range > span {
+  opacity: 0.5;
+  flex-shrink: 0;
+}

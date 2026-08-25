@@ -29,6 +29,7 @@ vi.mock("@/lib/trpc", () => ({
       logout: { useMutation: () => ({ mutateAsync: vi.fn(), isPending: false, error: null }) },
     },
     meetings: {
+      status: { useQuery: () => ({ data: undefined, isLoading: false }) },
       list: { useQuery: mocks.notionListQuery },
       update: { useMutation: mocks.notionUpdateMutation },
       create: { useMutation: mocks.notionCreateMutation },
@@ -175,6 +176,23 @@ describe("meeting workspace interactions", () => {
     render(<Home />);
     expect(await screen.findByText("نجهّز مساحتك...")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "الاجتماعات" })).not.toBeInTheDocument();
+  });
+
+  it("shows today's real date, not a hard-coded one", async () => {
+    render(<Home />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument());
+    // The header used to always read "الثلاثاء، ٢٧ أغسطس ٢٠٢٦".
+    expect(screen.queryByText("الثلاثاء، ٢٧ أغسطس ٢٠٢٦")).not.toBeInTheDocument();
+    expect(document.querySelector(".eyebrow")?.textContent).toMatch(/٠|١|٢|٣|٤|٥|٦|٧|٨|٩/);
+  });
+
+  it("renders counts in one numeral system", async () => {
+    render(<Home />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "الاجتماعات" })).toBeInTheDocument());
+    // padStart(2, "٠") produced "٠3" — an Arabic zero next to a Western digit.
+    const counts = Array.from(document.querySelectorAll(".stat-card strong")).map((n) => n.textContent ?? "");
+    expect(counts.length).toBeGreaterThan(0);
+    counts.forEach((count) => expect(count).not.toMatch(/[٠-٩].*[0-9]|[0-9].*[٠-٩]/));
   });
 
   it("creates a genuinely blank meeting, not a copy of a sample", async () => {

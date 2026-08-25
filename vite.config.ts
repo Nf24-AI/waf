@@ -22,6 +22,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // One 700KB chunk made the first paint wait on everything. React and the
+        // data layer change rarely, so they cache separately from app code.
+        manualChunks: {
+          react: ["react", "react-dom", "react/jsx-runtime"],
+          data: ["@trpc/client", "@trpc/react-query", "@tanstack/react-query", "superjson"],
+        },
+      },
+    },
   },
   server: {
     host: true,
