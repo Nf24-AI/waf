@@ -20,6 +20,7 @@ import {
   Maximize2,
   Menu,
   Minimize2,
+  Palette,
   Pause,
   Play,
   Circle,
@@ -351,6 +352,9 @@ export default function Home() {
   );
 
   const updateUiSetting = <K extends keyof UiSettings>(key: K, value: UiSettings[K]) => setUiSettings((current) => ({ ...current, [key]: value }));
+  const themeLabel = uiSettings.theme === "navy"
+    ? (isArabic ? "التبديل إلى المظهر الحبري" : "Switch to the ink theme")
+    : (isArabic ? "التبديل إلى المظهر الكحلي" : "Switch to the navy theme");
   const resetUiSettings = () => setUiSettings(DEFAULT_UI_SETTINGS);
 
   return (
@@ -368,7 +372,7 @@ export default function Home() {
       </aside>
 
       <main className="workspace-main">
-        <header className="topbar"><div className="flex items-center gap-3"><button className="mobile-menu lg:hidden"><Menu size={20} /></button><div><p className="eyebrow">{today}</p><h1 className="page-title">{greeting}</h1></div></div><div className="topbar-actions"><div className="sync-pill"><span className="sync-dot" /> {syncLabel}</div><button className="help-button" onClick={() => setSettingsOpen((open) => !open)} aria-label={isArabic ? "تخصيص الواجهة" : "Customize interface"}><Settings2 size={18} /></button><div className="avatar small">م</div></div></header>
+        <header className="topbar"><div className="flex items-center gap-3"><button className="mobile-menu lg:hidden"><Menu size={20} /></button><div><p className="eyebrow">{today}</p><h1 className="page-title">{greeting}</h1></div></div><div className="topbar-actions"><div className="sync-pill"><span className="sync-dot" /> {syncLabel}</div><button className="help-button" onClick={() => updateUiSetting("theme", uiSettings.theme === "navy" ? "ink" : "navy")} aria-pressed={uiSettings.theme === "navy"} title={themeLabel} aria-label={themeLabel}><Palette size={18} /></button><button className="help-button" onClick={() => setSettingsOpen((open) => !open)} aria-label={isArabic ? "تخصيص الواجهة" : "Customize interface"}><Settings2 size={18} /></button><div className="avatar small">م</div></div></header>
         {settingsOpen && <UiSettingsPanel language={language} settings={uiSettings} update={updateUiSetting} reset={resetUiSettings} close={() => setSettingsOpen(false)} />}
         <section className="dashboard-intro"><div><p className="section-kicker">{copy.dashboard}</p><h2>{copy.intro}</h2><p>{copy.introSub}</p></div><div className="intro-actions"><button className="language-toggle" onClick={() => setLanguage(isArabic ? "en" : "ar")}>{isArabic ? "EN" : "عربي"}</button><button className="primary-button" disabled={notionCreate.isPending} onClick={() => createMeeting(blankMeeting(language))}><Plus size={18} /> {copy.newMeeting}</button></div></section>
         <section className="template-strip"><div className="template-strip-label"><Sparkles size={15} /><span>{copy.templates}</span></div><div className="template-buttons">{templates.map((template) => <button key={template.id} className="template-button" onClick={() => createFromTemplate(template)}>{isArabic ? template.ar : template.en}</button>)}</div></section>

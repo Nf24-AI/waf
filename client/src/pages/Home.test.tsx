@@ -116,6 +116,22 @@ describe("meeting workspace interactions", () => {
     expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toEqual({ density: "comfortable", displayScale: "standard", theme: "ink" });
   });
 
+  it("switches the theme from the top bar without opening settings", async () => {
+    render(<Home />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
+
+    // The toggle names the theme it would switch to, so it reads as an action.
+    const toNavy = screen.getByRole("button", { name: "التبديل إلى المظهر الكحلي" });
+    expect(document.documentElement.hasAttribute("data-waf-theme")).toBe(false);
+
+    fireEvent.click(toNavy);
+    expect(document.documentElement.getAttribute("data-waf-theme")).toBe("navy");
+    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}").theme).toBe("navy");
+
+    fireEvent.click(screen.getByRole("button", { name: "التبديل إلى المظهر الحبري" }));
+    expect(document.documentElement.hasAttribute("data-waf-theme")).toBe(false);
+  });
+
   it("opens the presentation mode from preparation", async () => {
     render(<Home />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
