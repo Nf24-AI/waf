@@ -92,20 +92,28 @@ describe("meeting workspace interactions", () => {
     fireEvent.click(screen.getByLabelText("تخصيص الواجهة"));
     expect(screen.getByText("تخصيص الواجهة")).toBeInTheDocument();
 
-    // Theme and accent were removed: they stored a preference and changed
-    // nothing, because no stylesheet backed them.
+    // Accent stays removed: it stored a preference and changed nothing,
+    // because no stylesheet backed it. Theme is different — see below.
     expect(screen.queryByRole("button", { name: "ليلي" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("blue")).not.toBeInTheDocument();
+
+    // The theme does have a stylesheet behind it: picking navy puts the token
+    // scope on the root, which is what actually repaints the console.
+    expect(document.documentElement.hasAttribute("data-waf-theme")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "كحلي" }));
+    expect(document.documentElement.getAttribute("data-waf-theme")).toBe("navy");
+    fireEvent.click(screen.getByRole("button", { name: "حبري" }));
+    expect(document.documentElement.hasAttribute("data-waf-theme")).toBe(false);
 
     const compactButtons = screen.getAllByRole("button", { name: "مضغوط" });
     expect(compactButtons).toHaveLength(2);
     fireEvent.click(compactButtons[0]);
     fireEvent.click(compactButtons[1]);
     expect(document.querySelector(".workspace-shell.density-compact")).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toEqual({ density: "compact", displayScale: "compact" });
+    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toEqual({ density: "compact", displayScale: "compact", theme: "ink" });
 
     fireEvent.click(screen.getByRole("button", { name: "إعادة الإعدادات الافتراضية" }));
-    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toEqual({ density: "comfortable", displayScale: "standard" });
+    expect(JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}")).toEqual({ density: "comfortable", displayScale: "standard", theme: "ink" });
   });
 
   it("opens the presentation mode from preparation", async () => {

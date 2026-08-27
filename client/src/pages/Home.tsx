@@ -49,8 +49,8 @@ import { buildTimeRange, parseTimeRange } from "@shared/meeting-time";
 import type { MeetingRecord } from "@shared/meeting-store";
 
 
-type UiSettings = { density: "comfortable" | "compact"; displayScale: "standard" | "compact" };
-const DEFAULT_UI_SETTINGS: UiSettings = { density: "comfortable", displayScale: "standard" };
+type UiSettings = { density: "comfortable" | "compact"; displayScale: "standard" | "compact"; theme: "ink" | "navy" };
+const DEFAULT_UI_SETTINGS: UiSettings = { density: "comfortable", displayScale: "standard", theme: "ink" };
 function readUiSettings(): UiSettings {
   try { const stored = { ...DEFAULT_UI_SETTINGS, ...JSON.parse(localStorage.getItem("meeting-prep-ui") ?? "{}") } as UiSettings; const params = new URLSearchParams(window.location.search); return params.get("displayDensity") === "compact" ? { ...stored, displayScale: "compact" } : stored; } catch { return DEFAULT_UI_SETTINGS; }
 }
@@ -201,6 +201,16 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("meeting-prep-ui", JSON.stringify(uiSettings));
   }, [uiSettings]);
+
+  // The theme is a token scope on the root, not a class the components read:
+  // every surface already resolves through --canvas / --surface-* / --accent,
+  // so swapping the scope repaints the console without touching a component.
+  // The stage keeps its own `.waf-stage` scope and stays light either way.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (uiSettings.theme === "ink") root.removeAttribute("data-waf-theme");
+    else root.setAttribute("data-waf-theme", uiSettings.theme);
+  }, [uiSettings.theme]);
 
   // Saving is manual, so leaving with pending edits used to lose them silently.
   useEffect(() => {
@@ -389,9 +399,10 @@ function UiSettingsPanel({ language, settings, update, reset, close }: {
   const isArabic = language === "ar";
   return <section className="ui-settings-panel" aria-label={isArabic ? "تخصيص الواجهة" : "Interface customization"}>
     <div className="ui-settings-head"><div><strong>{isArabic ? "تخصيص الواجهة" : "Customize interface"}</strong><p>{isArabic ? "كثافة المساحة وصفحة الاجتماع." : "Density of the workspace and the meeting page."}</p></div><button className="settings-close" onClick={close} aria-label={isArabic ? "إغلاق" : "Close"}><X size={16} /></button></div>
-    {/* Theme and accent are gone: Waf defines one canvas and one rationed
-        accent, and neither option had a stylesheet behind it — the buttons
-        stored a preference and changed nothing on screen. */}
+    {/* Theme is back because there is now a stylesheet behind it: `navy` is a
+        real token scope in the design system, not a stored preference that
+        changes nothing. Accent stays out — it is rationed by design. */}
+    <SettingGroup label={isArabic ? "مظهر المساحة" : "Workspace theme"} options={[{ value: "ink", label: isArabic ? "حبري" : "Ink" }, { value: "navy", label: isArabic ? "كحلي" : "Navy" }]} selected={settings.theme} onSelect={(value) => update("theme", value as UiSettings["theme"])} />
     <SettingGroup label={isArabic ? "كثافة المحتوى" : "Density"} options={[{ value: "comfortable", label: isArabic ? "مريح" : "Comfortable" }, { value: "compact", label: isArabic ? "مضغوط" : "Compact" }]} selected={settings.density} onSelect={(value) => update("density", value as UiSettings["density"])} />
     <SettingGroup label={isArabic ? "كثافة العرض" : "Display density"} options={[{ value: "standard", label: isArabic ? "قياسي" : "Standard" }, { value: "compact", label: isArabic ? "مضغوط" : "Compact" }]} selected={settings.displayScale} onSelect={(value) => update("displayScale", value as UiSettings["displayScale"])} />
     <button className="settings-reset" onClick={reset}>{isArabic ? "إعادة الإعدادات الافتراضية" : "Reset defaults"}</button>

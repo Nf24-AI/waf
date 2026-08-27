@@ -25,3 +25,24 @@
 --alpha-line:rgba(0,0,0,.11);--alpha-line-weak:rgba(0,0,0,.06);--alpha-fill:rgba(0,0,0,.05);--alpha-fill-weak:rgba(0,0,0,.025);--alpha-fill-strong:rgba(0,0,0,.09);
 --focus-ring:0 0 0 2px #FFFFFF,0 0 0 4px #127C8E; /* @kind shadow */
 }
+.waf-navy,[data-waf-theme="navy"]{
+--navy-1000:#08111F;--navy-950:#0C1A2E;--navy-900:#0E2038;--navy-850:#132845;--navy-800:#16304F;--navy-700:#1C3D63;--navy-600:#234A76;
+--gold-300:#F2DDAA;--gold-400:#D4B06A;--gold-500:#B8924E;--gold-900:#2E2413;
+--mist-50:#F4F8FF;--mist-100:#E4ECF9;--mist-200:#CCD8EA;--mist-300:#93A6C4;--mist-400:#6F84A6;--mist-500:#51648A;
+--alpha-line-weak:rgba(210,226,255,.08);--alpha-line:rgba(210,226,255,.14);--alpha-line-strong:rgba(210,226,255,.26);
+--alpha-fill-weak:rgba(210,226,255,.04);--alpha-fill:rgba(210,226,255,.07);--alpha-fill-strong:rgba(210,226,255,.12);
+--alpha-scrim:rgba(8,17,31,.72);
+--canvas:var(--navy-950);--surface-sunken:var(--navy-1000);--surface-card:var(--navy-900);--surface-raised:var(--navy-850);--surface-overlay:var(--navy-850);--surface-hover:var(--alpha-fill-weak);--surface-active:var(--alpha-fill);
+--text-primary:var(--mist-50);--text-body:var(--mist-100);--text-secondary:var(--mist-200);--text-tertiary:var(--mist-300);--text-disabled:var(--mist-400);--text-inverse:var(--navy-950);
+--border-hairline:var(--alpha-line-weak);--border-default:var(--alpha-line);--border-strong:var(--alpha-line-strong);--border-focus:var(--gold-400);
+--accent:var(--gold-400);--accent-hover:var(--gold-300);--accent-quiet:var(--gold-900);--accent-on:var(--navy-950);
+--status-live:var(--gold-400);--status-scheduled:var(--mist-200);--status-draft:var(--mist-300);--status-done:#2BC79A;--status-attention:#F0B93F;--status-danger:#E4654F;
+--focus-ring:0 0 0 2px var(--navy-950),0 0 0 4px var(--gold-400); /* @kind shadow */
+--dot-matrix:radial-gradient(var(--alpha-line) 1px,transparent 1px); /* @kind other */--dot-matrix-size:16px 16px; /* @kind other */
+--shadow-inset-top:inset 0 1px 0 rgba(210,226,255,.06);
+--shadow-sm:0 1px 2px rgba(4,10,20,.5);
+--shadow-md:0 4px 16px rgba(4,10,20,.55);
+--shadow-lg:0 18px 48px rgba(4,10,20,.65);
+--scrim-top:linear-gradient(to bottom,var(--canvas) 0%,rgba(12,26,46,0) 100%); /* @kind other */
+--scrim-bottom:linear-gradient(to top,var(--canvas) 0%,rgba(12,26,46,0) 100%); /* @kind other */
+}

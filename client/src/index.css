@@ -2,7 +2,8 @@
  * Waf — meeting console and stage.
  *
  * Two surfaces, as the design system defines them:
- *   - the console, on the near-black ink canvas
+ *   - the console, on the near-black ink canvas — or the navy one
+ *     (`[data-waf-theme="navy"]`), which the workspace theme setting picks
  *   - the stage (`.waf-stage`), the light page you read during the meeting
  *
  * Every value here comes from a Waf token. No literal colours.
