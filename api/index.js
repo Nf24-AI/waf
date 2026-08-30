@@ -6,6 +6,9 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 // shared/const.ts
 var COOKIE_NAME = "app_session_id";
 var ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1e3;
+var IDLE_MINUTES = 10;
+var IDLE_MS = IDLE_MINUTES * 60 * 1e3;
+var IDLE_WARN_MS = 60 * 1e3;
 
 // server/_core/cookies.ts
 function isSecureRequest(req) {
@@ -73,7 +76,6 @@ var ENV = {
 
 // server/access.ts
 var ACCESS_COOKIE = "meeting-prep-session";
-var SESSION_HOURS = 8;
 function secret() {
   const value = ENV.cookieSecret || ENV.appPassword;
   if (!value) throw new Error("JWT_SECRET must be set when APP_PASSWORD is used.");
@@ -83,7 +85,7 @@ function accessIsOpen() {
   return !ENV.appPassword;
 }
 async function createSessionToken() {
-  return new SignJWT({ scope: "owner" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${SESSION_HOURS}h`).sign(secret());
+  return new SignJWT({ scope: "owner" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${IDLE_MINUTES}m`).sign(secret());
 }
 async function hasValidSession(cookieHeader) {
   if (accessIsOpen()) return true;
@@ -114,9 +116,15 @@ function passwordMatches(candidate) {
   }
   return diff === 0;
 }
+async function touchSession(res) {
+  res.cookie(ACCESS_COOKIE, await createSessionToken(), sessionCookieOptions(ENV.isProduction));
+}
 var appProcedure = publicProcedure.use(async ({ ctx, next }) => {
-  if (await hasValidSession(ctx.req.headers.cookie)) return next({ ctx });
-  throw new TRPCError({ code: "UNAUTHORIZED", message: "This workspace is locked." });
+  if (!await hasValidSession(ctx.req.headers.cookie)) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "This workspace is locked." });
+  }
+  if (!accessIsOpen()) await touchSession(ctx.res);
+  return next({ ctx });
 });
 
 // shared/meeting-date.ts
@@ -646,10 +654,22 @@ var appRouter = router({
       ctx.res.cookie(ACCESS_COOKIE, token, sessionCookieOptions(ENV.isProduction));
       return { success: true };
     }),
+    /**
+     * Slide the idle window forward without asking for anything.
+     *
+     * The server counts a session idle when no request arrives; the browser
+     * counts it idle when nobody touches the page. Those disagree while
+     * someone types a long note, because saving is a button and not an
+     * autosave — the page is busy and the server hears nothing. Ten minutes
+     * in, Save would fail as UNAUTHORIZED with the note still unsaved.
+     *
+     * appProcedure re-issues the cookie, so the call needs no body of its own.
+     */
+    touch: appProcedure.mutation(() => ({ ok: true })),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      ctx.res.clearCookie(ACCESS_COOKIE, { ...sessionCookieOptions(ENV.isProduction), maxAge: -1 });
+      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
+      ctx.res.clearCookie(ACCESS_COOKIE, sessionCookieOptions(ENV.isProduction));
       return { success: true };
     })
   }),

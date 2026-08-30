@@ -37,13 +37,16 @@ describe("auth.logout", () => {
     expect(result).toEqual({ success: true });
     // Both the legacy Manus cookie and the single-user session cookie are cleared.
     expect(clearedCookies.map((cookie) => cookie.name)).toEqual([COOKIE_NAME, ACCESS_COOKIE]);
+    // No maxAge — clearCookie expires the cookie on its own, and Express 4
+    // deprecates passing it.
+    expect(clearedCookies[0]?.options).not.toHaveProperty("maxAge");
     expect(clearedCookies[0]?.options).toMatchObject({
-      maxAge: -1,
       secure: true,
       sameSite: "none",
       httpOnly: true,
       path: "/",
     });
-    expect(clearedCookies[1]?.options).toMatchObject({ maxAge: -1, httpOnly: true, path: "/" });
+    expect(clearedCookies[1]?.options).not.toHaveProperty("maxAge");
+    expect(clearedCookies[1]?.options).toMatchObject({ httpOnly: true, path: "/" });
   });
 });

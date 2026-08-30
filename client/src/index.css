@@ -1272,6 +1272,78 @@ input, textarea, select { outline: none; }
 
 .lock-spinner { animation: waf-spin 900ms linear infinite; }
 
+/* ------------------------------------------------ the idle countdown */
+
+.idle-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-9);
+  /* Above the settings panel (40) and the header (20): it is a decision. */
+  z-index: 60;
+  background: color-mix(in srgb, var(--canvas) 82%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.idle-card {
+  width: 100%;
+  max-width: 400px;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-9);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-panel);
+  background-color: var(--surface-card);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.idle-title {
+  margin: 0;
+  font: var(--fw-medium) var(--fs-26) / var(--lh-snug) var(--font-serif-display);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-primary);
+}
+
+.idle-body {
+  margin: 0;
+  font: var(--text-body-md);
+  color: var(--text-secondary);
+}
+
+.idle-countdown {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  color: var(--text-primary);
+}
+
+.idle-countdown > span:first-child {
+  /* Latin digits, lining and tabular, so the number does not jump each second. */
+  direction: ltr;
+  font: var(--fw-medium) var(--fs-42) / 1 var(--font-serif-display);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.idle-countdown-unit {
+  font: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.idle-actions {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idle-overlay { backdrop-filter: none; }
+}
+
+
 /* Status badges — semantic colour lives only inside the badge, per Waf. */
 .status-badge.status-ready { color: var(--status-live) !important; border-color: color-mix(in srgb, var(--status-live) 40%, transparent) !important; }
 .status-badge.status-draft { color: var(--status-attention) !important; border-color: color-mix(in srgb, var(--status-attention) 40%, transparent) !important; }
