@@ -70,10 +70,26 @@ export const appRouter = router({
         return { success: true as const };
       }),
 
+    /**
+     * Slide the idle window forward without asking for anything.
+     *
+     * The server counts a session idle when no request arrives; the browser
+     * counts it idle when nobody touches the page. Those disagree while
+     * someone types a long note, because saving is a button and not an
+     * autosave — the page is busy and the server hears nothing. Ten minutes
+     * in, Save would fail as UNAUTHORIZED with the note still unsaved.
+     *
+     * appProcedure re-issues the cookie, so the call needs no body of its own.
+     */
+    touch: appProcedure.mutation(() => ({ ok: true }) as const),
+
     logout: publicProcedure.mutation(({ ctx }) => {
+      // No maxAge: clearCookie already expires the cookie immediately, and
+      // passing it makes Express 4 log a deprecation on every logout — which
+      // the idle lock now triggers on its own, so the noise adds up.
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      ctx.res.clearCookie(ACCESS_COOKIE, { ...sessionCookieOptions(ENV.isProduction), maxAge: -1 });
+      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
+      ctx.res.clearCookie(ACCESS_COOKIE, sessionCookieOptions(ENV.isProduction));
       return { success: true } as const;
     }),
   }),

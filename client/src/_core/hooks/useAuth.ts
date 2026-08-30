@@ -18,6 +18,7 @@ export function useAuth() {
   const unlockMutation = trpc.auth.unlock.useMutation({
     onSuccess: () => utils.auth.me.invalidate(),
   });
+  const touchMutation = trpc.auth.touch.useMutation();
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => utils.auth.me.invalidate(),
   });
@@ -29,6 +30,18 @@ export function useAuth() {
     },
     [unlockMutation]
   );
+
+  /**
+   * Tell the server someone is still here, so its idle window slides too.
+   *
+   * A failure here means the session is already gone. Swallowing it would
+   * leave a workspace that looks unlocked until the next save fails, with
+   * whatever was typed still unsaved — so re-read the lock state instead and
+   * let the gate come back now, while there is nothing to lose.
+   */
+  const keepAlive = useCallback(() => {
+    touchMutation.mutate(undefined, { onError: () => void utils.auth.me.invalidate() });
+  }, [touchMutation, utils]);
 
   const logout = useCallback(async () => {
     await logoutMutation.mutateAsync();
@@ -43,6 +56,7 @@ export function useAuth() {
     unlock,
     unlocking: unlockMutation.isPending,
     logout,
+    keepAlive,
     refresh: () => meQuery.refetch(),
   };
 }

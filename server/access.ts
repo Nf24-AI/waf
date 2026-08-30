@@ -3,6 +3,7 @@ import { parse as parseCookieHeader } from "cookie";
 import { SignJWT, jwtVerify } from "jose";
 import { publicProcedure } from "./_core/trpc";
 import { ENV } from "./_core/env";
+import { IDLE_MINUTES } from "@shared/const";
 
 /**
  * Single-user access control.
@@ -21,15 +22,18 @@ import { ENV } from "./_core/env";
 
 export const ACCESS_COOKIE = "meeting-prep-session";
 /**
- * The session lasts the browsing session, not a month.
+ * The session lasts an idle window, not a browsing day.
  *
  * A 30-day cookie meant returning to the workspace never asked for the
  * password again, which for a single-password gate on a public URL is the
  * whole protection quietly lapsing. The cookie now carries no expiry, so the
- * browser drops it on close, and the token itself expires after this window
- * as a backstop for a browser left running.
+ * browser drops it on close, and the token itself expires IDLE_MINUTES after
+ * it was last issued.
+ *
+ * The window is idle-based rather than absolute because touchSession re-issues
+ * the cookie on every authenticated request: a workspace in use keeps sliding
+ * forward, and only one left untouched runs out.
  */
-const SESSION_HOURS = 8;
 
 function secret() {
   const value = ENV.cookieSecret || ENV.appPassword;
@@ -45,7 +49,7 @@ export async function createSessionToken() {
   return new SignJWT({ scope: "owner" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_HOURS}h`)
+    .setExpirationTime(`${IDLE_MINUTES}m`)
     .sign(secret());
 }
 
@@ -88,8 +92,25 @@ export function passwordMatches(candidate: string) {
   return diff === 0;
 }
 
+/**
+ * Push the idle deadline out by IDLE_MINUTES from now.
+ *
+ * Without this the window would be absolute, and the gate would drop in front
+ * of someone mid-sentence ten minutes after they unlocked. Only the token is
+ * re-issued; the cookie stays session-scoped, so closing the browser still
+ * ends the session.
+ */
+export async function touchSession(res: { cookie: (name: string, value: string, options: object) => void }) {
+  res.cookie(ACCESS_COOKIE, await createSessionToken(), sessionCookieOptions(ENV.isProduction));
+}
+
 /** Use for every procedure that touches meeting data. */
 export const appProcedure = publicProcedure.use(async ({ ctx, next }) => {
-  if (await hasValidSession(ctx.req.headers.cookie)) return next({ ctx });
-  throw new TRPCError({ code: "UNAUTHORIZED", message: "This workspace is locked." });
+  if (!(await hasValidSession(ctx.req.headers.cookie))) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "This workspace is locked." });
+  }
+  // Activity slides the window forward. Skipped when the gate is off, where
+  // there is no session to keep alive in the first place.
+  if (!accessIsOpen()) await touchSession(ctx.res);
+  return next({ ctx });
 });

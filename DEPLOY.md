@@ -5,22 +5,42 @@
 Project `waf` on the `NF` team, from the private repo `Nf24-AI/waf`.
 
 **Vercel Deployment Protection is on**, so every request redirects to Vercel SSO
-and only someone with access to the account can open the site. Keep it on: it is
-what keeps the bundled fonts from being downloadable by third parties, and what
+and only someone with access to the account can open the site. It is what
 protects the meetings before `APP_PASSWORD` is set. Turning it off makes the
-site genuinely public — do not, until both blockers below are settled.
+site genuinely public — do not, until the blocker below is settled.
 
-## Before you deploy — two things that are not optional
+## Before you deploy — one thing that is not optional
 
-**1. The fonts are not cleared for a public origin.**
-See `client/src/design-system/FONT-LICENSE.md`. The thmanyah licence forbids
-serving the font files where third parties can download them, which is exactly
-what a public Vercel URL does. Either clear it with `ask@thmanyah.com`, or keep
-the deployment behind Vercel's Deployment Protection.
-
-**2. Set `APP_PASSWORD`.**
+**Set `APP_PASSWORD`.**
 Without it the workspace is open and anyone with the URL can read, edit and
-archive your meetings. The gate only appears when this is set.
+archive your meetings. The gate only appears when this is set, and the idle
+lock below only runs when the gate exists.
+
+## The fonts — settled, no longer a blocker
+
+This used to say the fonts were not cleared for a public origin. They are now.
+`scripts/embed-fonts.ts` inlines the four faces the design uses into
+`tokens/fonts.css` as data URIs, so the build emits no font files, and the raw
+sources are neither tracked nor in git history. See
+`client/src/design-system/FONT-LICENSE.md` for how that maps onto the licence.
+Confirm before any deploy that ships a font change:
+
+```bash
+find dist/public -name "*.woff2"          # must print nothing
+git rev-list --all --objects | grep assets/fonts   # must print nothing
+```
+
+## The idle lock
+
+Past the gate, the workspace locks itself after `IDLE_MINUTES` (shared/const.ts)
+with nothing happening on the page, asking first for the last `IDLE_WARN_MS`.
+
+Two clocks have to agree for this to be safe. The server expires the session
+token after the same window and slides it forward on every authenticated
+request; the browser watches for activity. They disagree while someone types a
+long note, because saving here is a button and not an autosave — so the page
+pings `auth.touch` on activity, at most twice a window, to keep them in step.
+Without that ping, Save fails as UNAUTHORIZED with the note still unsaved.
 
 ## Environment variables to add in Vercel
 
