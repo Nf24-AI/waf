@@ -11,6 +11,7 @@ import {
   CircleHelp,
   Clock3,
   Copy,
+  Download,
   ExternalLink,
   FileText,
   LayoutDashboard,
@@ -51,6 +52,7 @@ import {
 import { PREPARE_STEPS, completedSteps, nextStep } from "./prepare-steps";
 import { fromIsoDate, toArabicDigits, toIsoDate } from "@shared/meeting-date";
 import { buildTimeRange, parseTimeRange } from "@shared/meeting-time";
+import { meetingFileName } from "@shared/meeting-pdf";
 import type { MeetingRecord } from "@shared/meeting-store";
 
 type UiSettings = {
@@ -391,6 +393,8 @@ export default function Home() {
           refresh: "تحديث العرض",
           fullScreen: "ملء الشاشة",
           exitFullScreen: "الخروج من ملء الشاشة",
+          pdf: "تنزيل PDF",
+          pdfHint: "اختر «حفظ كملف PDF» في وجهة الطباعة، ثم شارك الملف.",
           goal: "هدف الاجتماع",
           topics: "محاور النقاش",
           title: "عنوان الاجتماع",
@@ -443,6 +447,9 @@ export default function Home() {
           refresh: "Refresh view",
           fullScreen: "Full screen",
           exitFullScreen: "Exit full screen",
+          pdf: "Download PDF",
+          pdfHint:
+            "Pick “Save as PDF” as the destination, then share the file.",
           goal: "Meeting goal",
           topics: "Discussion topics",
           title: "Meeting title",
@@ -1964,6 +1971,8 @@ function DisplayMode({
     refresh: string;
     fullScreen: string;
     exitFullScreen: string;
+    pdf: string;
+    pdfHint: string;
     goal: string;
     topics: string;
     actions: string;
@@ -2012,6 +2021,32 @@ function DisplayMode({
         isArabic ? "تعذر فتح ملء الشاشة" : "Could not open full screen"
       );
     }
+  };
+
+  /**
+   * Hand the meeting over as a PDF.
+   *
+   * This is the browser's own print pipeline rather than a canvas exporter:
+   * nothing is rasterised, so the Arabic keeps its shaping and the text in the
+   * saved file stays selectable, searchable and copyable. The only lever a
+   * browser gives us over the saved name is document.title, so it is swapped
+   * for the length of the job and put back after.
+   */
+  const downloadPdf = () => {
+    const original = document.title;
+    document.title = meetingFileName(meeting, language);
+
+    const restore = () => {
+      document.title = original;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    // Some browsers never fire afterprint if the dialog is dismissed with Esc.
+    window.setTimeout(restore, 60_000);
+
+    toast.info(copy.pdfHint);
+    // A frame, so the hint has painted before the dialog blocks the page.
+    window.setTimeout(() => window.print(), 120);
   };
 
   const toggleCovered = (index: number) => {
@@ -2077,6 +2112,9 @@ function DisplayMode({
           <button className="display-tool" onClick={toggleFullscreen}>
             {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}{" "}
             <span>{isFullscreen ? copy.exitFullScreen : copy.fullScreen}</span>
+          </button>
+          <button className="display-tool" onClick={downloadPdf}>
+            <Download size={15} /> <span>{copy.pdf}</span>
           </button>
           <button className="display-tool" onClick={onRefresh}>
             <Copy size={15} /> <span>{copy.refresh}</span>
@@ -2229,6 +2267,11 @@ function DisplayMode({
                             )
                           }
                         />
+                        {/* An input prints as an empty box; this prints the
+                            value that was typed into it. Print only. */}
+                        <p className="stage-print-value">
+                          {item.decision || "—"}
+                        </p>
                       </label>
                       <label className="stage-owner">
                         <span>{isArabic ? "المسؤول" : "Owner"}</span>
@@ -2239,6 +2282,7 @@ function DisplayMode({
                             onUpdateAgenda(index, "owner", event.target.value)
                           }
                         />
+                        <p className="stage-print-value">{item.owner || "—"}</p>
                       </label>
                     </div>
                   </div>

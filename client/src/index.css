@@ -1604,3 +1604,70 @@ input, textarea, select { outline: none; }
   .stage-progress { padding-inline: var(--space-6); }
   .stage-point-head { flex-direction: column; gap: var(--space-4); }
 }
+
+/* -------------------------------------------------------- the printed page */
+
+/* Print only: the typed value, standing in for the input it sits beside. */
+.stage-print-value { display: none; }
+
+/*
+ * "Download PDF" on the stage is the browser's own print pipeline, aimed at
+ * its Save-as-PDF destination. Nothing is rasterised, so Arabic keeps its
+ * shaping and the text in the saved file stays selectable and searchable --
+ * a canvas exporter would flatten both into a picture.
+ *
+ * Only the stage has a print form. You never hand someone the editor.
+ */
+
+@media print {
+  @page { size: A4; margin: 14mm 12mm; }
+
+  /* The stage is a designed document, not a screen dump: keep its paper. */
+  *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html, body { background: #fff; }
+
+  /* Controls, timers and notifications mean nothing on paper. */
+  .display-toolbar,
+  .stage-progress,
+  .stage-cover,
+  [data-sonner-toaster] { display: none !important; }
+
+  .display-shell { min-height: 0; background: #fff; }
+  .stage-page { max-width: none; margin: 0; padding: 0; }
+
+  /* On screen these mark where you are; on paper there is no "where you are". */
+  .stage-point.active { background: transparent; }
+  .stage-point.covered .stage-number,
+  .stage-point.covered h3 { opacity: 1; }
+
+  /* Swap each live input for the value it holds. */
+  .stage-decision input { display: none; }
+  .stage-decision .stage-print-value {
+    display: block;
+    margin: 0;
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-default);
+    font: var(--text-body-sm);
+    color: var(--text-primary);
+  }
+
+  /* A topic broken across two sheets is unreadable -- keep each one whole. */
+  .stage-purpose,
+  .stage-point,
+  .stage-block,
+  .stage-image,
+  .stage-actions li { break-inside: avoid; }
+
+  .stage-title, .stage-label { break-after: avoid; }
+
+  /* Side by side on screen, stacked on paper: A4 is narrower than the stage. */
+  .stage-columns { grid-template-columns: minmax(0, 1fr); }
+
+  /* Paper cannot be clicked, so name the destination beside the link. */
+  .stage-footer a::after {
+    content: " (" attr(href) ")";
+    font-size: .85em;
+    word-break: break-all;
+  }
+}
