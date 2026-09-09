@@ -1748,3 +1748,78 @@ input, textarea, select { outline: none; }
     word-break: break-all;
   }
 }
+
+/* ----------------------------------------------------- the share link */
+
+.share-panel {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+  padding: var(--space-6);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+}
+
+.share-head { display: flex; align-items: center; justify-content: space-between; }
+.share-note { font: var(--text-body-sm); color: var(--text-secondary); margin: 0; }
+.share-warning { font: var(--text-caption); color: var(--text-warning, var(--text-tertiary)); margin: 0; }
+
+.share-link { display: flex; gap: var(--space-3); }
+
+.share-link input {
+  flex: 1;
+  min-width: 0;
+  direction: ltr;
+  text-align: left;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  padding: var(--space-4) var(--space-5);
+  font: var(--text-caption);
+}
+
+.share-link button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  transition: var(--transition-control);
+}
+
+.share-link button:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+.share-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  height: 34px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font: var(--text-caption);
+  transition: var(--transition-control);
+}
+
+.share-action:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
+.share-action:disabled { opacity: .5; }
+.share-action.danger:hover:not(:disabled) { color: var(--text-danger, var(--text-primary)); }
+
+.spin { animation: share-spin 1s linear infinite; }
+@keyframes share-spin { to { transform: rotate(360deg); } }
+
+/* A read-only stage shows the decision and the owner as what they are: text. */
+.stage-value {
+  margin: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-hairline);
+  font: var(--text-body-sm);
+  color: var(--text-primary);
+}

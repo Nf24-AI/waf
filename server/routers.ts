@@ -3,6 +3,14 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
+import { nanoid } from "nanoid";
+import { TRPCError } from "@trpc/server";
+import {
+  canShare,
+  isShareExpired,
+  shareExpiresOn,
+  toSharedMeeting,
+} from "@shared/meeting-share";
 import {
   ACCESS_COOKIE,
   accessIsOpen,
@@ -17,7 +25,9 @@ import {
   deleteNotionMeeting,
   getNotionDatabaseInfo,
   isNotionConfigured,
+  findNotionMeetingByShareToken,
   listNotionMeetings,
+  setNotionMeetingShare,
   updateNotionMeeting,
 } from "./notion";
 import { ENV } from "./_core/env";
@@ -45,6 +55,9 @@ const meetingFields = {
   link: z.string(),
   image: z.string().default(""),
 };
+
+/** 32 chars of nanoid's 64-symbol alphabet — about 190 bits. */
+const SHARE_TOKEN_LENGTH = 32;
 
 const meetingInput = z.object(meetingFields);
 const meetingWithId = z.object({ id: z.string(), ...meetingFields });
@@ -130,6 +143,73 @@ export const appRouter = router({
       await deleteNotionMeeting(input.id);
       return { success: true as const };
     }),
+
+    /**
+     * Issue a read-only link for one meeting, or replace the one it has.
+     *
+     * The token is the whole secret, so it is generated here and never
+     * derived from anything guessable about the meeting. Re-sharing mints a
+     * fresh one, which is also how a leaked link is retired: the old address
+     * stops resolving the moment the new one exists.
+     */
+    share: appProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        const meetings = await listNotionMeetings();
+        const meeting = meetings.find((candidate) => candidate.id === input.id);
+        if (!meeting) throw new TRPCError({ code: "NOT_FOUND", message: "لا يوجد اجتماع بهذا المعرف." });
+
+        // Expiry is derived from the meeting's date, so a meeting without one
+        // has no window to offer. Refused here rather than issued dead.
+        if (!canShare(meeting)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "أضف تاريخ الاجتماع أولًا — صلاحية الرابط تُحسب منه.",
+          });
+        }
+
+        const token = nanoid(SHARE_TOKEN_LENGTH);
+        await setNotionMeetingShare(input.id, token);
+        return { token, expiresOn: shareExpiresOn(meeting.date) };
+      }),
+
+    /** Retire the link. The address stops resolving immediately. */
+    unshare: appProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        await setNotionMeetingShare(input.id, "");
+        return { success: true as const };
+      }),
+
+    /**
+     * Read one shared meeting. The only procedure outside the password gate.
+     *
+     * publicProcedure by design: the token is the credential, and it names
+     * exactly one meeting — there is no list here and no id to substitute, so
+     * holding one link is not a way to reach a second meeting.
+     *
+     * What comes back is rebuilt by toSharedMeeting, which drops the private
+     * preparation notes and the token itself.
+     */
+    shared: publicProcedure
+      .input(z.object({ token: z.string().min(1).max(128) }))
+      .query(async ({ input }) => {
+        const meeting = await findNotionMeetingByShareToken(input.token);
+        if (!meeting) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "هذا الرابط غير صالح." });
+        }
+
+        // Separated from NOT_FOUND so the page can say which it is. With a
+        // 190-bit token, confirming one existed tells an attacker nothing.
+        if (isShareExpired(meeting.date)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "انتهت صلاحية هذا الرابط.",
+          });
+        }
+
+        return { meeting: toSharedMeeting(meeting) };
+      }),
   }),
 });
 

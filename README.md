@@ -92,6 +92,34 @@ heading in the page body.
 
 Deleting a meeting archives the Notion page — restore it from Notion's trash.
 
+## Read-only share links
+
+Each meeting can be handed to someone outside the workspace. The selected
+meeting has a **رابط للقراءة فقط** panel: create the link, copy it, send it.
+
+What the holder of a link gets:
+
+- The meeting page, read-only. No editing, no timer, no marking topics covered.
+- **Not** your preparation notes (`note`), and not the token itself.
+- **Not** the rest of your meetings. The token names one meeting; there is no
+  list behind the page and no id to substitute.
+
+The link expires at the end of the day after the meeting, derived from the
+meeting's own date — so a meeting must have a date before it can be shared.
+**إيقاف المشاركة** retires a link immediately, which is also how a leaked one
+is killed before it would expire on its own.
+
+Everything else stays behind `APP_PASSWORD`. `meetings.shared` is the only
+public procedure and it is a query; issuing and retiring links are
+`appProcedure`, like every other write.
+
+The token lives in a `Share` rich_text property in Notion. An existing database
+needs it added once:
+
+```bash
+pnpm setup:notion   # adds only the properties that are missing
+```
+
 ## Sharing a meeting as a PDF
 
 Display mode has a **تنزيل PDF** button. It opens the browser's print dialog —
