@@ -15,11 +15,19 @@ import type { MeetingRecord } from "@shared/meeting-store";
  */
 export default function SharePanel({
   meeting,
+  freshToken,
   onShare,
   onUnshare,
   pending,
 }: {
   meeting: MeetingRecord;
+  /**
+   * A token just minted, before the meeting list has been re-read.
+   *
+   * The mutation returns it, so there is no reason to make someone wait on
+   * a full Notion refetch to see the link they just asked for.
+   */
+  freshToken?: string;
   onShare: () => void;
   onUnshare: () => void;
   pending: boolean;
@@ -28,7 +36,8 @@ export default function SharePanel({
 
   const shareable = canShare(meeting);
   const expiresIso = shareExpiresOn(meeting.date);
-  const url = meeting.share ? shareUrl(window.location.origin, meeting.share) : "";
+  const token = meeting.share || freshToken || "";
+  const url = token ? shareUrl(window.location.origin, token) : "";
 
   const copy = async () => {
     try {
@@ -49,7 +58,7 @@ export default function SharePanel({
         </span>
       </div>
 
-      {!meeting.share ? (
+      {!token ? (
         <>
           <p className="share-note">
             رابط يفتح صفحة هذا الاجتماع وحده، بلا كلمة مرور ولا وصول إلى بقية

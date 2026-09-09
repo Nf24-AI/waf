@@ -617,3 +617,21 @@ export async function setNotionMeetingShare(id: string, token: string) {
     }),
   });
 }
+
+/**
+ * The date of one meeting, as the display string the rest of the app uses.
+ *
+ * One request for one page. Issuing a share link only needs the date — it is
+ * what expiry is derived from — and reaching that through listNotionMeetings
+ * meant reading every meeting in the database, and every block of every page,
+ * to answer a question about one of them. That took seconds, and got slower
+ * with each meeting added.
+ *
+ * Null when the page has no date set, which is what refuses the share.
+ */
+export async function getNotionMeetingDate(id: string): Promise<string | null> {
+  const schema = await getDatabaseSchema();
+  const page = await notionRequest<NotionPage>(`/pages/${id}`);
+  const iso = readField(page, schema.date);
+  return iso ? fromIsoDate(iso) : null;
+}

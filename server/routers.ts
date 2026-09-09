@@ -26,6 +26,7 @@ import {
   getNotionDatabaseInfo,
   isNotionConfigured,
   findNotionMeetingByShareToken,
+  getNotionMeetingDate,
   listNotionMeetings,
   setNotionMeetingShare,
   updateNotionMeeting,
@@ -155,13 +156,13 @@ export const appRouter = router({
     share: appProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ input }) => {
-        const meetings = await listNotionMeetings();
-        const meeting = meetings.find((candidate) => candidate.id === input.id);
-        if (!meeting) throw new TRPCError({ code: "NOT_FOUND", message: "لا يوجد اجتماع بهذا المعرف." });
+        // Only the date is needed, and only to derive the expiry — so this
+        // reads the one page rather than walking the whole database.
+        const date = await getNotionMeetingDate(input.id);
 
-        // Expiry is derived from the meeting's date, so a meeting without one
-        // has no window to offer. Refused here rather than issued dead.
-        if (!canShare(meeting)) {
+        // A meeting without a date has no window to offer. Refused here
+        // rather than issued dead.
+        if (!date || !canShare({ date })) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "أضف تاريخ الاجتماع أولًا — صلاحية الرابط تُحسب منه.",
@@ -170,7 +171,7 @@ export const appRouter = router({
 
         const token = nanoid(SHARE_TOKEN_LENGTH);
         await setNotionMeetingShare(input.id, token);
-        return { token, expiresOn: shareExpiresOn(meeting.date) };
+        return { token, expiresOn: shareExpiresOn(date) };
       }),
 
     /** Retire the link. The address stops resolving immediately. */

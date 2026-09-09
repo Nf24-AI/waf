@@ -481,8 +481,22 @@ export default function Home() {
    * save: the token is not something the editor holds, and a save must never
    * be able to mint or drop a live link.
    */
+  /**
+   * The token the mutation just returned, held until the list catches up.
+   *
+   * Invalidating the list re-reads every meeting from Notion, which takes
+   * seconds — long enough that the panel looked like nothing had happened.
+   * The link is already known here, so it is shown at once and the refetch
+   * simply confirms it. Keyed by meeting id so switching meetings mid-flight
+   * cannot show one meeting's link on another.
+   */
+  const [freshShare, setFreshShare] = useState<{ id: string; token: string } | null>(
+    null
+  );
+
   const notionShare = trpc.meetings.share.useMutation({
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      setFreshShare({ id: variables.id, token: data.token });
       void utils.meetings.list.invalidate();
       toast.success("أُنشئ الرابط. انسخه وشاركه.");
     },
@@ -491,6 +505,7 @@ export default function Home() {
 
   const notionUnshare = trpc.meetings.unshare.useMutation({
     onSuccess: () => {
+      setFreshShare(null);
       void utils.meetings.list.invalidate();
       toast.success("أُوقفت المشاركة. الرابط لم يعد يعمل.");
     },
@@ -1246,6 +1261,9 @@ export default function Home() {
             </Link>
             <SharePanel
               meeting={activeMeeting}
+              freshToken={
+                freshShare?.id === activeMeeting.id ? freshShare.token : undefined
+              }
               onShare={() => notionShare.mutate({ id: activeMeeting.id })}
               onUnshare={() => notionUnshare.mutate({ id: activeMeeting.id })}
               pending={notionShare.isPending || notionUnshare.isPending}
