@@ -1699,10 +1699,15 @@ input, textarea, select { outline: none; }
 
   html, body { background: #fff; }
 
-  /* Controls, timers and notifications mean nothing on paper. */
+  /* Controls, timers and notifications mean nothing on paper.
+   *
+   * The idle countdown is in here because activity stops extending the
+   * deadline once it is on screen — so clicking "Download PDF" while it is up
+   * does not dismiss it, and it would print across the meeting. */
   .display-toolbar,
   .stage-progress,
   .stage-cover,
+  .idle-overlay,
   [data-sonner-toaster] { display: none !important; }
 
   .display-shell { min-height: 0; background: #fff; }
