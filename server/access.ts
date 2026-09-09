@@ -21,6 +21,17 @@ import { IDLE_MINUTES } from "@shared/const";
  */
 
 export const ACCESS_COOKIE = "meeting-prep-session";
+
+function secret() {
+  const value = ENV.cookieSecret || ENV.appPassword;
+  if (!value) throw new Error("JWT_SECRET must be set when APP_PASSWORD is used.");
+  return new TextEncoder().encode(value);
+}
+
+export function accessIsOpen() {
+  return !ENV.appPassword;
+}
+
 /**
  * The session lasts an idle window, not a browsing day.
  *
@@ -34,17 +45,6 @@ export const ACCESS_COOKIE = "meeting-prep-session";
  * the cookie on every authenticated request: a workspace in use keeps sliding
  * forward, and only one left untouched runs out.
  */
-
-function secret() {
-  const value = ENV.cookieSecret || ENV.appPassword;
-  if (!value) throw new Error("JWT_SECRET must be set when APP_PASSWORD is used.");
-  return new TextEncoder().encode(value);
-}
-
-export function accessIsOpen() {
-  return !ENV.appPassword;
-}
-
 export async function createSessionToken() {
   return new SignJWT({ scope: "owner" })
     .setProtectedHeader({ alg: "HS256" })
