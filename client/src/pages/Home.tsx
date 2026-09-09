@@ -11,6 +11,7 @@ import {
   CircleHelp,
   Clock3,
   Copy,
+  Download,
   ExternalLink,
   FileText,
   LayoutDashboard,
@@ -47,6 +48,7 @@ import { formatAgendaIndex, getMeetingReadiness, moveListItem } from "@shared/me
 import { PREPARE_STEPS, completedSteps, nextStep } from "./prepare-steps";
 import { fromIsoDate, toArabicDigits, toIsoDate } from "@shared/meeting-date";
 import { buildTimeRange, parseTimeRange } from "@shared/meeting-time";
+import { meetingFileName } from "@shared/meeting-pdf";
 import type { MeetingRecord } from "@shared/meeting-store";
 
 
@@ -141,8 +143,8 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(() => new URLSearchParams(window.location.search).get("customize") === "1");
   const [location] = useLocation();
   const copy = language === "ar"
-    ? { dashboard: "MEETINGS", intro: "الاجتماعات", introSub: "تضع البيانات الأساسية، وواف يبني صفحة الاجتماع.", newMeeting: "اجتماع جديد", edit: "وضع التحرير", display: "وضع العرض", basics: "المعلومات الأساسية", summary: "الملخص التنفيذي", notes: "ملاحظاتك التحضيرية", agenda: "مواضيع النقاش", external: "مرجع خارجي", actions: "نقاط متابعة", save: "حفظ التغييرات", back: "العودة للتحرير", refresh: "تحديث العرض", fullScreen: "ملء الشاشة", exitFullScreen: "الخروج من ملء الشاشة", goal: "هدف الاجتماع", topics: "محاور النقاش", title: "عنوان الاجتماع", date: "التاريخ", time: "الوقت", type: "نوع الاجتماع", attendees: "الحضور", hint: "افصل بين الأسماء بفاصلة", search: "ابحث...", noResults: "لا اجتماعات مطابقة", noResultsHint: "جرّب كلمة أخرى.", loading: "جارٍ التحميل", loadingHint: "تُقرأ الاجتماعات من Notion.", connected: "Notion متصل", syncing: "جاري المزامنة...", retry: "إعادة المحاولة", templates: "ابدأ بقالب", meetings: "القائمة", meetingsHint: "اختر اجتماعًا.", active: "الاجتماع النشط", scopeUpcoming: "القادمة", scopePast: "السابقة", scopeAll: "الكل", archive: "أرشفة الاجتماع", archiveConfirm: "سيُنقل هذا الاجتماع إلى أرشيف Notion. يمكنك استعادته من سلة المحذوفات هناك.", cancel: "إلغاء", image: "صورة أو شعار", imageHint: "رابط صورة تظهر أعلى صفحة الاجتماع — شعار الجهة أو الشريك.", emptyTitle: "لا اجتماعات", emptyHint: "قاعدة Notion متصلة وفارغة. ابدأ بقالب." }
-    : { dashboard: "MEETINGS", intro: "Meetings", introSub: "You enter the essentials, and Waf builds the meeting page.", newMeeting: "New meeting", edit: "Edit mode", display: "Display mode", basics: "Meeting basics", summary: "Executive summary", notes: "Preparation notes", agenda: "Discussion topics", external: "External reference", actions: "Follow-ups", save: "Save changes", back: "Back to edit", refresh: "Refresh view", fullScreen: "Full screen", exitFullScreen: "Exit full screen", goal: "Meeting goal", topics: "Discussion topics", title: "Meeting title", date: "Date", time: "Time", type: "Meeting type", attendees: "Attendees", hint: "Separate names with commas", search: "Search...", noResults: "No results", noResultsHint: "Try a different search.", loading: "Loading", loadingHint: "Reading meetings from Notion.", connected: "Notion connected", syncing: "Syncing from Notion...", retry: "Retry", templates: "Start from a template", meetings: "List", meetingsHint: "Select a meeting.", active: "Active meeting", scopeUpcoming: "Upcoming", scopePast: "Past", scopeAll: "All", archive: "Archive meeting", archiveConfirm: "This meeting moves to the Notion archive. You can restore it from the trash there.", cancel: "Cancel", image: "Image or logo", imageHint: "Link to an image shown at the top of the meeting page — an organisation or partner mark.", emptyTitle: "No meetings", emptyHint: "Notion is connected and empty. Start from a template." };
+    ? { dashboard: "MEETINGS", intro: "الاجتماعات", introSub: "تضع البيانات الأساسية، وواف يبني صفحة الاجتماع.", newMeeting: "اجتماع جديد", edit: "وضع التحرير", display: "وضع العرض", basics: "المعلومات الأساسية", summary: "الملخص التنفيذي", notes: "ملاحظاتك التحضيرية", agenda: "مواضيع النقاش", external: "مرجع خارجي", actions: "نقاط متابعة", save: "حفظ التغييرات", back: "العودة للتحرير", refresh: "تحديث العرض", fullScreen: "ملء الشاشة", exitFullScreen: "الخروج من ملء الشاشة", pdf: "تنزيل PDF", pdfHint: "اختر «حفظ كملف PDF» في وجهة الطباعة، ثم شارك الملف.", goal: "هدف الاجتماع", topics: "محاور النقاش", title: "عنوان الاجتماع", date: "التاريخ", time: "الوقت", type: "نوع الاجتماع", attendees: "الحضور", hint: "افصل بين الأسماء بفاصلة", search: "ابحث...", noResults: "لا اجتماعات مطابقة", noResultsHint: "جرّب كلمة أخرى.", loading: "جارٍ التحميل", loadingHint: "تُقرأ الاجتماعات من Notion.", connected: "Notion متصل", syncing: "جاري المزامنة...", retry: "إعادة المحاولة", templates: "ابدأ بقالب", meetings: "القائمة", meetingsHint: "اختر اجتماعًا.", active: "الاجتماع النشط", scopeUpcoming: "القادمة", scopePast: "السابقة", scopeAll: "الكل", archive: "أرشفة الاجتماع", archiveConfirm: "سيُنقل هذا الاجتماع إلى أرشيف Notion. يمكنك استعادته من سلة المحذوفات هناك.", cancel: "إلغاء", image: "صورة أو شعار", imageHint: "رابط صورة تظهر أعلى صفحة الاجتماع — شعار الجهة أو الشريك.", emptyTitle: "لا اجتماعات", emptyHint: "قاعدة Notion متصلة وفارغة. ابدأ بقالب." }
+    : { dashboard: "MEETINGS", intro: "Meetings", introSub: "You enter the essentials, and Waf builds the meeting page.", newMeeting: "New meeting", edit: "Edit mode", display: "Display mode", basics: "Meeting basics", summary: "Executive summary", notes: "Preparation notes", agenda: "Discussion topics", external: "External reference", actions: "Follow-ups", save: "Save changes", back: "Back to edit", refresh: "Refresh view", fullScreen: "Full screen", exitFullScreen: "Exit full screen", pdf: "Download PDF", pdfHint: "Pick “Save as PDF” as the destination, then share the file.", goal: "Meeting goal", topics: "Discussion topics", title: "Meeting title", date: "Date", time: "Time", type: "Meeting type", attendees: "Attendees", hint: "Separate names with commas", search: "Search...", noResults: "No results", noResultsHint: "Try a different search.", loading: "Loading", loadingHint: "Reading meetings from Notion.", connected: "Notion connected", syncing: "Syncing from Notion...", retry: "Retry", templates: "Start from a template", meetings: "List", meetingsHint: "Select a meeting.", active: "Active meeting", scopeUpcoming: "Upcoming", scopePast: "Past", scopeAll: "All", archive: "Archive meeting", archiveConfirm: "This meeting moves to the Notion archive. You can restore it from the trash there.", cancel: "Cancel", image: "Image or logo", imageHint: "Link to an image shown at the top of the meeting page — an organisation or partner mark.", emptyTitle: "No meetings", emptyHint: "Notion is connected and empty. Start from a template." };
   const isDisplay = location === "/display";
   const isArabic = language === "ar";
   const utils = trpc.useUtils();
@@ -516,7 +518,7 @@ function DisplayMode({ meeting, onBack, onRefresh, onUpdateAgenda, copy, languag
   onBack: () => void;
   onRefresh: () => void;
   onUpdateAgenda: (index: number, field: "decision" | "owner", value: string) => void;
-  copy: { back: string; refresh: string; fullScreen: string; exitFullScreen: string; goal: string; topics: string; actions: string; notes: string; attendees: string };
+  copy: { back: string; refresh: string; fullScreen: string; exitFullScreen: string; pdf: string; pdfHint: string; goal: string; topics: string; actions: string; notes: string; attendees: string };
   language: "ar" | "en";
 }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -550,6 +552,32 @@ function DisplayMode({ meeting, onBack, onRefresh, onUpdateAgenda, copy, languag
     } catch {
       toast.error(isArabic ? "تعذر فتح ملء الشاشة" : "Could not open full screen");
     }
+  };
+
+  /**
+   * Hand the meeting over as a PDF.
+   *
+   * This is the browser's own print pipeline rather than a canvas exporter:
+   * nothing is rasterised, so the Arabic keeps its shaping and the text in the
+   * saved file stays selectable, searchable and copyable. The only lever a
+   * browser gives us over the saved name is document.title, so it is swapped
+   * for the length of the job and put back after.
+   */
+  const downloadPdf = () => {
+    const original = document.title;
+    document.title = meetingFileName(meeting, language);
+
+    const restore = () => {
+      document.title = original;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    // Some browsers never fire afterprint if the dialog is dismissed with Esc.
+    window.setTimeout(restore, 60_000);
+
+    toast.info(copy.pdfHint);
+    // A frame, so the hint has painted before the dialog blocks the page.
+    window.setTimeout(() => window.print(), 120);
   };
 
   const toggleCovered = (index: number) => {
@@ -589,6 +617,7 @@ function DisplayMode({ meeting, onBack, onRefresh, onUpdateAgenda, copy, languag
             <span>{startedAt === null ? (isArabic ? "ابدأ" : "Start") : clock(elapsed)}</span>
           </button>
           <button className="display-tool" onClick={toggleFullscreen}>{isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />} <span>{isFullscreen ? copy.exitFullScreen : copy.fullScreen}</span></button>
+          <button className="display-tool" onClick={downloadPdf}><Download size={15} /> <span>{copy.pdf}</span></button>
           <button className="display-tool" onClick={onRefresh}><Copy size={15} /> <span>{copy.refresh}</span></button>
         </div>
       </header>
@@ -679,6 +708,8 @@ function DisplayMode({ meeting, onBack, onRefresh, onUpdateAgenda, copy, languag
                             placeholder={isArabic ? "ما الذي اتُّفق عليه؟" : "What was agreed?"}
                             onChange={(event) => onUpdateAgenda(index, "decision", event.target.value)}
                           />
+                          {/* An input prints as an empty box; this prints the value typed into it. Print only. */}
+                          <p className="stage-print-value">{item.decision || "—"}</p>
                         </label>
                         <label className="stage-owner">
                           <span>{isArabic ? "المسؤول" : "Owner"}</span>
@@ -687,6 +718,7 @@ function DisplayMode({ meeting, onBack, onRefresh, onUpdateAgenda, copy, languag
                             placeholder={isArabic ? "من ينفّذه؟" : "Who owns it?"}
                             onChange={(event) => onUpdateAgenda(index, "owner", event.target.value)}
                           />
+                          <p className="stage-print-value">{item.owner || "—"}</p>
                         </label>
                       </div>
                     </div>

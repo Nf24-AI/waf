@@ -92,6 +92,22 @@ heading in the page body.
 
 Deleting a meeting archives the Notion page — restore it from Notion's trash.
 
+## Sharing a meeting as a PDF
+
+Display mode has a **تنزيل PDF** button. It opens the browser's print dialog —
+choose *Save as PDF* as the destination and the meeting page is saved as
+`واف — <title> — <date>.pdf`, ready to view or send on.
+
+The export goes through the browser's print pipeline rather than a canvas
+exporter, so the Arabic keeps its shaping and the text in the saved file stays
+selectable and searchable instead of being flattened into a picture.
+
+What changes on paper: the toolbar, the agenda progress rail and the *mark
+covered* buttons are dropped, the decision and owner fields print as the text
+typed into them rather than as empty boxes, the two bottom columns stack, and a
+topic is never split across two sheets. Everything else prints as designed —
+A4, 14mm/12mm margins.
+
 ## Commands
 
 ```bash

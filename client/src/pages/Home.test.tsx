@@ -191,6 +191,25 @@ describe("meeting workspace interactions", () => {
     expect(mocks.toastInfo).toHaveBeenCalledWith("ملء الشاشة غير متاح في هذا المتصفح");
   });
 
+  it("saves the meeting page as a PDF named after the meeting", async () => {
+    render(<Home />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
+    fireEvent.click(screen.getAllByText("وضع العرض")[0]);
+
+    const print = vi.fn();
+    window.print = print;
+    const beforeExport = document.title;
+
+    fireEvent.click(await screen.findByRole("button", { name: /تنزيل PDF/ }));
+
+    // The browser names the saved file after the title, so it is swapped for
+    // the length of the job — and put back once the dialog closes.
+    expect(document.title).toBe("واف — مراجعة شراكة الربع الثالث — الخميس، ٢٧ أغسطس ٢٠٢٦");
+    await waitFor(() => expect(print).toHaveBeenCalled());
+    window.dispatchEvent(new Event("afterprint"));
+    expect(document.title).toBe(beforeExport);
+  });
+
   it("keeps the workspace visible while Notion is syncing", async () => {
     // A refetch keeps existing meetings on screen; only the very first load
     // (no data yet) is allowed to block with the loading screen.
