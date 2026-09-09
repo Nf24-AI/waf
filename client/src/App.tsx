@@ -1,12 +1,13 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useRoute } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import IdleWarning from "./components/IdleWarning";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Lock from "./pages/Lock";
+import Shared from "./pages/Shared";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useIdleLock } from "./hooks/useIdleLock";
 import { MEETING_ROUTES } from "@shared/routes";
@@ -67,12 +68,17 @@ function Gate() {
 }
 
 export default function App() {
+  // A share link is read by someone who has no workspace and no password, so
+  // it is matched before the gate rather than inside it. The token in the
+  // address is the credential, and it reaches exactly one meeting.
+  const [isShared] = useRoute(MEETING_ROUTES.shared);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster position="bottom-left" />
-          <Gate />
+          {isShared ? <Shared /> : <Gate />}
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

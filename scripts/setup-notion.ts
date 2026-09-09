@@ -39,6 +39,8 @@ const REQUIRED_PROPERTIES: Record<string, unknown> = {
   Summary: { rich_text: {} },
   "External link": { url: {} },
   Image: { url: {} },
+  // Holds the read-only share token. Empty means the meeting is not shared.
+  Share: { rich_text: {} },
 };
 
 /** Add any property the adapter needs that the database does not have yet. */
@@ -118,6 +120,7 @@ async function main() {
         Summary: { rich_text: {} },
         "External link": { url: {} },
         Image: { url: {} },
+        Share: { rich_text: {} },
       },
     }),
   });

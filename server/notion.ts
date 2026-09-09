@@ -1,4 +1,4 @@
-import type { MeetingAgendaItem, MeetingRecord } from "@shared/meeting-store";
+import type { MeetingAgendaItem, MeetingDraft, MeetingRecord } from "@shared/meeting-store";
 import { fromIsoDate, toIsoDate } from "@shared/meeting-date";
 import { ENV } from "./_core/env";
 
@@ -152,7 +152,7 @@ function text(content: string) {
 // reads and writes always target the same real property.
 // ---------------------------------------------------------------------------
 
-type FieldKey = "title" | "date" | "time" | "type" | "attendees" | "status" | "summary" | "link" | "image";
+type FieldKey = "title" | "date" | "time" | "type" | "attendees" | "status" | "summary" | "link" | "image" | "share";
 
 const ALIASES: Record<FieldKey, string[]> = {
   title: ["name", "title", "العنوان", "الاسم", "اسم الاجتماع", "عنوان الاجتماع"],
@@ -164,6 +164,7 @@ const ALIASES: Record<FieldKey, string[]> = {
   status: ["status", "الحالة"],
   summary: ["summary", "الملخص", "الملخص التنفيذي"],
   link: ["external link", "link", "url", "الرابط", "مرجع خارجي"],
+  share: ["share", "المشاركة", "مشاركة", "رابط المشاركة"],
 };
 
 const ACCEPTED_TYPES: Record<FieldKey, string[]> = {
@@ -176,10 +177,11 @@ const ACCEPTED_TYPES: Record<FieldKey, string[]> = {
   status: ["status", "select"],
   summary: ["rich_text"],
   link: ["url"],
+  share: ["rich_text"],
 };
 
 /** Fields matched only by name. A loose type match would steal another column. */
-const ALIAS_ONLY = new Set<FieldKey>(["time", "image"]);
+const ALIAS_ONLY = new Set<FieldKey>(["time", "image", "share"]);
 
 export type ResolvedField = { name: string; type: string } | null;
 export type DatabaseSchema = Record<FieldKey, ResolvedField> & {
@@ -229,6 +231,7 @@ function resolveSchema(raw: RawDatabase): DatabaseSchema {
   const date = pick("date");
   const time = pick("time");
   const image = pick("image");
+  const share = pick("share");
   const link = pick("link");
   const status = pick("status");
   const type = pick("type");
@@ -242,7 +245,7 @@ function resolveSchema(raw: RawDatabase): DatabaseSchema {
   };
 
   return {
-    title, date, time, type, attendees, status, summary, link, image,
+    title, date, time, type, attendees, status, summary, link, image, share,
     statusOptions: optionsOf(status),
     typeOptions: optionsOf(type),
   };
@@ -369,6 +372,7 @@ async function mapPage(page: NotionPage, schema: DatabaseSchema): Promise<Meetin
     note: content.note,
     link: readField(page, schema.link) || page.url || "",
     image: readField(page, schema.image),
+    share: readField(page, schema.share),
   };
 }
 
@@ -445,6 +449,9 @@ function buildProperties(meeting: Partial<MeetingRecord>, schema: DatabaseSchema
   if (schema.link && meeting.link !== undefined) {
     properties[schema.link.name] = { url: meeting.link || null };
   }
+  if (schema.share && meeting.share !== undefined) {
+    properties[schema.share.name] = { rich_text: text(meeting.share) };
+  }
   // A "files" property needs Notion's upload flow, so only a url one is written.
   if (schema.image?.type === "url" && meeting.image !== undefined) {
     properties[schema.image.name] = { url: meeting.image || null };
@@ -457,7 +464,7 @@ function block(type: "heading_2" | "paragraph" | "bulleted_list_item", content: 
   return { object: "block", type, [type]: { rich_text: text(content) } };
 }
 
-function managedBlocks(meeting: MeetingRecord, hasTimeProperty: boolean) {
+function managedBlocks(meeting: MeetingDraft, hasTimeProperty: boolean) {
   return [
     // Skipped when Time is a real property, so the value has one home only.
     ...(hasTimeProperty ? [] : [block("heading_2", "Time"), block("paragraph", meeting.time)]),
@@ -476,7 +483,7 @@ function managedBlocks(meeting: MeetingRecord, hasTimeProperty: boolean) {
  * Replace only the sections this tool owns. Blocks outside Time/Agenda/Actions/
  * Note are notes the user wrote themselves and must survive a save.
  */
-async function replaceManagedContent(meeting: MeetingRecord, hasTimeProperty: boolean) {
+async function replaceManagedContent(meeting: MeetingDraft & { id: string }, hasTimeProperty: boolean) {
   const stale: string[] = [];
   let section = "";
   let cursor: string | undefined;
@@ -513,7 +520,7 @@ async function replaceManagedContent(meeting: MeetingRecord, hasTimeProperty: bo
   }
 }
 
-export async function updateNotionMeeting(meeting: MeetingRecord) {
+export async function updateNotionMeeting(meeting: MeetingDraft & { id: string }) {
   const schema = await getDatabaseSchema();
   await notionRequest(`/pages/${meeting.id}`, {
     method: "PATCH",
@@ -522,7 +529,7 @@ export async function updateNotionMeeting(meeting: MeetingRecord) {
   await replaceManagedContent(meeting, Boolean(schema.time));
 }
 
-export async function createNotionMeeting(meeting: Omit<MeetingRecord, "id">): Promise<MeetingRecord> {
+export async function createNotionMeeting(meeting: MeetingDraft): Promise<MeetingRecord> {
   const { databaseId } = getConfig();
   const schema = await getDatabaseSchema();
 
@@ -534,7 +541,8 @@ export async function createNotionMeeting(meeting: Omit<MeetingRecord, "id">): P
     }),
   });
 
-  const created: MeetingRecord = { ...meeting, id: page.id };
+  // A meeting is never born shared.
+  const created: MeetingRecord = { ...meeting, id: page.id, share: "" };
   await replaceManagedContent(created, Boolean(schema.time));
   return { ...created, link: created.link || page.url || "" };
 }
@@ -542,4 +550,70 @@ export async function createNotionMeeting(meeting: Omit<MeetingRecord, "id">): P
 /** Notion has no hard delete through the API; archiving is the delete action. */
 export async function deleteNotionMeeting(id: string) {
   await notionRequest(`/pages/${id}`, { method: "PATCH", body: JSON.stringify({ archived: true }) });
+}
+
+// ---------------------------------------------------------------------------
+// Read-only share links
+// ---------------------------------------------------------------------------
+
+/**
+ * Find the one meeting a share token names.
+ *
+ * Notion does the matching, with an exact filter on the Share property, so a
+ * token that is not in the database returns nothing rather than a page that
+ * merely resembles it. The result is capped at two on purpose: one is the
+ * answer, and a second means two meetings somehow carry the same token, which
+ * is not a situation to guess your way out of — it returns null instead.
+ *
+ * The Notion page URL is stripped when it is only the fallback. A link holder
+ * is outside the workspace; handing them the address of the underlying Notion
+ * page tells them where the meetings live for no benefit they can use.
+ */
+export async function findNotionMeetingByShareToken(token: string): Promise<MeetingRecord | null> {
+  if (!token) return null;
+
+  const { databaseId } = getConfig();
+  const schema = await getDatabaseSchema();
+  if (!schema.share) return null;
+
+  const response = await notionRequest<{ results: NotionPage[] }>(`/databases/${databaseId}/query`, {
+    method: "POST",
+    body: JSON.stringify({
+      page_size: 2,
+      filter: { property: schema.share.name, rich_text: { equals: token } },
+    }),
+  });
+
+  if (response.results.length !== 1) return null;
+
+  const page = response.results[0];
+  const meeting = await mapPage(page, schema);
+  return { ...meeting, link: meeting.link === page.url ? "" : meeting.link };
+}
+
+/**
+ * Write only the share token, leaving every other property and the page body
+ * untouched.
+ *
+ * Deliberately not part of updateNotionMeeting: that one rebuilds the whole
+ * page from what the workspace sent, and the token is not something the
+ * workspace edits. Keeping the two apart means a normal save can never drop a
+ * live link, and issuing a link can never overwrite a meeting.
+ */
+export async function setNotionMeetingShare(id: string, token: string) {
+  const schema = await getDatabaseSchema();
+  if (!schema.share) {
+    // Surfaced to the workspace as a toast, so it is written for the person
+    // reading it, not for a log.
+    throw new Error(
+      "قاعدة Notion تنقصها خاصية Share. شغّل: pnpm setup:notion"
+    );
+  }
+
+  await notionRequest(`/pages/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      properties: { [schema.share.name]: { rich_text: text(token) } },
+    }),
+  });
 }
