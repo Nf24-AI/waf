@@ -44,7 +44,8 @@ export default function Lock({
   };
 
   return (
-    <div dir={isArabic ? "rtl" : "ltr"} className="lock-screen">
+<div dir={isArabic ? "rtl" : "ltr"} className="lock-screen" data-waf-theme="navy">
+
       <form className="lock-card waf-dots" onSubmit={submit}>
         <p className="lock-wordmark">واف</p>
         <p className="lock-eyebrow">{isArabic ? "مساحة مقيّدة" : "RESTRICTED"}</p>
