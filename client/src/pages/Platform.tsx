@@ -1,3 +1,6 @@
+// مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
+// فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
+import React from "react";
 import { ArrowLeft, ArrowUpLeft, CalendarClock, LayoutGrid, Lock } from "lucide-react";
 import { Link } from "wouter";
 import { SERVICES, type Service } from "@shared/services";
