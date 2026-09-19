@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { PLATFORM_ROUTE } from "@shared/routes";
 import {
   ArrowLeft,
   CalendarClock,
@@ -868,17 +869,22 @@ export default function Home() {
       className={`workspace-shell density-${uiSettings.density}`}
     >
       <aside className="workspace-sidebar hidden lg:flex">
-        <div className="brand-lockup">
+        {/* الشعار هو طريق الرجوع: الاجتماعات خدمة واحدة داخل واف، لا واف كله. */}
+        <Link
+          href={PLATFORM_ROUTE}
+          className="brand-lockup brand-lockup-link"
+          aria-label={isArabic ? "الرجوع إلى خدمات واف" : "Back to Waf services"}
+        >
           <div className="brand-mark">
             <Sparkles size={17} />
           </div>
           <div>
             <p className="brand-title">واف</p>
             <p className="brand-subtitle">
-              {isArabic ? "أداة الاجتماعات الداخلية" : "Internal meetings tool"}
+              {isArabic ? "خدمة الاجتماعات" : "Meetings service"}
             </p>
           </div>
-        </div>
+        </Link>
         <div className="sidebar-section-label">
           {isArabic ? "مساحة العمل" : "Workspace"}
         </div>
