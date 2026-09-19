@@ -1748,3 +1748,204 @@ input, textarea, select { outline: none; }
     word-break: break-all;
   }
 }
+
+/* ───────────────────────────────────────────────────────────────
+ * Platform — the front door.
+ *
+ * The console's own surface, one step quieter: the dot matrix carries the
+ * texture so the cards can stay hairline and flat. A service card is a link
+ * that looks like a card; a "soon" card is the same shape with its affordance
+ * removed, so absence reads as deliberate rather than broken.
+ * ─────────────────────────────────────────────────────────────── */
+
+.platform-shell {
+  min-height: 100vh;
+  background: var(--canvas);
+  padding: var(--space-12) var(--gutter-inline) var(--space-11);
+}
+.platform-inner {
+  max-width: var(--content-max);
+  margin-inline: auto;
+}
+
+.platform-head {
+  padding-bottom: var(--space-11);
+  border-bottom: 1px solid var(--border-hairline);
+  margin-bottom: var(--space-11);
+}
+.platform-lockup {
+  padding: 0 0 var(--space-7);
+}
+.platform-lede {
+  margin: 0;
+  max-width: var(--prose-max);
+  font: var(--text-body-lg);
+  color: var(--text-secondary);
+}
+
+.platform-section + .platform-section {
+  margin-top: var(--space-12);
+}
+.platform-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-5);
+  margin-bottom: var(--space-7);
+}
+.platform-section-title {
+  margin: 0;
+  font: var(--text-title-2);
+  color: var(--text-primary);
+}
+.platform-count {
+  font: var(--text-caption);
+  color: var(--text-tertiary);
+}
+.platform-section-note {
+  margin: calc(var(--space-7) * -1 + var(--space-2)) 0 var(--space-7);
+  font: var(--text-body-sm);
+  color: var(--text-tertiary);
+}
+
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+  gap: var(--space-6);
+}
+
+.service-card {
+  display: block;
+  padding: var(--space-8);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-panel);
+  color: inherit;
+  transition: var(--transition-control), transform var(--dur-fast) var(--ease-standard);
+}
+/* The base stylesheet underlines every <a>; a card is a surface, not a word. */
+a.service-card {
+  border-bottom: 1px solid var(--border-hairline);
+}
+a.service-card:hover {
+  color: inherit;
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+a.service-card:active {
+  transform: scale(var(--press-scale));
+}
+a.service-card:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.service-card-soon {
+  background: var(--alpha-fill-weak);
+  border-style: dashed;
+  border-color: var(--border-hairline);
+}
+.service-card-soon .service-name {
+  color: var(--text-secondary);
+}
+.service-card-soon .service-summary {
+  color: var(--text-disabled);
+}
+
+.service-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+/* Latin micro-label: uppercase and tracked. Arabic never imitates this. */
+.service-eyebrow {
+  margin: 0;
+  font: var(--text-eyebrow);
+  letter-spacing: var(--ls-widest);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  direction: ltr;
+}
+
+.service-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-badge);
+  font: var(--text-caption);
+  white-space: nowrap;
+}
+.service-flag-live {
+  color: var(--status-live);
+  border-color: color-mix(in srgb, var(--status-live) 40%, transparent);
+}
+.service-flag-soon {
+  color: var(--text-tertiary);
+}
+
+.service-name {
+  margin: 0 0 var(--space-4);
+  font: var(--text-title-3);
+  color: var(--text-primary);
+}
+.service-summary {
+  margin: 0;
+  font: var(--text-body-sm);
+  color: var(--text-secondary);
+}
+
+.service-go {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-7);
+  font: var(--text-label);
+  color: var(--accent);
+}
+a.service-card:hover .service-go {
+  color: var(--accent-hover);
+}
+
+.platform-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-12);
+  padding-top: var(--space-7);
+  border-top: 1px solid var(--border-hairline);
+  font: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 640px) {
+  .platform-shell { padding-top: var(--space-10); }
+  .platform-section + .platform-section { margin-top: var(--space-11); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-card { transition: none; }
+  a.service-card:hover, a.service-card:active { transform: none; }
+}
+
+/* The lockup became the way back to the platform; it must not read as a link. */
+.brand-lockup-link {
+  border-bottom: none;
+  color: inherit;
+  border-radius: var(--radius-card);
+  transition: var(--transition-control);
+}
+.brand-lockup-link:hover {
+  color: inherit;
+  border-bottom: none;
+}
+.brand-lockup-link:hover .brand-mark {
+  border-color: var(--border-strong);
+  background: var(--alpha-fill-strong);
+}
+.brand-lockup-link:focus-visible {
+  box-shadow: var(--focus-ring);
+}

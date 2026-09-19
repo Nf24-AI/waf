@@ -7,13 +7,15 @@ import IdleWarning from "./components/IdleWarning";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Lock from "./pages/Lock";
+import Platform from "./pages/Platform";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useIdleLock } from "./hooks/useIdleLock";
-import { MEETING_ROUTES } from "@shared/routes";
+import { MEETING_ROUTES, PLATFORM_ROUTE } from "@shared/routes";
 
 function Router() {
   return (
     <Switch>
+      <Route path={PLATFORM_ROUTE} component={Platform} />
       <Route path={MEETING_ROUTES.prepare} component={Home} />
       <Route path={MEETING_ROUTES.display} component={Home} />
       <Route path="/404" component={NotFound} />
