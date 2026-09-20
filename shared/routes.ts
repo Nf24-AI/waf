@@ -4,6 +4,8 @@
  */
 export const PLATFORM_ROUTE = "/";
 
+export const DECISIONS_ROUTE = "/decisions";
+
 export const MEETING_ROUTES = {
   prepare: "/meetings",
   display: "/display",
