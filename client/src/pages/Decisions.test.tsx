@@ -163,4 +163,18 @@ describe("decision log page", () => {
     renderPage();
     expect(screen.getByRole("link", { name: /خدمات واف/ })).toHaveAttribute("href", "/");
   });
+
+  it("sends each card to the meeting the decision was taken in, not to the list", () => {
+    withMeetings(SAMPLE);
+    renderPage();
+
+    // بطاقتان من m1 وواحدة من m2 — والرابط يفرّق بينها
+    const cards = Array.from(document.querySelectorAll(".decision-card"));
+    const hrefs = cards.map((card) => card.querySelector(".decision-source")?.getAttribute("href"));
+
+    expect(hrefs).toContain("/meetings?meeting=m1");
+    expect(hrefs).toContain("/meetings?meeting=m2");
+    // رابط إلى القائمة وحدها يكسر الوعد: «ارجع وصحّحه حيث اتُّخذ»
+    expect(hrefs).not.toContain("/meetings");
+  });
 });

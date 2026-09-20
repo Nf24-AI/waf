@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { ArrowRight, CalendarDays, Search, UserRound, Users } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { MEETING_ROUTES, PLATFORM_ROUTE } from "@shared/routes";
+import { MEETING_ROUTES, PLATFORM_ROUTE, meetingHref } from "@shared/routes";
 import {
   collectDecisions,
   decisionOwners,
@@ -50,7 +50,7 @@ function DecisionCard({ entry }: { entry: DecisionEntry }) {
       {entry.context && <p className="decision-context">{entry.context}</p>}
 
       {/* القرار يُحرَّر في اجتماعه لا هنا، فالرابط يعيدك إلى مصدره. */}
-      <Link className="decision-source" href={MEETING_ROUTES.prepare}>
+      <Link className="decision-source" href={meetingHref(entry.meetingId)}>
         <ArrowRight size={13} aria-hidden="true" />
         {entry.meetingTitle || "الاجتماع"}
         {entry.meetingType && <span className="decision-source-type">{entry.meetingType}</span>}
