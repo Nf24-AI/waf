@@ -53,6 +53,14 @@ export const SERVICES: readonly Service[] = [
     href: "/decisions",
   },
   {
+    id: "status",
+    name: "تقرير الحالة الأسبوعي",
+    eyebrow: "STATUS REPORT",
+    summary: "ما انعقد وما تقرّر وما يحتاج انتباهاً في فترة تختارها — صفحة واحدة مُشتقّة من الاجتماعات، تُرسَل كما هي.",
+    status: "live",
+    href: "/status",
+  },
+  {
     id: "risks",
     name: "سجلّ المخاطر",
     eyebrow: "RISK REGISTER",
@@ -64,13 +72,6 @@ export const SERVICES: readonly Service[] = [
     name: "خريطة أصحاب المصلحة",
     eyebrow: "STAKEHOLDER MAP",
     summary: "من يقرّر ومن يُستشار ومن يُبلَّغ فقط، ودرجة تأثير كلٍّ منهم على المشروع.",
-    status: "soon",
-  },
-  {
-    id: "status",
-    name: "تقرير الحالة الأسبوعي",
-    eyebrow: "STATUS REPORT",
-    summary: "ما أُنجز وما تعطّل وما يحتاج قراراً، في صفحة واحدة تُرسَل كما هي.",
     status: "soon",
   },
   {
