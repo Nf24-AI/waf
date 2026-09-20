@@ -48,8 +48,9 @@ export const SERVICES: readonly Service[] = [
     id: "decisions",
     name: "سجلّ القرارات",
     eyebrow: "DECISION LOG",
-    summary: "كل قرار ومن اتخذه ومتى وما البدائل التي رُفضت، حتى لا يُعاد النقاش بعد شهرين.",
-    status: "soon",
+    summary: "كل قرار اتُّخذ في اجتماع، ومن يملكه ومتى — يُقرأ من الاجتماعات نفسها، فلا سجلّ ثانٍ يتباعد عنها.",
+    status: "live",
+    href: "/decisions",
   },
   {
     id: "risks",

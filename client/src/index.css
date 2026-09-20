@@ -1949,3 +1949,134 @@ a.service-card:hover .service-go {
 .brand-lockup-link:focus-visible {
   box-shadow: var(--focus-ring);
 }
+
+/* ───────────────────────────────────────────────────────────────
+ * Decision log — a read view over the meetings that already exist.
+ *
+ * The decision itself is the loudest thing on the card, because that is what
+ * you came to read; everything else is metadata around it. It reuses the
+ * platform shell so the two services feel like one product.
+ * ─────────────────────────────────────────────────────────────── */
+
+.decision-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-7);
+  border-bottom: none;
+  font: var(--text-label);
+  color: var(--text-tertiary);
+  transition: var(--transition-control);
+}
+.decision-back:hover { color: var(--accent); border-bottom: none; }
+.decision-eyebrow { margin-bottom: var(--space-3); }
+.decision-title { margin: 0 0 var(--space-5); font: var(--text-title-1); }
+
+.decision-state {
+  display: grid;
+  place-items: center;
+  padding: var(--space-13);
+}
+
+.decision-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-8);
+}
+.decision-search { flex: 1 1 260px; }
+.decision-owner {
+  height: var(--control-h-md);
+  padding-inline: var(--space-5);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  font: var(--text-body-md);
+  transition: var(--transition-control);
+}
+.decision-owner:focus-within { border-color: var(--border-focus); }
+.decision-count { margin: 0; font: var(--text-caption); color: var(--text-tertiary); white-space: nowrap; }
+.decision-warn { color: var(--status-attention); }
+
+.decision-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-6);
+}
+
+.decision-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-8);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-panel);
+  /* The accent edge marks it as a decision, not a note. */
+  box-shadow: inset 2px 0 0 0 var(--accent-quiet);
+  transition: var(--transition-control);
+}
+.decision-card:hover {
+  border-color: var(--border-default);
+  box-shadow: inset 2px 0 0 0 var(--accent), var(--shadow-md);
+}
+
+/* The decision is what you came for; it outweighs every label around it. */
+.decision-text {
+  margin: 0;
+  font: var(--fw-medium) var(--fs-16) / var(--lh-normal) var(--font-sans);
+  color: var(--text-primary);
+}
+
+.decision-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.decision-topic {
+  font: var(--text-caption);
+  color: var(--text-secondary);
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-badge);
+}
+.decision-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--text-caption);
+  color: var(--text-tertiary);
+}
+.decision-unowned { color: var(--status-attention); }
+
+.decision-context {
+  margin: 0;
+  font: var(--text-body-sm);
+  color: var(--text-tertiary);
+}
+
+.decision-source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-hairline);
+  border-bottom: none;
+  font: var(--text-label);
+  color: var(--text-secondary);
+  transition: var(--transition-control);
+}
+.decision-source:hover { color: var(--accent); border-bottom: none; }
+.decision-source-type {
+  font: var(--text-caption);
+  color: var(--text-tertiary);
+  padding-inline-start: var(--space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decision-card { transition: none; }
+}

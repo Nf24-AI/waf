@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { PLATFORM_ROUTE } from "@shared/routes";
+import { MEETING_PARAM, PLATFORM_ROUTE } from "@shared/routes";
 import {
   ArrowLeft,
   CalendarClock,
@@ -361,7 +361,15 @@ export default function Home() {
   // Starts empty: meetings come from Notion, and showing samples first would
   // flash fake data that the user could mistake for their own.
   const [meetings, setMeetings] = useState<MeetingRecord[]>([]);
-  const [activeId, setActiveId] = useState("");
+  // اجتماع بعينه قد يُطلب في العنوان — من سجلّ القرارات مثلاً. القراءة مرة
+  // واحدة عند الإقلاع: بعدها الاختيار يخصّ المستخدم لا الرابط.
+  const [activeId, setActiveId] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get(MEETING_PARAM) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [query, setQuery] = useState("");
   const [saved, setSaved] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
