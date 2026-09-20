@@ -5,6 +5,7 @@
 export const PLATFORM_ROUTE = "/";
 
 export const DECISIONS_ROUTE = "/decisions";
+export const STATUS_REPORT_ROUTE = "/status";
 
 export const MEETING_ROUTES = {
   prepare: "/meetings",
