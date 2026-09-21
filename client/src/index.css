@@ -2211,8 +2211,8 @@ a.service-card:hover .service-go {
  * الوجه العام (/welcome). مثبَّت على ثيم navy عبر data-waf-theme، لأن بطله
  * صورة كحلية بنوافذ ذهبية تفقد معناها فوق القماش شبه الأسود.
  *
- * الاسم فوق اللوحة بلا ظلّ ولا توهّج ولا لون مميِّز: موضعه يُحسب من الصورة
- * نفسها (lib/ascii-stage.ts) فيقع في فراغها، ومن وقع في فراغ لا يحتاج عكازاً.
+ * الصورة تُعرض كما هي: img لا canvas، ولا رسم فوقها. كل المعالجة عناصر
+ * فوقها — أقواس، بيانات، وعمود حكاية. لا قيمة لونية حرفية هنا، كلها رموز.
  */
 
 .landing { background: var(--canvas); color: var(--text-body); min-height: 100vh; }
@@ -2221,14 +2221,6 @@ a.service-card:hover .service-go {
   max-width: var(--content-max);
   margin-inline: auto;
   padding-inline: var(--gutter-inline);
-}
-
-.landing-eyebrow {
-  margin: 0;
-  font: var(--text-eyebrow);
-  letter-spacing: var(--ls-widest);
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 
 /* ---- الشريط العلوي ---- */
@@ -2259,10 +2251,13 @@ a.service-card:hover .service-go {
   color: var(--accent);
 }
 .landing-topbar nav { display: flex; align-items: center; gap: var(--space-4); }
+/* رابط نظام واف يحمل خطّاً سفلياً افتراضياً (base.css). داخل المنصّة
+   يميّز الروابط في نصّ كثيف؛ هنا كل عنصر رابط، فالخطّ ضجيج. */
 .landing-topbar nav a {
   font: var(--text-label);
   color: var(--text-secondary);
   text-decoration: none;
+  border-block-end: 0;
   padding: var(--space-4) var(--space-6);
   border-radius: var(--radius-control);
   transition: var(--transition-control);
@@ -2271,202 +2266,473 @@ a.service-card:hover .service-go {
 .landing-topbar nav a.landing-go-btn { background: var(--accent); color: var(--accent-on); }
 .landing-topbar nav a.landing-go-btn:hover { background: var(--accent-hover); color: var(--accent-on); }
 
-/* ---- اللوحة ---- */
-.landing-stage {
+/* ================================================================ الصورة */
+.frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   background: var(--surface-sunken);
-  border-block-end: var(--border-w) solid var(--border-hairline);
+  isolation: isolate;
 }
-.landing-canvas { display: block; width: 100%; height: 100%; max-width: 100%; cursor: crosshair; }
-/* الحجاب يصل الصورة بالصفحة، لا يُقرئ الاسم. */
-.landing-stage::after {
-  content: "";
+.frame-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 96%;
+}
+/*
+ * غسلة لا حجاب: تُعتم جهة النصّ وحدها بما يكفي لقراءته، وتترك القرية
+ * والسماء البرتقالية على حالهما. الصورة هي الموضوع، لا خلفية له.
+ */
+.frame-wash {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: var(--scrim-bottom);
-  opacity: 0.55;
+  background:
+    linear-gradient(to left, color-mix(in srgb, var(--navy-1000) 82%, transparent) 0%,
+                             color-mix(in srgb, var(--navy-1000) 46%, transparent) 34%,
+                             transparent 64%),
+    linear-gradient(to top, color-mix(in srgb, var(--navy-1000) 74%, transparent) 0%, transparent 26%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--navy-1000) 52%, transparent) 0%, transparent 18%);
 }
 
-.landing-brand {
+/* أقواس الزوايا: علامة مطبوعة، مفتوحة من جهتين. */
+.frame-corner {
   position: absolute;
-  z-index: 2;
-  transform: translate(-50%, -50%);
-  text-align: center;
+  width: 26px;
+  height: 26px;
+  border: var(--border-w) solid var(--alpha-line-strong);
   pointer-events: none;
-  max-width: min(86vw, 620px);
 }
-.landing-brand-word {
-  position: relative;
+.frame-corner.is-tr { inset-block-start: 22px; inset-inline-start: 22px; border-inline-end: 0; border-block-end: 0; }
+.frame-corner.is-tl { inset-block-start: 22px; inset-inline-end: 22px; border-inline-start: 0; border-block-end: 0; }
+.frame-corner.is-br { inset-block-end: 22px; inset-inline-start: 22px; border-inline-end: 0; border-block-start: 0; }
+.frame-corner.is-bl { inset-block-end: 22px; inset-inline-end: 22px; border-inline-start: 0; border-block-start: 0; }
+
+/* ---- بيانات اللقطة ---- */
+.frame-meta { position: absolute; inset: 0; pointer-events: none; }
+.frame-slug {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font: var(--fw-regular) var(--fs-11)/1.5 var(--font-mono);
+  letter-spacing: var(--ls-widest);
+  color: var(--text-tertiary);
+}
+.frame-slug b { font-family: var(--font-sans); font-weight: var(--fw-medium); font-size: var(--fs-14); letter-spacing: 0; color: var(--text-primary); }
+.frame-rule { width: 34px; height: var(--border-w); background: var(--alpha-line-strong); display: block; }
+.frame-slug-place { inset-block-start: 46px; inset-inline-end: 62px; align-items: flex-start; }
+.frame-slug-date  { inset-block-start: 46px; inset-inline-start: 62px; }
+/* فخّ: inset-inline-* يُحلّ باتجاه العنصر نفسه لا أبيه. هذان مضبوطان على
+   ltr لأن محتواهما لاتيني وأرقام، فـ start عندهما يسار لا يمين. */
+.frame-slug-geo   { inset-block-end: 46px; inset-inline-start: 62px; direction: ltr; text-align: left; }
+.frame-slug-en    { inset-block-end: 46px; inset-inline-end: 62px; direction: ltr; text-align: right; align-items: flex-end; }
+
+/* ---- عمود الحكاية ---- */
+.frame-story {
+  position: absolute;
+  inset-inline-start: 62px;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  width: min(46ch, 52vw);
+  text-align: right;
+}
+.frame-story h1 {
   margin: 0;
   font-family: var(--font-serif-display);
   font-weight: var(--fw-medium);
-  font-size: clamp(58px, 10.5vw, 132px);
-  line-height: 1.24;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-/* نسخة تُقاس ولا تُرى: أثناء الكتابة يكون الاسم المرئي أضيق من نهايته. */
-.landing-brand-ghost {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-.landing-caret {
-  display: inline-block;
-  width: 2px;
-  height: 0.78em;
-  margin-inline-start: 0.1em;
-  background: currentColor;
-  vertical-align: -0.08em;
-  animation: landing-caret 1.05s steps(1, end) infinite;
-}
-@keyframes landing-caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-
-.landing-brand-meaning {
-  margin: var(--space-6) 0 0;
-  font: var(--fw-regular) clamp(13px, 1.55vw, 16.5px)/1.7 var(--font-sans);
-  color: var(--text-primary);
-  opacity: 0;
-  transition: opacity var(--dur-slow) var(--ease-out);
-}
-.landing-brand-meaning.is-in { opacity: 0.72; }
-
-/* ---- الشريط تحت اللوحة ---- */
-.landing-band { padding-block: var(--space-9) var(--space-8); }
-.landing-lede {
-  margin: var(--space-6) 0 0;
-  max-width: 56ch;
-  font: var(--fw-regular) clamp(15px, 1.6vw, 18px)/1.8 var(--font-sans);
-  color: var(--text-secondary);
-}
-.landing-acts { display: flex; gap: var(--space-5); flex-wrap: wrap; margin-block-start: var(--space-8); }
-.landing-btn {
-  font: var(--text-label);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
-  height: var(--control-h-lg);
-  padding-inline: var(--space-8);
-  border-radius: var(--radius-control);
-  border: var(--border-w) solid transparent;
-  text-decoration: none;
-  transition: var(--transition-control), transform var(--dur-fast) var(--ease-standard);
-}
-.landing-btn:active { transform: scale(var(--press-scale)); }
-.landing-btn-primary { background: var(--accent); color: var(--accent-on); }
-.landing-btn-primary:hover { background: var(--accent-hover); color: var(--accent-on); }
-.landing-btn-ghost { border-color: var(--border-strong); color: var(--text-primary); background: var(--alpha-fill-weak); }
-.landing-btn-ghost:hover { background: var(--surface-active); border-color: var(--accent); color: var(--accent); }
-
-.landing-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-5);
-  flex-wrap: wrap;
-  padding-block: var(--space-5);
-  border-block-end: var(--border-w) solid var(--border-hairline);
-  font: var(--fw-regular) var(--fs-11)/1.2 var(--font-mono);
-  letter-spacing: var(--ls-wide);
-  text-transform: uppercase;
-  color: var(--text-disabled);
-  direction: ltr;
-}
-.landing-modes { display: flex; gap: var(--space-3); flex-wrap: wrap; }
-.landing-chip {
-  font: inherit;
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-badge);
-  border: var(--border-w) solid var(--border-hairline);
-  background: transparent;
-  color: var(--text-tertiary);
-  transition: var(--transition-control);
-}
-.landing-chip:hover { border-color: var(--border-default); color: var(--text-primary); }
-.landing-chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-quiet); }
-
-/* ---- الأقسام والبطاقات ---- */
-.landing-section { padding-block: var(--section-y); }
-.landing-section-tight { padding-block-start: 0; }
-.landing-sec-head { margin-block-end: var(--space-10); }
-.landing-sec-head h2 {
-  margin: var(--space-5) 0 0;
-  font: var(--fw-medium) clamp(24px, 3.2vw, 32px)/var(--lh-snug) var(--font-sans);
+  font-size: clamp(30px, 4.4vw, 58px);
+  line-height: 1.32;
   letter-spacing: var(--ls-tight);
   color: var(--text-primary);
 }
-.landing-sec-head p { margin: var(--space-5) 0 0; max-width: 58ch; color: var(--text-tertiary); font: var(--text-body-lg); }
-
-/*
- * القائمتان أربع بطاقات لكل منهما، فعمودان يملآن كل صفّ تماماً. شبكة
- * auto-fit تعطي ثلاثة أعمدة عند هذا العرض فتترك الرابعة وحدها في صفّ.
- */
-.landing-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
-@media (min-width: 680px) {
-  .landing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.frame-note {
+  margin: var(--space-7) 0 0;
+  font: var(--fw-regular) clamp(13px, 1.25vw, 15px)/2.05 var(--font-sans);
+  color: var(--text-secondary);
 }
-.landing-card {
+.frame-brand {
+  margin: clamp(28px, 4vw, 58px) 0 0;
+  font-family: var(--font-serif-display);
+  font-weight: var(--fw-medium);
+  font-size: clamp(56px, 8vw, 104px);
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+.frame-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.72em;
+  margin-inline-start: 0.08em;
+  background: currentColor;
+  vertical-align: -0.06em;
+  animation: frame-caret 1.05s steps(1, end) infinite;
+}
+@keyframes frame-caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+.frame-meaning {
+  margin: var(--space-5) 0 0;
+  font: var(--fw-regular) clamp(12.5px, 1.2vw, 14.5px)/1.95 var(--font-sans);
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.frame-meaning.is-in { opacity: 1; }
+
+/* الأصل رأسيّ، فكادر عريض يكبّره كثيراً. ١٦:٩ أقصر ارتفاعاً فيدخل
+   الإطار كاملاً في الشاشة، والقرية تبقى داخل الكادر لا تحته. */
+@media (min-width: 860px) { .frame { aspect-ratio: 16 / 9; } }
+
+@media (max-width: 859px) {
+  .frame-photo { object-position: 50% 92%; }
+  .frame-corner { width: 18px; height: 18px; }
+  .frame-corner.is-tr, .frame-corner.is-tl { inset-block-start: 14px; }
+  .frame-corner.is-br, .frame-corner.is-bl { inset-block-end: 14px; }
+  .frame-corner.is-tr, .frame-corner.is-br { inset-inline-start: 14px; }
+  .frame-corner.is-tl, .frame-corner.is-bl { inset-inline-end: 14px; }
+  .frame-slug-place { inset-block-start: 26px; inset-inline-end: 30px; }
+  .frame-slug-date  { inset-block-start: 26px; inset-inline-start: 30px; }
+  .frame-slug-geo, .frame-slug-en { inset-block-end: 26px; }
+  .frame-slug-geo { inset-inline-start: 30px; }
+  .frame-slug-en { inset-inline-end: 30px; }
+  .frame-story {
+    inset-inline: 30px;
+    inset-block-start: auto;
+    inset-block-end: 88px;
+    transform: none;
+    width: auto;
+  }
+  .frame-note br { display: none; }
+}
+
+/* ============================================================== الخدمات */
+/*
+ * خدمتان، وهذا مقصود. البطاقتان تأخذان عرض الصفحة بينهما، والفراغ حولهما
+ * متروك — لا يُحشى ببطاقات «قريباً»، فتلك إعلان نيّة يخصّ من دخل المنصّة.
+ */
+.svc-section {
+  position: relative;
+  padding-block: clamp(72px, 9vw, 132px) clamp(40px, 5vw, 64px);
+  background: var(--canvas);
+  overflow: hidden;
+}
+/* طيف الجبال: الصورة نفسها، معتمة إلى حدّ الإيحاء، ومتلاشية إلى أعلى. */
+.svc-section::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  height: 42%;
+  background-image: var(--svc-ridge);
+  background-size: cover;
+  background-position: 50% 82%;
+  opacity: 0.09;
+  filter: grayscale(35%) brightness(0.55);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  pointer-events: none;
+}
+.svc-section > .landing-wrap { position: relative; z-index: 1; }
+
+/* ---- ترويسة القسم ---- */
+.svc-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(24px, 4vw, 64px);
+  align-items: start;
+  margin-block-end: clamp(44px, 6vw, 84px);
+}
+.svc-index {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  padding: var(--space-8);
-  background: var(--surface-card);
+  gap: var(--space-3);
+}
+.svc-index-top { display: flex; flex-direction: row-reverse; align-items: center; gap: var(--space-5); }
+.svc-index-ar { font: var(--text-title-3); color: var(--text-primary); }
+.svc-index-en {
+  font: var(--fw-regular) 10px/1.2 var(--font-mono);
+  letter-spacing: var(--ls-widest);
+  color: var(--text-disabled);
+  padding-inline-end: 52px;
+}
+.svc-lead { grid-column: 1; grid-row: 1; text-align: right; }
+.svc-eyebrow {
+  margin: 0;
+  font: var(--fw-regular) var(--fs-13)/1.4 var(--font-sans);
+  color: var(--text-tertiary);
+}
+.svc-lead h2 {
+  margin: var(--space-6) 0 0;
+  font-family: var(--font-serif-display);
+  font-weight: var(--fw-medium);
+  font-size: clamp(32px, 4.6vw, 62px);
+  line-height: 1.18;
+  letter-spacing: var(--ls-tight);
+  color: var(--text-primary);
+}
+.svc-sub {
+  margin: var(--space-4) 0 0;
+  font-family: var(--font-serif-display);
+  font-weight: var(--fw-regular);
+  font-size: clamp(20px, 2.6vw, 34px);
+  line-height: 1.4;
+  color: var(--accent);
+}
+/* الملاحظة تحت المؤشّر لا تحت العنوان: التماثل هنا يقتل الإيقاع. */
+.svc-note {
+  grid-column: 2;
+  grid-row: 2;
+  margin: clamp(18px, 3vw, 40px) 0 0;
+  padding-block-end: var(--space-5);
+  border-block-end: 2px solid var(--accent);
+  width: fit-content;
+  font: var(--fw-regular) var(--fs-13)/1.85 var(--font-sans);
+  color: var(--text-tertiary);
+}
+
+/* ---- البطاقات ---- */
+.svc-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(16px, 2vw, 28px);
+}
+@media (min-width: 900px) { .svc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.svc-card {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(22px, 3vw, 38px);
+  padding: clamp(22px, 2.6vw, 34px);
+  background: color-mix(in srgb, var(--surface-card) 76%, transparent);
   border: var(--border-w) solid var(--border-hairline);
   border-radius: var(--radius-card);
-  text-decoration: none;
-  color: inherit;
   transition: background-color var(--dur-normal) var(--ease-standard),
               border-color var(--dur-normal) var(--ease-standard),
-              transform var(--dur-normal) var(--ease-out),
-              box-shadow var(--dur-normal) var(--ease-out);
+              transform var(--dur-normal) var(--ease-out);
 }
-a.landing-card:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-raised);
+.svc-card:hover {
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  border-color: var(--border-default);
   transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
 }
-a.landing-card:hover .landing-go { color: var(--accent-hover); gap: var(--space-5); }
-.landing-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); }
-.landing-card h3 { margin: 0; font: var(--text-title-2); color: var(--text-primary); }
-.landing-card p { margin: 0; font: var(--text-body-md); line-height: var(--lh-relaxed); color: var(--text-tertiary); }
-.landing-flag {
-  font: var(--fw-medium) 10px/1 var(--font-mono);
-  letter-spacing: var(--ls-wide);
-  text-transform: uppercase;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-badge);
-  border: var(--border-w) solid var(--border-default);
+
+.svc-meta {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+.svc-number { font: var(--fw-medium) var(--fs-13)/1 var(--font-mono); color: var(--accent); }
+.svc-rule { width: 34px; height: var(--border-w); background: var(--alpha-line-strong); display: block; flex: none; }
+.svc-meta .svc-rule { margin-inline-end: auto; margin-inline-start: var(--space-5); }
+.svc-category {
+  font: var(--fw-regular) 10px/1.2 var(--font-mono);
+  letter-spacing: var(--ls-widest);
+  color: var(--text-disabled);
+}
+
+.svc-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(16px, 2vw, 28px);
+  flex: 1;
+}
+.svc-content { flex: 1; min-width: 0; text-align: right; }
+.svc-title { display: flex; align-items: center; gap: var(--space-5); justify-content: flex-start; }
+.svc-title h3 {
+  margin: 0;
+  font-family: var(--font-serif-display);
+  font-weight: var(--fw-medium);
+  font-size: clamp(22px, 2.3vw, 30px);
+  line-height: var(--lh-snug);
+  color: var(--text-primary);
+}
+.svc-icon {
+  width: 42px; height: 42px; flex: none;
+  display: grid; place-items: center;
+  border-radius: var(--radius-control);
+  background: var(--alpha-fill);
+  color: var(--text-secondary);
+  transition: color var(--dur-normal) var(--ease-standard), background-color var(--dur-normal) var(--ease-standard);
+}
+.svc-card:hover .svc-icon { color: var(--accent); background: var(--alpha-fill-strong); }
+.svc-content p {
+  margin: var(--space-6) 0 0;
+  font: var(--fw-regular) var(--fs-14)/2 var(--font-sans);
   color: var(--text-tertiary);
-  white-space: nowrap;
+  max-width: 34ch;
+  margin-inline-start: auto;
 }
-.landing-flag-live { border-color: var(--accent); color: var(--accent); background: var(--accent-quiet); }
-.landing-go {
-  margin-block-start: auto;
-  padding-block-start: var(--space-4);
+
+/* ---- الرسم داخل البطاقة ---- */
+.svc-visual { position: relative; width: 190px; height: 150px; flex: none; }
+.svc-sheet {
+  position: absolute;
+  background: var(--surface-raised);
+  border: var(--border-w) solid var(--border-hairline);
+  border-radius: var(--radius-control);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.svc-dot { width: 9px; height: 9px; border-radius: var(--radius-pill); border: var(--border-w) solid var(--alpha-line-strong); flex: none; display: block; }
+.svc-line { height: 5px; border-radius: var(--radius-pill); background: var(--alpha-fill-strong); flex: 1; display: block; }
+
+.svc-visual-time .svc-sheet {
+  inset-block-start: 16px;
+  inset-inline-start: 10px;
+  width: 150px;
+  height: 104px;
+  padding: var(--space-6) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.svc-task { display: flex; align-items: center; gap: var(--space-5); }
+.svc-task.is-done .svc-dot { background: var(--accent); border-color: var(--accent); }
+.svc-task.is-done .svc-line { background: var(--alpha-fill); }
+.svc-chip {
+  position: absolute;
+  background: var(--surface-overlay);
+  border: var(--border-w) solid var(--border-default);
+  border-radius: var(--radius-control);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.svc-chip-today {
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  padding: var(--space-3) var(--space-5);
+  font: var(--fw-regular) var(--fs-11)/1 var(--font-sans);
+  color: var(--text-secondary);
+}
+.svc-chip-bars {
+  inset-block-end: 0;
+  inset-inline-start: 24px;
+  width: 44px; height: 38px;
+  display: flex; align-items: flex-end; justify-content: center; gap: 4px;
+  padding-block-end: var(--space-4);
+}
+.svc-chip-bars i { width: 5px; border-radius: 2px; background: var(--alpha-fill-strong); display: block; }
+.svc-chip-bars i:nth-child(1) { height: 9px; }
+.svc-chip-bars i:nth-child(2) { height: 17px; background: var(--accent); }
+.svc-chip-bars i:nth-child(3) { height: 12px; }
+
+.svc-visual-meet .svc-stage {
+  inset-block-start: 18px;
+  inset-inline-end: 6px;
+  width: 116px;
+  height: 100px;
+}
+.svc-avatar {
+  position: absolute;
+  width: 20px; height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--alpha-fill-strong);
+  display: block;
+}
+.svc-avatar:nth-of-type(1) { inset-block-start: 16px; inset-inline-end: 14px; }
+.svc-avatar:nth-of-type(2) { inset-block-start: 52px; inset-inline-end: 14px; }
+.svc-call {
+  position: absolute;
+  inset-block-start: 28px;
+  inset-inline-start: 22px;
+  width: 38px; height: 38px;
+  border-radius: var(--radius-pill);
+  background: var(--alpha-fill-strong);
+  border: var(--border-w) solid var(--border-default);
+  display: block;
+}
+.svc-pills { position: absolute; inset-block-end: 12px; inset-inline-start: 26px; display: flex; gap: var(--space-4); }
+.svc-pills i { width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--alpha-fill); display: block; }
+.svc-visual-meet .svc-agenda {
+  inset-block-start: 26px;
+  inset-inline-start: 0;
+  width: 54px;
+  height: 92px;
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.svc-agenda-row { display: flex; align-items: center; gap: var(--space-3); }
+.svc-agenda-row .svc-dot { width: 6px; height: 6px; }
+.svc-agenda-row.is-now .svc-dot { background: var(--accent); border-color: var(--accent); }
+.svc-agenda-row .svc-line { height: 4px; }
+
+.svc-card:hover .svc-sheet { transform: translateY(-3px); }
+.svc-card:hover .svc-chip-today { transform: translateY(-5px); }
+.svc-card:hover .svc-chip-bars { transform: translateY(4px); }
+
+/* ---- الإجراءات ---- */
+.svc-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-block-start: var(--space-6);
+  border-block-start: var(--border-w) solid var(--border-hairline);
+}
+.svc-enter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-5);
+  font: var(--text-label);
+  color: var(--accent);
+  text-decoration: none;
+  border-block-end: 0;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.svc-enter:hover { color: var(--accent-hover); }
+.svc-arrow {
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-on);
+  transition: transform var(--dur-normal) var(--ease-out), background-color var(--dur-fast) var(--ease-standard);
+}
+.svc-card:hover .svc-arrow { transform: translateX(-5px); background: var(--accent-hover); }
+.svc-aside {
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);
-  font: var(--text-label);
-  color: var(--accent);
-  transition: gap var(--dur-normal) var(--ease-out), color var(--dur-fast) var(--ease-standard);
+  font: var(--fw-regular) var(--fs-12)/1 var(--font-sans);
+  color: var(--text-disabled);
+  text-decoration: none;
+  border-block-end: 0;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
-.landing-card-soon { background: transparent; border-style: dashed; }
-.landing-card-soon h3 { color: var(--text-secondary); }
-.landing-card-soon p { color: var(--text-disabled); }
+.svc-aside:hover { color: var(--text-secondary); }
 
-.landing-craft {
+/* ---- تذييل القسم ---- */
+.svc-foot {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  margin-block-start: clamp(44px, 6vw, 88px);
+  padding-block-start: var(--space-6);
   border-block-start: var(--border-w) solid var(--border-hairline);
-  background-color: var(--surface-sunken);
-  padding-block: var(--section-y);
+  font: var(--fw-regular) var(--fs-12)/1.6 var(--font-sans);
+  color: var(--text-disabled);
+}
+.svc-foot-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-5);
+  font-family: var(--font-mono);
+  letter-spacing: var(--ls-widest);
+  direction: ltr;
 }
 
+/* ---- تذييل الصفحة ---- */
 .landing-foot {
   border-block-start: var(--border-w) solid var(--border-hairline);
   padding-block: var(--space-9) var(--space-10);
@@ -2477,20 +2743,40 @@ a.landing-card:hover .landing-go { color: var(--accent-hover); gap: var(--space-
   align-items: center;
 }
 .landing-foot p { margin: 0; font: var(--text-body-sm); color: var(--text-disabled); }
-.landing-foot a { color: var(--text-tertiary); text-decoration: none; border-block-end: var(--border-w) solid var(--border-default); }
+.landing-foot a {
+  font: var(--text-label);
+  color: var(--text-tertiary);
+  text-decoration: none;
+  border-block-end: var(--border-w) solid var(--border-default);
+  padding-block-end: 2px;
+}
 .landing-foot a:hover { color: var(--accent); border-color: var(--accent); }
 
-@media (min-width: 760px) { .landing-stage { aspect-ratio: 16 / 9; } }
-@media (min-width: 1280px) { .landing-stage { aspect-ratio: 2.45 / 1; } }
+/* ---- الجوال: إعادة تركيب لا تصغير ---- */
+@media (max-width: 899px) {
+  .svc-head { grid-template-columns: minmax(0, 1fr); }
+  .svc-index { grid-column: 1; grid-row: 1; }
+  .svc-index-top { justify-content: flex-start; }
+  .svc-index-en { padding-inline-end: 52px; }
+  .svc-lead { grid-column: 1; grid-row: 2; }
+  .svc-note { grid-column: 1; grid-row: 3; margin-block-start: var(--space-7); }
+  .svc-body { flex-direction: column-reverse; align-items: stretch; }
+  .svc-visual { align-self: flex-start; }
+  .svc-content p { max-width: none; }
+}
 
 @media (max-width: 640px) {
   .landing-topbar nav a:not(.landing-go-btn) { display: none; }
-  .landing-foot { justify-content: flex-start; }
+  .svc-visual { transform: scale(0.88); transform-origin: right center; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-caret { animation: none; }
-  .landing-brand-meaning { transition: none; }
-  .landing-card, .landing-btn, .landing-chip, .landing-go { transition: none; }
-  a.landing-card:hover { transform: none; }
+  .frame-caret { animation: none; }
+  .frame-meaning { transition: none; }
+  .svc-card, .svc-sheet, .svc-chip, .svc-arrow, .svc-icon, .svc-enter, .svc-aside { transition: none; }
+  .svc-card:hover { transform: none; }
+  .svc-card:hover .svc-sheet,
+  .svc-card:hover .svc-chip-today,
+  .svc-card:hover .svc-chip-bars,
+  .svc-card:hover .svc-arrow { transform: none; }
 }
