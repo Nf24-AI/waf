@@ -24,6 +24,15 @@ export interface Service {
   href?: string;
   /** خدمة تعيش خارج واف: تُفتح في لسان جديد ويُعلَّم ذلك في الواجهة. */
   external?: boolean;
+  /**
+   * مُعرّف الخدمة التي تُشتقّ منها هذه.
+   *
+   * سجلّ القرارات وتقرير الحالة يُقرآن من الاجتماعات ولا يملكان بياناً خاصاً
+   * بهما؛ لو حُذفت الاجتماعات لم يبق لهما ما يعرضانه. فهما مخرجان لخدمة، لا
+   * خدمتان. التمييز ليس تصنيفاً: من يقف على الباب يحتاج أن يعرف كم أداةً
+   * مستقلّة عند واف، ومن دخل يحتاج أن يصل إلى كل صفحة.
+   */
+  partOf?: string;
 }
 
 export const SERVICES: readonly Service[] = [
@@ -51,6 +60,7 @@ export const SERVICES: readonly Service[] = [
     summary: "كل قرار اتُّخذ في اجتماع، ومن يملكه ومتى — يُقرأ من الاجتماعات نفسها، فلا سجلّ ثانٍ يتباعد عنها.",
     status: "live",
     href: "/decisions",
+    partOf: "meetings",
   },
   {
     id: "status",
@@ -59,6 +69,7 @@ export const SERVICES: readonly Service[] = [
     summary: "ما انعقد وما تقرّر وما يحتاج انتباهاً في فترة تختارها — صفحة واحدة مُشتقّة من الاجتماعات، تُرسَل كما هي.",
     status: "live",
     href: "/status",
+    partOf: "meetings",
   },
   {
     id: "risks",
@@ -92,3 +103,14 @@ export const SERVICES: readonly Service[] = [
 
 export const liveServices = () => SERVICES.filter((service) => service.status === "live");
 export const upcomingServices = () => SERVICES.filter((service) => service.status === "soon");
+
+/**
+ * الخدمات المستقلّة: ما يملك بياناته ويقوم وحده.
+ *
+ * هذا هو العدد الذي يُعلَن على الباب. الوجه العام يشتقّه من هنا ولا يكتبه
+ * بيده، فخدمة تُضاف إلى الكتالوج لا تختفي منه بصمت.
+ */
+export const rootServices = () => SERVICES.filter((service) => service.status === "live" && !service.partOf);
+
+/** ما تُنتجه خدمة بعينها من صفحات تُقرأ داخل المنصّة. */
+export const derivedServices = (id: string) => SERVICES.filter((service) => service.partOf === id);

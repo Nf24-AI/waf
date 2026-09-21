@@ -3,7 +3,7 @@
 import React from "react";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
-import { SERVICES } from "@shared/services";
+import { rootServices } from "@shared/services";
 
 /**
  * قسم الخدمات في الوجه العام.
@@ -15,12 +15,6 @@ import { SERVICES } from "@shared/services";
  * النصّ هنا نصّ تعريف، وملخّص الكتالوج نصّ استعمال؛ لذلك يختلفان. أمّا
  * الوجهة فتُقرأ من shared/services.ts دائماً، فلا يتباعد رابطان لخدمة واحدة.
  */
-
-function hrefOf(id: string) {
-  const service = SERVICES.find(item => item.id === id);
-  if (!service?.href) throw new Error(`الخدمة ${id} بلا وجهة في shared/services.ts`);
-  return service.href;
-}
 
 interface LandingService {
   id: string;
@@ -35,34 +29,60 @@ interface LandingService {
 }
 
 /**
- * الترتيب ترتيب قراءة: في RTL تُقرأ اليمنى أولاً، فالاجتماعات أولاً على
- * الشاشة وفي التكديس على الجوال. الأرقام تصف الخدمة لا موضعها.
+ * نصّ الوجه العام لكل خدمة مستقلّة.
+ *
+ * هو نصّ تعريف لا نصّ استعمال، فيختلف عن ملخّص الكتالوج عمداً: الأول يشرح
+ * لمن لا يعرف، والثاني يذكّر من يعرف. أمّا الاسم والوجهة وكون الخدمة خارج
+ * الأصل فتُقرأ من الكتالوج، فلا يتباعد طرفان لخدمة واحدة.
  */
-const LANDING_SERVICES: LandingService[] = [
-  {
-    id: "meetings",
+const LANDING_COPY: Record<
+  string,
+  Pick<LandingService, "number" | "title" | "description" | "icon" | "visual">
+> = {
+  meetings: {
     number: "02",
-    category: "MEETINGS",
     title: "خدمة الاجتماعات",
     description:
       "جهّز الاجتماع، شارك جدول الأعمال، أدر الحضور، واحتفظ بكل ما يهم الاجتماع في مكان واحد.",
-    href: hrefOf("meetings"),
     icon: "people",
     visual: "meetings",
   },
-  {
-    id: "time",
+  time: {
     number: "01",
-    category: "TIME MANAGEMENT",
     title: "إدارة الوقت",
     description:
       "رتّب مهامك بين المهم والعاجل، وشاهد وقتك بوضوح، لتترك مساحة لما يهم فعلاً.",
-    href: hrefOf("time"),
-    external: true,
     icon: "calendar",
     visual: "time",
   },
-];
+};
+
+/**
+ * البطاقتان مشتقّتان من الكتالوج لا مكتوبتين هنا.
+ *
+ * «خدمتان» في العنوان ليست ادّعاءً: هي عدد ما يقوم وحده في shared/services.ts.
+ * وخدمة مستقلّة تُضاف بلا نصّ تعريف توقف البناء بدل أن تغيب عن الباب بصمت.
+ *
+ * الترتيب ترتيب الكتالوج، وهو ترتيب القراءة: في RTL تُقرأ اليمنى أولاً،
+ * فالاجتماعات أولاً على الشاشة وفي التكديس على الجوال. الأرقام تصف الخدمة
+ * لا موضعها.
+ */
+const LANDING_SERVICES: LandingService[] = rootServices().map(service => {
+  const copy = LANDING_COPY[service.id];
+  if (!copy) {
+    throw new Error(`الخدمة ${service.id} مستقلّة في الكتالوج وبلا نصّ في الوجه العام`);
+  }
+  if (!service.href) {
+    throw new Error(`الخدمة ${service.id} بلا وجهة في shared/services.ts`);
+  }
+  return {
+    id: service.id,
+    category: service.eyebrow,
+    href: service.href,
+    external: service.external,
+    ...copy,
+  };
+});
 
 /**
  * رمزا الخدمتين، مرسومان هنا لا مستورَدان من مجموعة أيقونات.
