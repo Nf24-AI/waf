@@ -2552,21 +2552,20 @@ a.service-card:hover .service-go {
   background: var(--canvas);
   overflow: hidden;
 }
-/* طيف الجبال: الصورة نفسها، معتمة إلى حدّ الإيحاء، ومتلاشية إلى أعلى. */
-.svc-section::before {
-  content: "";
+/* سلسلة الجبال: شكل مرسوم، يخفت صاعداً فلا ينازع البطاقات. */
+.svc-ridge {
   position: absolute;
   inset-inline: 0;
   inset-block-end: 0;
-  height: 42%;
-  background-image: var(--svc-ridge);
-  background-size: cover;
-  background-position: 50% 82%;
-  opacity: 0.09;
-  filter: grayscale(35%) brightness(0.55);
-  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
-  mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  width: 100%;
+  height: clamp(120px, 17vw, 236px);
+  fill: var(--navy-800);
+  opacity: 0.42;
+  /* تمويه خفيف: قمم حادّة تقرأ رسماً، والمطلوب بُعد وجوّ. */
+  filter: blur(1.6px);
   pointer-events: none;
+  -webkit-mask-image: linear-gradient(to top, #000 34%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 34%, transparent 100%);
 }
 .svc-section > .landing-wrap { position: relative; z-index: 1; }
 

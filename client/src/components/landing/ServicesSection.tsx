@@ -1,10 +1,9 @@
 // مستورَد صراحةً كما في بقية الملفات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React from "react";
-import { ArrowLeft, CalendarDays, ExternalLink, Users } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { SERVICES } from "@shared/services";
-import tanomah from "@/assets/village-at-dusk.jpg";
 
 /**
  * قسم الخدمات في الوجه العام.
@@ -31,7 +30,7 @@ interface LandingService {
   description: string;
   href: string;
   external?: boolean;
-  icon: typeof Users;
+  icon: "people" | "calendar";
   visual: "meetings" | "time";
 }
 
@@ -48,7 +47,7 @@ const LANDING_SERVICES: LandingService[] = [
     description:
       "جهّز الاجتماع، شارك جدول الأعمال، أدر الحضور، واحتفظ بكل ما يهم الاجتماع في مكان واحد.",
     href: hrefOf("meetings"),
-    icon: Users,
+    icon: "people",
     visual: "meetings",
   },
   {
@@ -60,10 +59,49 @@ const LANDING_SERVICES: LandingService[] = [
       "رتّب مهامك بين المهم والعاجل، وشاهد وقتك بوضوح، لتترك مساحة لما يهم فعلاً.",
     href: hrefOf("time"),
     external: true,
-    icon: CalendarDays,
+    icon: "calendar",
     visual: "time",
   },
 ];
+
+/**
+ * رمزا الخدمتين، مرسومان هنا لا مستورَدان من مجموعة أيقونات.
+ *
+ * المشروع لا يحمل أي أصل رسوميّ — لا svg ولا png في client كلّه — وبقية
+ * الصفحات تأخذ أيقوناتها من lucide. هنا يُرسم الرمزان بالضبط كما في المرجع
+ * بدل استعارة أقرب أيقونة جاهزة.
+ */
+function ServiceGlyph({ kind }: { kind: LandingService["icon"] }) {
+  const common = {
+    width: 19,
+    height: 19,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.55,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+
+  if (kind === "calendar") {
+    return (
+      <svg {...common}>
+        <rect x="3.4" y="5.2" width="17.2" height="15.4" rx="2.6" />
+        <path d="M3.4 10.2h17.2" />
+        <path d="M8.2 3.2v3.6M15.8 3.2v3.6" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <circle cx="9.6" cy="8.6" r="3.3" />
+      <path d="M3.9 19.4c0-3.1 2.5-5 5.7-5s5.7 1.9 5.7 5" />
+      <circle cx="17.4" cy="9.9" r="2.3" />
+      <path d="M16.6 14.7c2.4.1 4.1 1.9 4.1 4.5" />
+    </svg>
+  );
+}
 
 /** رسم داخل البطاقة، لا أيقونة: يلمّح إلى شكل الخدمة ولا يشرحها. */
 function ServiceVisual({ kind }: { kind: LandingService["visual"] }) {
@@ -121,7 +159,6 @@ function ServiceVisual({ kind }: { kind: LandingService["visual"] }) {
 }
 
 function ServiceCard({ service }: { service: LandingService }) {
-  const Icon = service.icon;
   const enterLabel = `ادخل ${service.title}`;
 
   return (
@@ -139,7 +176,7 @@ function ServiceCard({ service }: { service: LandingService }) {
           <div className="svc-title">
             <h3>{service.title}</h3>
             <span className="svc-icon" aria-hidden="true">
-              <Icon size={18} />
+              <ServiceGlyph kind={service.icon} />
             </span>
           </div>
           <p>{service.description}</p>
@@ -187,10 +224,15 @@ export default function ServicesSection() {
       id="services"
       className="svc-section"
       aria-labelledby="svc-heading"
-      // طيف الجبال خلف القسم هو الصورة نفسها، ومسارها يأتي من البناء لا من
-      // الأنماط — فيُمرَّر متغيّراً بدل تكرار الأصل في CSS.
-      style={{ "--svc-ridge": `url(${tanomah})` } as React.CSSProperties}
     >
+      {/*
+        سلسلة الجبال مرسومة لا مصوَّرة: صورة تنومة تخصّ «عن واف» في آخر
+        الصفحة، وإقحامها هنا يجعل الحكاية خلفيةً للمنتج.
+      */}
+      <svg className="svc-ridge" viewBox="0 0 1600 220" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 78 L74 44 L152 104 L238 62 L332 126 L436 90 L548 148 L668 116 L802 162 L952 136 L1104 172 L1298 156 L1452 184 L1600 172 L1600 220 L0 220 Z" />
+      </svg>
+
       <div className="landing-wrap">
         <div className="svc-head">
           <div className="svc-index">
@@ -226,7 +268,8 @@ export default function ServicesSection() {
           <span className="svc-foot-mark">
             WAF
             <i className="svc-rule" aria-hidden="true" />
-            {new Date().getFullYear()}
+            {/* السنة كما في المرجع، لا سنة التشغيل: هي سنة الإصدار لا ساعة الزائر. */}
+            2025
           </span>
         </footer>
       </div>
