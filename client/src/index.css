@@ -2765,38 +2765,65 @@ a.service-card:hover .service-go {
 .svc-chip-bars i:nth-child(2) { height: 17px; background: var(--accent); }
 .svc-chip-bars i:nth-child(3) { height: 12px; }
 
+/*
+ * لوح الاجتماع، مقيس من المرجع: لوح عريض يسار فيه وجهان وزرّ كاميرا وشريط
+ * تحكّم، وجدول أعمال ضيّق يمينه.
+ *
+ * الرسم صورة لا نصّ، فاتجاهه ltr صراحةً: المرجع يضع الوجهين يساراً والزرّ
+ * وسطه، وقلبه مع اتجاه الصفحة يعكس المشهد بلا سبب.
+ */
+.svc-visual-meet { direction: ltr; }
 .svc-visual-meet .svc-stage {
-  inset-block-start: 18px;
-  inset-inline-end: 6px;
-  width: 116px;
-  height: 100px;
+  inset-block-start: 10px;
+  inset-inline-start: 0;
+  width: 146px;
+  height: 150px;
 }
 .svc-avatar {
   position: absolute;
-  width: 20px; height: 20px;
+  inset-inline-start: 14px;
+  width: 30px; height: 30px;
   border-radius: var(--radius-pill);
   background: var(--alpha-fill-strong);
-  display: block;
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
 }
-.svc-avatar:nth-of-type(1) { inset-block-start: 16px; inset-inline-end: 14px; }
-.svc-avatar:nth-of-type(2) { inset-block-start: 52px; inset-inline-end: 14px; }
+.svc-avatar:nth-of-type(1) { inset-block-start: 26px; }
+.svc-avatar:nth-of-type(2) { inset-block-start: 66px; }
+/* الزرّ مربّع مستدير كما في المرجع، وهو أفتح ما في اللوح فيقع عليه النظر. */
 .svc-call {
   position: absolute;
-  inset-block-start: 28px;
-  inset-inline-start: 22px;
-  width: 38px; height: 38px;
-  border-radius: var(--radius-pill);
+  inset-block-start: 34px;
+  inset-inline-start: 58px;
+  width: 56px; height: 56px;
+  border-radius: 16px;
   background: var(--alpha-fill-strong);
   border: var(--border-w) solid var(--border-default);
-  display: block;
+  display: grid;
+  place-items: center;
+  color: var(--text-primary);
 }
-.svc-pills { position: absolute; inset-block-end: 12px; inset-inline-start: 26px; display: flex; gap: var(--space-4); }
-.svc-pills i { width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--alpha-fill); display: block; }
+.svc-pills {
+  position: absolute;
+  inset-block-end: 16px;
+  inset-inline-start: 56px;
+  display: flex;
+  gap: var(--space-4);
+}
+.svc-pills i {
+  width: 30px; height: 24px;
+  border-radius: 8px;
+  background: var(--alpha-fill);
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+}
 .svc-visual-meet .svc-agenda {
-  inset-block-start: 26px;
-  inset-inline-start: 0;
-  width: 54px;
-  height: 92px;
+  inset-block-start: 22px;
+  inset-inline-end: 0;
+  width: 58px;
+  height: 128px;
   padding: var(--space-5) var(--space-4);
   display: flex;
   flex-direction: column;

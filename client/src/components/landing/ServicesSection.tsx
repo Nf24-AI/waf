@@ -103,6 +103,34 @@ function ServiceGlyph({ kind }: { kind: LandingService["icon"] }) {
   );
 }
 
+/* رموز داخل لوح الاجتماع. صغيرة جداً، فالحدّ سميك نسبياً لتبقى مقروءة. */
+function PersonGlyph() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+      <circle cx="12" cy="8.4" r="3.4" />
+      <path d="M5.6 20c0-3.5 2.9-5.6 6.4-5.6s6.4 2.1 6.4 5.6" />
+    </svg>
+  );
+}
+
+function CameraGlyph({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round">
+      <rect x="2.6" y="6.6" width="13.2" height="10.8" rx="2.6" />
+      <path d="M15.8 12.4 21.4 8.6v6.8l-5.6-2.6z" />
+    </svg>
+  );
+}
+
+function MicGlyph() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round">
+      <rect x="9" y="2.6" width="6" height="11.4" rx="3" />
+      <path d="M5.6 11.6a6.4 6.4 0 0 0 12.8 0M12 18v3.2" />
+    </svg>
+  );
+}
+
 /** رسم داخل البطاقة، لا أيقونة: يلمّح إلى شكل الخدمة ولا يشرحها. */
 function ServiceVisual({ kind }: { kind: LandingService["visual"] }) {
   if (kind === "time") {
@@ -133,15 +161,30 @@ function ServiceVisual({ kind }: { kind: LandingService["visual"] }) {
   return (
     <div className="svc-visual svc-visual-meet" aria-hidden="true">
       <div className="svc-sheet svc-stage">
-        <span className="svc-avatar" />
-        <span className="svc-avatar" />
-        <span className="svc-call" />
+        <span className="svc-avatar">
+          <PersonGlyph />
+        </span>
+        <span className="svc-avatar">
+          <PersonGlyph />
+        </span>
+        <span className="svc-call">
+          <CameraGlyph size={22} />
+        </span>
         <span className="svc-pills">
-          <i /><i />
+          <i>
+            <MicGlyph />
+          </i>
+          <i>
+            <CameraGlyph size={13} />
+          </i>
         </span>
       </div>
       <div className="svc-sheet svc-agenda">
         <span className="svc-agenda-row is-now">
+          <i className="svc-dot" />
+          <i className="svc-line" />
+        </span>
+        <span className="svc-agenda-row">
           <i className="svc-dot" />
           <i className="svc-line" />
         </span>
