@@ -2205,3 +2205,292 @@ a.service-card:hover .service-go {
 @media (prefers-reduced-motion: reduce) {
   .report-row, .report-alert, .report-nav { transition: none; }
 }
+
+/* --------------------------------------------------------------- landing */
+/*
+ * الوجه العام (/welcome). مثبَّت على ثيم navy عبر data-waf-theme، لأن بطله
+ * صورة كحلية بنوافذ ذهبية تفقد معناها فوق القماش شبه الأسود.
+ *
+ * الاسم فوق اللوحة بلا ظلّ ولا توهّج ولا لون مميِّز: موضعه يُحسب من الصورة
+ * نفسها (lib/ascii-stage.ts) فيقع في فراغها، ومن وقع في فراغ لا يحتاج عكازاً.
+ */
+
+.landing { background: var(--canvas); color: var(--text-body); min-height: 100vh; }
+.landing-wrap {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter-inline);
+}
+
+.landing-eyebrow {
+  margin: 0;
+  font: var(--text-eyebrow);
+  letter-spacing: var(--ls-widest);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* ---- الشريط العلوي ---- */
+.landing-topbar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 50;
+  background: color-mix(in srgb, var(--canvas) 84%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-block-end: var(--border-w) solid var(--border-hairline);
+}
+.landing-topbar-in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  height: var(--topbar-h);
+}
+.landing-lockup { display: flex; align-items: center; gap: var(--space-5); }
+.landing-lockup b { font: var(--fw-medium) var(--fs-18)/1 var(--font-serif-display); color: var(--text-primary); }
+.landing-mark {
+  width: 30px; height: 30px; flex: none;
+  display: grid; place-items: center;
+  border: var(--border-w) solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: var(--alpha-fill-weak);
+  color: var(--accent);
+}
+.landing-topbar nav { display: flex; align-items: center; gap: var(--space-4); }
+.landing-topbar nav a {
+  font: var(--text-label);
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-control);
+  transition: var(--transition-control);
+}
+.landing-topbar nav a:hover { background: var(--surface-hover); color: var(--text-primary); }
+.landing-topbar nav a.landing-go-btn { background: var(--accent); color: var(--accent-on); }
+.landing-topbar nav a.landing-go-btn:hover { background: var(--accent-hover); color: var(--accent-on); }
+
+/* ---- اللوحة ---- */
+.landing-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  border-block-end: var(--border-w) solid var(--border-hairline);
+}
+.landing-canvas { display: block; width: 100%; height: 100%; max-width: 100%; cursor: crosshair; }
+/* الحجاب يصل الصورة بالصفحة، لا يُقرئ الاسم. */
+.landing-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--scrim-bottom);
+  opacity: 0.55;
+}
+
+.landing-brand {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  max-width: min(86vw, 620px);
+}
+.landing-brand-word {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-serif-display);
+  font-weight: var(--fw-medium);
+  font-size: clamp(58px, 10.5vw, 132px);
+  line-height: 1.24;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+/* نسخة تُقاس ولا تُرى: أثناء الكتابة يكون الاسم المرئي أضيق من نهايته. */
+.landing-brand-ghost {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.landing-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.78em;
+  margin-inline-start: 0.1em;
+  background: currentColor;
+  vertical-align: -0.08em;
+  animation: landing-caret 1.05s steps(1, end) infinite;
+}
+@keyframes landing-caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+.landing-brand-meaning {
+  margin: var(--space-6) 0 0;
+  font: var(--fw-regular) clamp(13px, 1.55vw, 16.5px)/1.7 var(--font-sans);
+  color: var(--text-primary);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.landing-brand-meaning.is-in { opacity: 0.72; }
+
+/* ---- الشريط تحت اللوحة ---- */
+.landing-band { padding-block: var(--space-9) var(--space-8); }
+.landing-lede {
+  margin: var(--space-6) 0 0;
+  max-width: 56ch;
+  font: var(--fw-regular) clamp(15px, 1.6vw, 18px)/1.8 var(--font-sans);
+  color: var(--text-secondary);
+}
+.landing-acts { display: flex; gap: var(--space-5); flex-wrap: wrap; margin-block-start: var(--space-8); }
+.landing-btn {
+  font: var(--text-label);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--control-h-lg);
+  padding-inline: var(--space-8);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid transparent;
+  text-decoration: none;
+  transition: var(--transition-control), transform var(--dur-fast) var(--ease-standard);
+}
+.landing-btn:active { transform: scale(var(--press-scale)); }
+.landing-btn-primary { background: var(--accent); color: var(--accent-on); }
+.landing-btn-primary:hover { background: var(--accent-hover); color: var(--accent-on); }
+.landing-btn-ghost { border-color: var(--border-strong); color: var(--text-primary); background: var(--alpha-fill-weak); }
+.landing-btn-ghost:hover { background: var(--surface-active); border-color: var(--accent); color: var(--accent); }
+
+.landing-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  padding-block: var(--space-5);
+  border-block-end: var(--border-w) solid var(--border-hairline);
+  font: var(--fw-regular) var(--fs-11)/1.2 var(--font-mono);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-disabled);
+  direction: ltr;
+}
+.landing-modes { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.landing-chip {
+  font: inherit;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-badge);
+  border: var(--border-w) solid var(--border-hairline);
+  background: transparent;
+  color: var(--text-tertiary);
+  transition: var(--transition-control);
+}
+.landing-chip:hover { border-color: var(--border-default); color: var(--text-primary); }
+.landing-chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-quiet); }
+
+/* ---- الأقسام والبطاقات ---- */
+.landing-section { padding-block: var(--section-y); }
+.landing-section-tight { padding-block-start: 0; }
+.landing-sec-head { margin-block-end: var(--space-10); }
+.landing-sec-head h2 {
+  margin: var(--space-5) 0 0;
+  font: var(--fw-medium) clamp(24px, 3.2vw, 32px)/var(--lh-snug) var(--font-sans);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-primary);
+}
+.landing-sec-head p { margin: var(--space-5) 0 0; max-width: 58ch; color: var(--text-tertiary); font: var(--text-body-lg); }
+
+/*
+ * القائمتان أربع بطاقات لكل منهما، فعمودان يملآن كل صفّ تماماً. شبكة
+ * auto-fit تعطي ثلاثة أعمدة عند هذا العرض فتترك الرابعة وحدها في صفّ.
+ */
+.landing-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
+@media (min-width: 680px) {
+  .landing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.landing-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-8);
+  background: var(--surface-card);
+  border: var(--border-w) solid var(--border-hairline);
+  border-radius: var(--radius-card);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color var(--dur-normal) var(--ease-standard),
+              border-color var(--dur-normal) var(--ease-standard),
+              transform var(--dur-normal) var(--ease-out),
+              box-shadow var(--dur-normal) var(--ease-out);
+}
+a.landing-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+a.landing-card:hover .landing-go { color: var(--accent-hover); gap: var(--space-5); }
+.landing-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); }
+.landing-card h3 { margin: 0; font: var(--text-title-2); color: var(--text-primary); }
+.landing-card p { margin: 0; font: var(--text-body-md); line-height: var(--lh-relaxed); color: var(--text-tertiary); }
+.landing-flag {
+  font: var(--fw-medium) 10px/1 var(--font-mono);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-badge);
+  border: var(--border-w) solid var(--border-default);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.landing-flag-live { border-color: var(--accent); color: var(--accent); background: var(--accent-quiet); }
+.landing-go {
+  margin-block-start: auto;
+  padding-block-start: var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font: var(--text-label);
+  color: var(--accent);
+  transition: gap var(--dur-normal) var(--ease-out), color var(--dur-fast) var(--ease-standard);
+}
+.landing-card-soon { background: transparent; border-style: dashed; }
+.landing-card-soon h3 { color: var(--text-secondary); }
+.landing-card-soon p { color: var(--text-disabled); }
+
+.landing-craft {
+  border-block-start: var(--border-w) solid var(--border-hairline);
+  background-color: var(--surface-sunken);
+  padding-block: var(--section-y);
+}
+
+.landing-foot {
+  border-block-start: var(--border-w) solid var(--border-hairline);
+  padding-block: var(--space-9) var(--space-10);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.landing-foot p { margin: 0; font: var(--text-body-sm); color: var(--text-disabled); }
+.landing-foot a { color: var(--text-tertiary); text-decoration: none; border-block-end: var(--border-w) solid var(--border-default); }
+.landing-foot a:hover { color: var(--accent); border-color: var(--accent); }
+
+@media (min-width: 760px) { .landing-stage { aspect-ratio: 16 / 9; } }
+@media (min-width: 1280px) { .landing-stage { aspect-ratio: 2.45 / 1; } }
+
+@media (max-width: 640px) {
+  .landing-topbar nav a:not(.landing-go-btn) { display: none; }
+  .landing-foot { justify-content: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-caret { animation: none; }
+  .landing-brand-meaning { transition: none; }
+  .landing-card, .landing-btn, .landing-chip, .landing-go { transition: none; }
+  a.landing-card:hover { transform: none; }
+}

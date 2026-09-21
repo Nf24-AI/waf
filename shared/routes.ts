@@ -4,6 +4,12 @@
  */
 export const PLATFORM_ROUTE = "/";
 
+/**
+ * الوجه العام لواف. وحده من بين المسارات يُقرأ قبل كلمة المرور — صفحة
+ * هبوط خلف بوّابة تشرح المنتج لمن دخل أصلاً، وهو يعرفه. انظر App.tsx.
+ */
+export const LANDING_ROUTE = "/welcome";
+
 export const DECISIONS_ROUTE = "/decisions";
 export const STATUS_REPORT_ROUTE = "/status";
 

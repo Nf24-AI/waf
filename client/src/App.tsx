@@ -6,13 +6,20 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import IdleWarning from "./components/IdleWarning";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Landing from "./pages/Landing";
 import Lock from "./pages/Lock";
 import Decisions from "./pages/Decisions";
 import Platform from "./pages/Platform";
 import StatusReport from "./pages/StatusReport";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useIdleLock } from "./hooks/useIdleLock";
-import { DECISIONS_ROUTE, MEETING_ROUTES, PLATFORM_ROUTE, STATUS_REPORT_ROUTE } from "@shared/routes";
+import {
+  DECISIONS_ROUTE,
+  LANDING_ROUTE,
+  MEETING_ROUTES,
+  PLATFORM_ROUTE,
+  STATUS_REPORT_ROUTE,
+} from "@shared/routes";
 
 function Router() {
   return (
@@ -72,13 +79,28 @@ function Gate() {
   );
 }
 
+/**
+ * صفحة الهبوط تسبق البوّابة عمداً.
+ *
+ * البوّابة تحمي بيانات الاجتماعات، لا تعريف المنتج. وصفحة هبوط خلف كلمة مرور
+ * تشرح واف لمن يعرفه أصلاً — فتُقرأ صفراً من المرات. لذلك يُلتقط المسار هنا
+ * قبل Gate: يُقرأ بلا كلمة مرور، وكل رابط فيه يقود إلى البوّابة فتطلبها.
+ *
+ * البوّابة نفسها على tRPC (server/access.ts)، فخروج هذا المسار من Gate لا
+ * يكشف شيئاً: الصفحة لا تطلب أي إجراء محميّ.
+ */
 export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster position="bottom-left" />
-          <Gate />
+          <Switch>
+            <Route path={LANDING_ROUTE} component={Landing} />
+            <Route>
+              <Gate />
+            </Route>
+          </Switch>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
