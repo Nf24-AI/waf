@@ -2567,7 +2567,16 @@ a.service-card:hover .service-go {
   -webkit-mask-image: linear-gradient(to top, #000 34%, transparent 100%);
   mask-image: linear-gradient(to top, #000 34%, transparent 100%);
 }
-.svc-section > .landing-wrap { position: relative; z-index: 1; }
+/*
+ * المرجع يعطي القسم ٩٠٪ من الشاشة؛ رمز --content-max (١١٢٠) يحبسه عند
+ * ٧٠٪ فتضيق البطاقتان ويلتفّ نصّهما فتطولان. التوسيع مقصور على هذا القسم:
+ * الرمز يبقى كما هو لبقية الصفحة والمنصّة.
+ */
+.svc-section > .landing-wrap {
+  position: relative;
+  z-index: 1;
+  max-width: min(1450px, 91vw);
+}
 
 /* ---- ترويسة القسم ---- */
 .svc-head {
@@ -2638,8 +2647,10 @@ a.service-card:hover .service-go {
 .svc-card {
   display: flex;
   flex-direction: column;
-  gap: clamp(22px, 3vw, 38px);
-  padding: clamp(22px, 2.6vw, 34px);
+  /* الإيقاع الرأسي مقيس من المرجع: هامش ٣٠، وفجوتان ٢٢، فيبقى للرسم
+     نصيبه ولا تطول البطاقة. */
+  gap: clamp(18px, 1.8vw, 23px);
+  padding: clamp(20px, 2.1vw, 30px);
   background: color-mix(in srgb, var(--surface-card) 76%, transparent);
   border: var(--border-w) solid var(--border-hairline);
   border-radius: var(--radius-card);
@@ -2664,7 +2675,7 @@ a.service-card:hover .service-go {
 .svc-rule { width: 34px; height: var(--border-w); background: var(--alpha-line-strong); display: block; flex: none; }
 .svc-meta .svc-rule { margin-inline-end: auto; margin-inline-start: var(--space-5); }
 .svc-category {
-  font: var(--fw-regular) 10px/1.2 var(--font-mono);
+  font: var(--fw-regular) var(--fs-12)/1.2 var(--font-mono);
   letter-spacing: var(--ls-widest);
   color: var(--text-disabled);
 }
@@ -2687,7 +2698,7 @@ a.service-card:hover .service-go {
   color: var(--text-primary);
 }
 .svc-icon {
-  width: 42px; height: 42px; flex: none;
+  width: 56px; height: 56px; flex: none;
   display: grid; place-items: center;
   border-radius: var(--radius-control);
   background: var(--alpha-fill);
@@ -2697,14 +2708,14 @@ a.service-card:hover .service-go {
 .svc-card:hover .svc-icon { color: var(--accent); background: var(--alpha-fill-strong); }
 .svc-content p {
   margin: var(--space-6) 0 0;
-  font: var(--fw-regular) var(--fs-14)/2 var(--font-sans);
+  font: var(--fw-regular) var(--fs-16)/1.95 var(--font-sans);
   color: var(--text-tertiary);
-  max-width: 34ch;
+  max-width: 38ch;
   margin-inline-start: auto;
 }
 
 /* ---- الرسم داخل البطاقة ---- */
-.svc-visual { position: relative; width: 190px; height: 150px; flex: none; }
+.svc-visual { position: relative; width: 214px; height: 176px; flex: none; }
 .svc-sheet {
   position: absolute;
   background: var(--surface-raised);
@@ -2806,7 +2817,7 @@ a.service-card:hover .service-go {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-6);
-  padding-block-start: var(--space-6);
+  padding-block-start: var(--space-5);
   border-block-start: var(--border-w) solid var(--border-hairline);
 }
 .svc-enter {
@@ -2821,7 +2832,7 @@ a.service-card:hover .service-go {
 }
 .svc-enter:hover { color: var(--accent-hover); }
 .svc-arrow {
-  width: 38px; height: 38px;
+  width: 42px; height: 42px;
   display: grid; place-items: center;
   border-radius: var(--radius-pill);
   background: var(--accent);
