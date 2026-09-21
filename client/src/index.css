@@ -2215,7 +2215,18 @@ a.service-card:hover .service-go {
  * فوقها — أقواس، بيانات، وعمود حكاية. لا قيمة لونية حرفية هنا، كلها رموز.
  */
 
-.landing { background: var(--canvas); color: var(--text-body); min-height: 100vh; }
+/*
+ * إيقاع الصفحة كلّه من مقدار واحد. كل قسم شريحة: يبدأ ببياض متساوٍ وينتهي
+ * بمثله، فالنزول يُقرأ ترتيباً لا تعثّراً. وscroll-snap بـproximity يجعل
+ * التمريرة تستقرّ عند حدود الأقسام دون أن تحبس من يريد المرور سريعاً.
+ */
+.landing {
+  background: var(--canvas);
+  color: var(--text-body);
+  min-height: 100vh;
+  --slide-y: clamp(38px, 3.4vw, 64px);
+}
+.landing-hero, .svc-section, .frame { scroll-snap-align: start; }
 .landing-wrap {
   width: 100%;
   max-width: var(--content-max);
@@ -2341,7 +2352,12 @@ a.service-card:hover .service-go {
 .landing-brand-meaning.is-in { opacity: 0.72; }
 
 /* ---- الشريط تحت اللوحة ---- */
-.landing-band { padding-block: var(--space-9) var(--space-8); }
+/*
+ * اللوحة والنصّ وشريط الأنماط شيء واحد، لا ثلاثة تتعاقب. لذلك يجمعها قسم
+ * واحد ببياض أسفله فقط، وتفقد الثلاثة هوامشها المستقلّة.
+ */
+.landing-hero { padding-block-end: var(--slide-y); }
+.landing-band { padding-block: var(--slide-y) 0; }
 .landing-lede {
   margin: var(--space-6) 0 0;
   max-width: 56ch;
@@ -2373,8 +2389,9 @@ a.service-card:hover .service-go {
   align-items: center;
   gap: var(--space-5);
   flex-wrap: wrap;
-  padding-block: var(--space-5);
-  border-block-end: var(--border-w) solid var(--border-hairline);
+  margin-block-start: var(--space-8);
+  padding-block-start: var(--space-6);
+  border-block-start: var(--border-w) solid var(--border-hairline);
   font: var(--fw-regular) var(--fs-11)/1.2 var(--font-mono);
   letter-spacing: var(--ls-wide);
   text-transform: uppercase;
@@ -2546,26 +2563,53 @@ a.service-card:hover .service-go {
  * خدمتان، وهذا مقصود. البطاقتان تأخذان عرض الصفحة بينهما، والفراغ حولهما
  * متروك — لا يُحشى ببطاقات «قريباً»، فتلك إعلان نيّة يخصّ من دخل المنصّة.
  */
+/*
+ * الأرض هنا أغمق من قماش الصفحة عمداً. المرجع يبني القسم على أرض شبه سوداء
+ * فترتفع البطاقات عنها؛ وعلى --canvas تتساوى البطاقة والأرض فتذوب فيها.
+ * والوهج الدافئ منخفضاً يساراً أثرُ غروب تنومة، لا الصورة نفسها.
+ */
 .svc-section {
   position: relative;
-  padding-block: clamp(72px, 9vw, 132px) clamp(40px, 5vw, 64px);
-  background: var(--canvas);
+  padding-block: var(--slide-y);
+  background:
+    radial-gradient(130% 78% at 6% 112%, color-mix(in srgb, var(--accent) 13%, transparent) 0%, transparent 54%),
+    linear-gradient(to bottom, var(--navy-1000) 0%, color-mix(in srgb, var(--navy-1000) 74%, var(--navy-900)) 52%, var(--navy-1000) 100%);
   overflow: hidden;
 }
 /* سلسلة الجبال: شكل مرسوم، يخفت صاعداً فلا ينازع البطاقات. */
-.svc-ridge {
+/*
+ * طبقة الجوّ: الصورة الأصلية تغطّي القسم كلّه خلف البطاقات، لا شريطاً في
+ * أسفله. cover مع موضع ثابت يحفظ التكوين عند كل عرض شاشة — الجبال في
+ * الوسط والقرية أسفلها — فلا يتغيّر المشهد بتغيّر المقاس.
+ *
+ * وتذوب في الكحلي تدريجاً: قناع يبدأ شفافاً من أعلى فيبقى رأس القسم أرضاً
+ * صافية، ويكتمل نحو الأسفل حيث الغروب. وخفض السطوع يُبقيها جوّاً لا صورة
+ * تنازع ما فوقها.
+ */
+.svc-atmos {
   position: absolute;
   inset-inline: 0;
-  inset-block-end: 0;
-  width: 100%;
-  height: clamp(120px, 17vw, 236px);
-  fill: var(--navy-800);
-  opacity: 0.42;
-  /* تمويه خفيف: قمم حادّة تقرأ رسماً، والمطلوب بُعد وجوّ. */
-  filter: blur(1.6px);
+  inset-block-start: 0;
+  /*
+   * القرية تشغل الخُمس الأسفل من الصورة، ولا مكان لها هنا: المطلوب جبال
+   * تصنع جوّاً، لا بيوت تنافس البطاقات — ومكانها «عن واف» أسفل الصفحة.
+   *
+   * فتُمدّ الطبقة أطول من القسم بمقدار ذلك الخُمس، ويقصّ overflow أسفلها.
+   * الحيلة مستقلّة عن المقاس: على الشاشة العريضة يقصّ cover رأس الصورة
+   * وذيلها، وعلى الجوال تظهر الصورة بطولها والقصّ وحده يمنع البيوت.
+   */
+  height: 128%;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(to top, #000 34%, transparent 100%);
-  mask-image: linear-gradient(to top, #000 34%, transparent 100%);
+  background-image: var(--svc-bg);
+  background-size: cover;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  /* جوّ لا مشهد: الغروب يغمر القسم إن تُرك على سطوعه فيسحب النظر من
+     البطاقات. المرجع يُبقي منه أثراً دافئاً في القاع لا أكثر. */
+  filter: brightness(0.3) saturate(0.7);
+  opacity: 0.44;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 14%, rgba(0, 0, 0, 0.7) 42%, #000 72%);
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 14%, rgba(0, 0, 0, 0.7) 42%, #000 72%);
 }
 /*
  * المرجع يعطي القسم ٩٠٪ من الشاشة؛ رمز --content-max (١١٢٠) يحبسه عند
@@ -2584,11 +2628,17 @@ a.service-card:hover .service-go {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: clamp(24px, 4vw, 64px);
   align-items: start;
-  margin-block-end: clamp(44px, 6vw, 84px);
+  margin-block-end: clamp(28px, 3.2vw, 56px);
 }
-.svc-index {
+.svc-index-col {
   grid-column: 2;
   grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  /* المسافة التي تُنزل الملاحظة إلى محاذاة أسفل العنوان، كما في المرجع. */
+  gap: clamp(40px, 5.6vw, 98px);
+}
+.svc-index {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -2626,9 +2676,7 @@ a.service-card:hover .service-go {
 }
 /* الملاحظة تحت المؤشّر لا تحت العنوان: التماثل هنا يقتل الإيقاع. */
 .svc-note {
-  grid-column: 2;
-  grid-row: 2;
-  margin: clamp(18px, 3vw, 40px) 0 0;
+  margin: 0;
   padding-block-end: var(--space-5);
   border-block-end: 2px solid var(--accent);
   width: fit-content;
@@ -2651,7 +2699,8 @@ a.service-card:hover .service-go {
      نصيبه ولا تطول البطاقة. */
   gap: clamp(18px, 1.8vw, 23px);
   padding: clamp(20px, 2.1vw, 30px);
-  background: color-mix(in srgb, var(--surface-card) 76%, transparent);
+  /* فوق طبقة الجوّ تحتاج البطاقة صلابة، وإلا شفّت الصورة خلالها. */
+  background: color-mix(in srgb, var(--surface-card) 94%, transparent);
   border: var(--border-w) solid var(--border-hairline);
   border-radius: var(--radius-card);
   transition: background-color var(--dur-normal) var(--ease-standard),
@@ -2659,7 +2708,7 @@ a.service-card:hover .service-go {
               transform var(--dur-normal) var(--ease-out);
 }
 .svc-card:hover {
-  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-raised) 96%, transparent);
   border-color: var(--border-default);
   transform: translateY(-3px);
 }
@@ -2887,7 +2936,7 @@ a.service-card:hover .service-go {
   justify-content: space-between;
   gap: var(--space-6);
   flex-wrap: wrap;
-  margin-block-start: clamp(44px, 6vw, 88px);
+  margin-block-start: clamp(44px, 5.4vw, 92px);
   padding-block-start: var(--space-6);
   border-block-start: var(--border-w) solid var(--border-hairline);
   font: var(--fw-regular) var(--fs-12)/1.6 var(--font-sans);
@@ -2925,18 +2974,21 @@ a.service-card:hover .service-go {
 /* ---- الجوال: إعادة تركيب لا تصغير ---- */
 @media (max-width: 899px) {
   .svc-head { grid-template-columns: minmax(0, 1fr); }
-  .svc-index { grid-column: 1; grid-row: 1; }
+  .svc-index-col { grid-column: 1; grid-row: 1; gap: var(--space-7); }
   .svc-index-top { justify-content: flex-start; }
   .svc-index-en { padding-inline-end: 52px; }
   .svc-lead { grid-column: 1; grid-row: 2; }
-  .svc-note { grid-column: 1; grid-row: 3; margin-block-start: var(--space-7); }
+  .svc-note { margin-block-start: 0; }
   .svc-body { flex-direction: column-reverse; align-items: stretch; }
   .svc-visual { align-self: flex-start; }
   .svc-content p { max-width: none; }
 }
 
 @media (max-width: 640px) {
-  .landing-topbar nav a:not(.landing-go-btn) { display: none; }
+  /* يبقى رابط واحد: «عن واف». الخدمات تلي اللوحة فتُدرك بتمريرة، أمّا
+     «عن واف» فآخر الصفحة — وهو الموضع الوحيد الذي تختصره المرساة. */
+  .landing-topbar nav a[href="#services"] { display: none; }
+  .landing-topbar nav a { padding-inline: var(--space-5); }
   .svc-visual { transform: scale(0.88); transform-origin: right center; }
 }
 
@@ -2957,9 +3009,10 @@ a.service-card:hover .service-go {
  * وفرضه على الجذر يغيّر سلوك المنصّة كلها. :has يقصره على وجود .landing.
  * وscroll-margin يترك للشريط اللاصق ارتفاعه فلا يبتلع أول القسم.
  */
-:root:has(.landing) { scroll-behavior: smooth; }
+:root:has(.landing) { scroll-behavior: smooth; scroll-snap-type: y proximity; }
 @media (prefers-reduced-motion: reduce) {
-  :root:has(.landing) { scroll-behavior: auto; }
+  /* من طلب تقليل الحركة لا يريد الصفحة تسحب تمريرته. */
+  :root:has(.landing) { scroll-behavior: auto; scroll-snap-type: none; }
 }
 #about-waf, #services { scroll-margin-block-start: calc(var(--topbar-h) + var(--space-5)); }
 

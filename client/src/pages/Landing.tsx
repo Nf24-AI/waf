@@ -307,7 +307,11 @@ export default function Landing() {
       </header>
 
       <main>
-        <AsciiHero />
+        {/* اللوحة والنصّ وشريط الأنماط قسم واحد، فتستقرّ التمريرة على أوّله. */}
+        <section className="landing-hero" aria-label="واف">
+          <AsciiHero />
+        </section>
+
         <ServicesSection />
         <AboutWaf />
       </main>

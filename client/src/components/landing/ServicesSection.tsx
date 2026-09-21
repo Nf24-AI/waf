@@ -4,6 +4,7 @@ import React from "react";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { rootServices } from "@shared/services";
+import tanomah from "@/assets/village-at-dusk.jpg";
 
 /**
  * قسم الخدمات في الوجه العام.
@@ -289,22 +290,37 @@ export default function ServicesSection() {
       aria-labelledby="svc-heading"
     >
       {/*
-        سلسلة الجبال مرسومة لا مصوَّرة: صورة تنومة تخصّ «عن واف» في آخر
-        الصفحة، وإقحامها هنا يجعل الحكاية خلفيةً للمنتج.
+        جوّ القسم صورة تنومة نفسها، طبقةً تغطّي القسم كلّه خلف البطاقات —
+        لا شريطاً سفلياً. مسارها يأتي من البناء لا من الأنماط.
       */}
-      <svg className="svc-ridge" viewBox="0 0 1600 220" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0 78 L74 44 L152 104 L238 62 L332 126 L436 90 L548 148 L668 116 L802 162 L952 136 L1104 172 L1298 156 L1452 184 L1600 172 L1600 220 L0 220 Z" />
-      </svg>
+      <div
+        className="svc-atmos"
+        aria-hidden="true"
+        style={{ "--svc-bg": `url(${tanomah})` } as React.CSSProperties}
+      />
 
       <div className="landing-wrap">
         <div className="svc-head">
-          <div className="svc-index">
-            <span className="svc-index-top">
-              <i className="svc-rule" aria-hidden="true" />
-              <span className="svc-number">02</span>
-              <span className="svc-index-ar">الخدمات</span>
-            </span>
-            <span className="svc-index-en">OUR SERVICES</span>
+          {/*
+            المؤشّر والملاحظة عمود واحد يجاور العنوان، لا صفّان يتعاقبان
+            تحته: في المرجع تقع الملاحظة بمحاذاة أسفل العنوان، فارتفاع
+            الترويسة هو ارتفاع أطول عموديها لا مجموعهما.
+          */}
+          <div className="svc-index-col">
+            <div className="svc-index">
+              <span className="svc-index-top">
+                <i className="svc-rule" aria-hidden="true" />
+                <span className="svc-number">02</span>
+                <span className="svc-index-ar">الخدمات</span>
+              </span>
+              <span className="svc-index-en">OUR SERVICES</span>
+            </div>
+
+            <p className="svc-note">
+              أدوات بسيطة
+              <br />
+              تركّز على ما يهم فعلاً.
+            </p>
           </div>
 
           <div className="svc-lead">
@@ -312,12 +328,6 @@ export default function ServicesSection() {
             <h2 id="svc-heading">نبدأ بما نحتاجه.</h2>
             <p className="svc-sub">خدمتان، والبداية من هنا.</p>
           </div>
-
-          <p className="svc-note">
-            أدوات بسيطة
-            <br />
-            تركّز على ما يهم فعلاً.
-          </p>
         </div>
 
         <div className="svc-cards">
