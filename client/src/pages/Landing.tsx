@@ -260,6 +260,13 @@ function AboutWaf() {
           <br />
           ومن هنا نحكي.
         </h2>
+        <p className="frame-note">
+          تنومة، موطن الـ ٢٢ عاماً.
+          <br />
+          هنا كبرت أحلامنا، وتشكّلت ملامحنا، وكانت البدايات.
+          <br />
+          واليوم، نحمل ذلك المكان في كل ما نبنيه.
+        </p>
 
         <p className="frame-brand">
           <span className="sr-only">{BRAND_WORD}</span>
