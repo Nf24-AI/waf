@@ -11,8 +11,8 @@ import { LANDING_ROUTE, PLATFORM_ROUTE } from "@shared/routes";
 /**
  * صفحة الهبوط هي المسار الوحيد الذي يُقرأ بلا كلمة مرور، فهي الصفحة الوحيدة
  * التي يراها غريب. ما يُكسر فيها بصمت: اسم المنتج يغيب عن قارئ الشاشة لأن
- * الحركة تخفي حروفه، صورة تنومة تفقد بديلها النصّي، أو وجهة خدمة تتباعد عن
- * الكتالوج لأن أحدهم كتب الرابط بيده.
+ * الحركة تخفي حروفه، «عن واف» يصعد فوق الخدمات فيصير افتتاحاً ثانياً، أو
+ * وجهة خدمة تتباعد عن الكتالوج لأن أحدهم كتب الرابط بيده.
  */
 
 function renderLanding() {
@@ -33,6 +33,10 @@ describe("landing page", () => {
 
   beforeEach(() => {
     errorSpy = vi.spyOn(console, "error").mockImplementation(message => {
+      // jsdom يعلن أن getContext غير منفّذ عبر console.error لا برمي. المحرّك
+      // يتعامل مع السياق الغائب ويرجع خاملاً، فهذه الرسالة متوقَّعة — والحارس
+      // هنا لتحذيرات React، فيبقى صارماً مع كل ما عداها.
+      if (String(message).includes("getContext")) return;
       throw new Error(String(message));
     });
   });
@@ -42,22 +46,38 @@ describe("landing page", () => {
     cleanup();
   });
 
-  it("tells the photograph's story as the page heading", () => {
+  it("opens on the brand, not on the story", () => {
     renderLanding();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("من هناك بدأنا");
+    // العنوان الأول للصفحة هو الاسم فوق اللوحة. لو صعد «عن واف» إلى الأعلى
+    // لصار عنوان الحكاية هو h1، وهذا بالضبط الترتيب الذي أُعيد ضبطه.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("وَاف");
+  });
+
+  it("keeps About Waf as the last section, after the services", () => {
+    const { container } = renderLanding();
+    const sections = Array.from(container.querySelectorAll("main > *[id], main > section"));
+    expect(sections.at(-1)).toHaveAttribute("id", "about-waf");
+    const services = container.querySelector("#services")!;
+    const about = container.querySelector("#about-waf")!;
+    expect(services.compareDocumentPosition(about) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("reaches About Waf by anchor on this page, not by a route", () => {
+    renderLanding();
+    const link = screen.getByRole("link", { name: "عن واف" });
+    expect(link).toHaveAttribute("href", "#about-waf");
   });
 
   it("names the brand where a screen reader can reach it, not only in the animation", () => {
     renderLanding();
     // الحروف المتحرّكة كلها aria-hidden، فلولا النسخة المقروءة لكان اسم
     // المنتج غائباً عن قارئ الشاشة تماماً.
-    expect(screen.getByText("واف", { selector: ".sr-only" })).toBeInTheDocument();
+    expect(screen.getAllByText("وَاف", { selector: ".sr-only" }).length).toBeGreaterThan(0);
   });
 
   it("describes the photograph rather than leaving it unlabelled", () => {
     renderLanding();
-    const photo = screen.getByRole("img");
-    expect(photo).toHaveAccessibleName(expect.stringContaining("تنومة"));
+    expect(screen.getByRole("img")).toHaveAccessibleName(expect.stringContaining("تنومة"));
   });
 
   it("credits where and when the photograph was taken", () => {
@@ -77,8 +97,7 @@ describe("landing page", () => {
   it("takes both services' destinations from the catalogue", () => {
     renderLanding();
     const enters = screen.getAllByRole("link", { name: /^ادخل (خدمة الاجتماعات|إدارة الوقت)$/ });
-    const destinations = enters.map(link => link.getAttribute("href"));
-    expect(destinations).toEqual([href("meetings"), href("time")]);
+    expect(enters.map(link => link.getAttribute("href"))).toEqual([href("meetings"), href("time")]);
   });
 
   it("isolates the externally hosted service from this origin", () => {
