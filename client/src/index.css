@@ -2221,12 +2221,16 @@ a.service-card:hover .service-go {
  * التمريرة تستقرّ عند حدود الأقسام دون أن تحبس من يريد المرور سريعاً.
  */
 .landing {
-  background: var(--canvas);
+  /* الأرض شفّافة فوق طبقة الجوّ الثابتة؛ اللون نفسه يسكن في .waf-atmos-veil. */
+  background: transparent;
   color: var(--text-body);
   min-height: 100vh;
   --slide-y: clamp(38px, 3.4vw, 64px);
 }
-.landing-hero, .svc-section, .frame { scroll-snap-align: start; }
+/*
+ * لا snap: الصفحة تجربة متّصلة لا شرائح منفصلة، والقارئ يقف حيث يشاء.
+ * والانتقال بين الأقسام يصنعه ظهورُ محتواها، لا توقّفُ التمريرة عند حدّها.
+ */
 .landing-wrap {
   width: 100%;
   max-width: var(--content-max);
@@ -2571,46 +2575,12 @@ a.service-card:hover .service-go {
 .svc-section {
   position: relative;
   padding-block: var(--slide-y);
-  background:
-    radial-gradient(130% 78% at 6% 112%, color-mix(in srgb, var(--accent) 13%, transparent) 0%, transparent 54%),
-    linear-gradient(to bottom, var(--navy-1000) 0%, color-mix(in srgb, var(--navy-1000) 74%, var(--navy-900)) 52%, var(--navy-1000) 100%);
+  /* شفّاف: الجبال طبقة واحدة خلف الصفحة كلّها، فلا يحجبها سطح القسم. */
+  background: transparent;
   overflow: hidden;
 }
 /* سلسلة الجبال: شكل مرسوم، يخفت صاعداً فلا ينازع البطاقات. */
-/*
- * طبقة الجوّ: الصورة الأصلية تغطّي القسم كلّه خلف البطاقات، لا شريطاً في
- * أسفله. cover مع موضع ثابت يحفظ التكوين عند كل عرض شاشة — الجبال في
- * الوسط والقرية أسفلها — فلا يتغيّر المشهد بتغيّر المقاس.
- *
- * وتذوب في الكحلي تدريجاً: قناع يبدأ شفافاً من أعلى فيبقى رأس القسم أرضاً
- * صافية، ويكتمل نحو الأسفل حيث الغروب. وخفض السطوع يُبقيها جوّاً لا صورة
- * تنازع ما فوقها.
- */
-.svc-atmos {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-start: 0;
-  /*
-   * القرية تشغل الخُمس الأسفل من الصورة، ولا مكان لها هنا: المطلوب جبال
-   * تصنع جوّاً، لا بيوت تنافس البطاقات — ومكانها «عن واف» أسفل الصفحة.
-   *
-   * فتُمدّ الطبقة أطول من القسم بمقدار ذلك الخُمس، ويقصّ overflow أسفلها.
-   * الحيلة مستقلّة عن المقاس: على الشاشة العريضة يقصّ cover رأس الصورة
-   * وذيلها، وعلى الجوال تظهر الصورة بطولها والقصّ وحده يمنع البيوت.
-   */
-  height: 128%;
-  pointer-events: none;
-  background-image: var(--svc-bg);
-  background-size: cover;
-  background-position: 50% 50%;
-  background-repeat: no-repeat;
-  /* جوّ لا مشهد: الغروب يغمر القسم إن تُرك على سطوعه فيسحب النظر من
-     البطاقات. المرجع يُبقي منه أثراً دافئاً في القاع لا أكثر. */
-  filter: brightness(0.3) saturate(0.7);
-  opacity: 0.44;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 14%, rgba(0, 0, 0, 0.7) 42%, #000 72%);
-  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 14%, rgba(0, 0, 0, 0.7) 42%, #000 72%);
-}
+
 /*
  * المرجع يعطي القسم ٩٠٪ من الشاشة؛ رمز --content-max (١١٢٠) يحبسه عند
  * ٧٠٪ فتضيق البطاقتان ويلتفّ نصّهما فتطولان. التوسيع مقصور على هذا القسم:
@@ -3009,10 +2979,11 @@ a.service-card:hover .service-go {
  * وفرضه على الجذر يغيّر سلوك المنصّة كلها. :has يقصره على وجود .landing.
  * وscroll-margin يترك للشريط اللاصق ارتفاعه فلا يبتلع أول القسم.
  */
-:root:has(.landing) { scroll-behavior: smooth; scroll-snap-type: y proximity; }
+:root:has(.landing) { scroll-behavior: auto; }
 @media (prefers-reduced-motion: reduce) {
-  /* من طلب تقليل الحركة لا يريد الصفحة تسحب تمريرته. */
-  :root:has(.landing) { scroll-behavior: auto; scroll-snap-type: none; }
+  /* من طلب تقليل الحركة لا يريد الصفحة تسحب تمريرته: Lenis لا يعمل أصلاً،
+     والقفز إلى المرساة يعود فورياً بسلوك المتصفح. */
+  :root:has(.landing) { scroll-behavior: auto; }
 }
 #about-waf, #services { scroll-margin-block-start: calc(var(--topbar-h) + var(--space-5)); }
 
@@ -3022,4 +2993,48 @@ a.service-card:hover .service-go {
   letter-spacing: var(--ls-widest);
   text-transform: uppercase;
   color: var(--accent);
+}
+
+/* ---- جبال واف: بيئة واحدة خلف الصفحة ---- */
+/*
+ * ثابتة في إطار العرض خلف كل شيء، فلا تنقطع بين قسم وقسم. ما يحجبها هو ما
+ * فوقها: لوحة الهيرو وصورة «عن واف» معتمتان، وبينهما تُرى.
+ */
+.waf-atmos {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: var(--canvas);
+}
+.waf-atmos-layer {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  /* أطول من الشاشة بخُمس: القرية تقع أسفل الحدّ المقصوص فلا تظهر أبداً. */
+  height: 128%;
+  background-image: var(--waf-atmos-src);
+  background-size: cover;
+  background-position: 50% 44%;
+  background-repeat: no-repeat;
+  /* جوّ لا مشهد: الجبال تُرى، والغروب لا يغلب ما فوقه. */
+  filter: brightness(0.5) saturate(0.72);
+  will-change: transform;
+}
+/* حجاب يذيب الطبقة في الكحلي صاعداً، فلا تبدأ ولا تنتهي بحدّ. */
+.waf-atmos-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, var(--canvas) 0%, color-mix(in srgb, var(--canvas) 55%, transparent) 26%, transparent 62%),
+    linear-gradient(to top, color-mix(in srgb, var(--navy-1000) 62%, transparent) 0%, transparent 34%);
+}
+/* المحتوى فوق الجوّ. */
+.landing > header,
+.landing > main,
+.landing > footer { position: relative; z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .waf-atmos-layer { will-change: auto; }
 }

@@ -4,9 +4,12 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { LayoutGrid } from "lucide-react";
 import { Link } from "wouter";
 import { PLATFORM_ROUTE } from "@shared/routes";
+import Atmosphere from "@/components/landing/Atmosphere";
+import Reveal from "@/components/landing/Reveal";
 import ServicesSection from "@/components/landing/ServicesSection";
 import { createAsciiStage, type AsciiStage, type RenderMode } from "@/lib/ascii-stage";
 import { prefersReducedMotion } from "@/lib/motion";
+import { useSmoothScroll } from "@/lib/smooth-scroll";
 import tanomah from "@/assets/village-at-dusk.jpg";
 
 /**
@@ -253,7 +256,7 @@ function AboutWaf() {
         </span>
       </div>
 
-      <div className="frame-story">
+      <Reveal className="frame-story">
         <p className="frame-label">عن واف</p>
         <h2 id="about-heading">
           من هناك بدأنا،
@@ -279,14 +282,20 @@ function AboutWaf() {
         </p>
 
         <p className={meaningIn ? "frame-meaning is-in" : "frame-meaning"}>من الوفاء، ومن التمام.</p>
-      </div>
+      </Reveal>
     </section>
   );
 }
 
+/** ارتفاع الشريط اللاصق، ليقف القفز إلى المرساة تحته لا خلفه. */
+const HEADER_OFFSET = 68;
+
 export default function Landing() {
+  useSmoothScroll(true, HEADER_OFFSET);
+
   return (
     <div className="landing" data-waf-theme="navy" dir="rtl">
+      <Atmosphere />
       <header className="landing-topbar">
         <div className="landing-wrap landing-topbar-in">
           <div className="landing-lockup">

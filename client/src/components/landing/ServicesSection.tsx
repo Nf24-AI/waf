@@ -4,7 +4,7 @@ import React from "react";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { rootServices } from "@shared/services";
-import tanomah from "@/assets/village-at-dusk.jpg";
+import Reveal from "./Reveal";
 
 /**
  * قسم الخدمات في الوجه العام.
@@ -289,18 +289,8 @@ export default function ServicesSection() {
       className="svc-section"
       aria-labelledby="svc-heading"
     >
-      {/*
-        جوّ القسم صورة تنومة نفسها، طبقةً تغطّي القسم كلّه خلف البطاقات —
-        لا شريطاً سفلياً. مسارها يأتي من البناء لا من الأنماط.
-      */}
-      <div
-        className="svc-atmos"
-        aria-hidden="true"
-        style={{ "--svc-bg": `url(${tanomah})` } as React.CSSProperties}
-      />
-
       <div className="landing-wrap">
-        <div className="svc-head">
+        <Reveal className="svc-head">
           {/*
             المؤشّر والملاحظة عمود واحد يجاور العنوان، لا صفّان يتعاقبان
             تحته: في المرجع تقع الملاحظة بمحاذاة أسفل العنوان، فارتفاع
@@ -328,13 +318,14 @@ export default function ServicesSection() {
             <h2 id="svc-heading">نبدأ بما نحتاجه.</h2>
             <p className="svc-sub">خدمتان، والبداية من هنا.</p>
           </div>
-        </div>
+        </Reveal>
 
-        <div className="svc-cards">
+        {/* البطاقتان بعد الترويسة بقليل: العنوان يُقرأ أولاً ثم يُكشف ما تحته. */}
+        <Reveal className="svc-cards" delay={0.12}>
           {LANDING_SERVICES.map(service => (
             <ServiceCard key={service.id} service={service} />
           ))}
-        </div>
+        </Reveal>
 
         <footer className="svc-foot">
           <span>أدوات اليوم — لبناء غدٍ أفضل.</span>

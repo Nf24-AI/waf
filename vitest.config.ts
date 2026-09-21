@@ -14,7 +14,8 @@ export default defineConfig({
   test: {
     environment: "node",
     environmentMatchGlobs: [["client/**/*.test.tsx", "jsdom"]],
-    setupFiles: [],
+    // jsdom بلا matchMedia ولا IntersectionObserver، وframer-motion يسألهما.
+    setupFiles: [path.resolve(templateRoot, "client", "src", "test-setup.ts")],
     include: ["server/**/*.test.ts", "server/**/*.spec.ts", "shared/**/*.test.ts", "client/**/*.test.ts", "client/**/*.test.tsx"],
   },
 });
