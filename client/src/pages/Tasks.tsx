@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { type Task } from "@shared/tasks";
-import { TIME_MANAGEMENT_ROUTE } from "@shared/routes";
+import { ARCHIVE_ROUTE, TIME_MANAGEMENT_ROUTE } from "@shared/routes";
 import TaskRow from "@/components/time/TaskRow";
 import { trpc } from "@/lib/trpc";
 
@@ -58,7 +58,9 @@ export default function Tasks() {
             إدارة الوقت
           </Link>
           <h1>مهامي المفتوحة</h1>
-          <p>ما لم يُنجَز بعد. المكتملة في الأرشيف.</p>
+          <p>
+            ما لم يُنجَز بعد. المكتملة في <Link href={ARCHIVE_ROUTE}>الأرشيف</Link>.
+          </p>
         </header>
 
         <div className="tm-tabs" role="tablist" aria-label="تصفية المهام">

@@ -9,6 +9,7 @@ import {
   type Importance,
   type Urgency,
 } from "@shared/tasks";
+import { type FocusSession } from "@shared/statistics";
 
 /**
  * المهام في Supabase، والوصول من هنا لا من المتصفح.
@@ -280,4 +281,24 @@ export async function closeFocusSession(id: string, completed: boolean): Promise
     method: "PATCH",
     body: JSON.stringify({ ended_at: new Date().toISOString(), completed }),
   });
+}
+
+/**
+ * جلسات التركيز في مدة — للإحصاء وحده.
+ *
+ * تُقرأ بالبداية لا بالنهاية: الجلسة التي بدأت أمس وانتهت اليوم تنتمي إلى
+ * أمس، وهو اليوم الذي قُضيت فيه.
+ */
+export async function listFocusSessions(sinceIso?: string): Promise<FocusSession[]> {
+  const since = sinceIso ? `&started_at=gte.${encodeURIComponent(sinceIso)}` : "";
+  const rows = await rest<
+    { started_at: string; ended_at: string | null; planned_minutes: number; completed: boolean }[]
+  >(`${SESSIONS}?select=started_at,ended_at,planned_minutes,completed${since}&order=started_at.desc`);
+
+  return rows.map(row => ({
+    startedAt: row.started_at,
+    endedAt: row.ended_at ?? undefined,
+    plannedMinutes: row.planned_minutes,
+    completed: row.completed,
+  }));
 }

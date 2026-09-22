@@ -3784,3 +3784,104 @@ a.service-card:hover .service-go {
     flex-wrap: wrap;
   }
 }
+
+/* ---- الإحصاء ---- */
+.st-periods { margin-block-start: var(--space-9); }
+.st-periods .ei-chip { cursor: pointer; }
+
+.st-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+}
+@media (min-width: 680px) {
+  .st-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.st-card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-9);
+  background: var(--surface-card);
+  border: var(--border-w) solid var(--border-hairline);
+  border-radius: var(--radius-card);
+}
+/* الرقم أولاً وأكبر: البطاقة تُقرأ في نظرة، والسطر تحته يشرحه لا يقدّمه. */
+.st-value {
+  font: var(--fw-medium) var(--fs-32)/var(--lh-tight) var(--font-serif-display);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-primary);
+}
+.st-label { font: var(--text-caption); color: var(--text-tertiary); }
+
+.st-note {
+  margin: 0 0 var(--space-7);
+  font: var(--text-body-md);
+  color: var(--text-tertiary);
+  max-width: 62ch;
+}
+.st-note:last-child { margin: var(--space-7) 0 0; }
+
+.st-bars { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-5); }
+.st-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-5);
+}
+.st-bar-label { font: var(--text-body-md); color: var(--text-secondary); }
+.st-bar-track {
+  block-size: 6px;
+  border-radius: 999px;
+  background: var(--alpha-fill-weak);
+  overflow: hidden;
+}
+.st-bar-fill {
+  display: block;
+  block-size: 100%;
+  min-inline-size: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.st-bar-value {
+  font: var(--fw-medium) var(--fs-16)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+@media (max-width: 560px) {
+  .st-bar { grid-template-columns: minmax(0, 1fr) auto; }
+  .st-bar-track { grid-column: 1 / -1; }
+}
+
+/* ---- الأرشيف ---- */
+.ar-day-title {
+  margin: 0 0 var(--space-6);
+  font: var(--text-title-3);
+  color: var(--text-secondary);
+}
+.ar-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
+.ar-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid transparent;
+}
+.ar-row:hover { border-color: var(--border-hairline); background: var(--alpha-fill-weak); }
+/* المنجَز لا يُشطب: الشطب يقول «أُلغي»، والعلامة تقول «تمّ». */
+.ar-check { color: var(--accent); align-self: center; }
+.ar-title { font: var(--text-body-md); color: var(--text-primary); }
+.ar-meta { font: var(--text-caption); color: var(--text-tertiary); }
+.ar-time {
+  font: var(--fs-13)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-disabled);
+  direction: ltr;
+}
+@media (max-width: 560px) {
+  .ar-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .ar-meta { grid-column: 2 / -1; }
+}

@@ -11,7 +11,9 @@ import Landing from "./pages/Landing";
 import Lock from "./pages/Lock";
 import Decisions from "./pages/Decisions";
 import Platform from "./pages/Platform";
+import Statistics from "./pages/Statistics";
 import StatusReport from "./pages/StatusReport";
+import Archive from "./pages/Archive";
 import Eisenhower from "./pages/Eisenhower";
 import Focus from "./pages/Focus";
 import TimeBlocking from "./pages/TimeBlocking";
@@ -26,6 +28,8 @@ import {
   MEETING_ROUTES,
   PLATFORM_ROUTE,
   STATUS_REPORT_ROUTE,
+  ARCHIVE_ROUTE,
+  STATISTICS_ROUTE,
   TASKS_ROUTE,
   TIME_MANAGEMENT_ROUTE,
   TIME_METHOD_ROUTES,
@@ -39,6 +43,8 @@ function Router() {
       <Route path={STATUS_REPORT_ROUTE} component={StatusReport} />
       <Route path={TIME_MANAGEMENT_ROUTE} component={TimeManagement} />
       <Route path={TASKS_ROUTE} component={Tasks} />
+      <Route path={STATISTICS_ROUTE} component={Statistics} />
+      <Route path={ARCHIVE_ROUTE} component={Archive} />
       <Route path={TIME_METHOD_ROUTES.eisenhower} component={Eisenhower} />
       <Route path={TIME_METHOD_ROUTES.timeBlocking} component={TimeBlocking} />
       <Route path={TIME_METHOD_ROUTES.focus} component={Focus} />

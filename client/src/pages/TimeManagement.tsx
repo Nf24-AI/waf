@@ -1,9 +1,9 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useState } from "react";
-import { CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
+import { Archive, BarChart3, CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
 import { Link } from "wouter";
-import { TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { ARCHIVE_ROUTE, STATISTICS_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
 import AddTaskDialog from "@/components/time/AddTaskDialog";
 import TaskRow from "@/components/time/TaskRow";
 import { trpc } from "@/lib/trpc";
@@ -62,6 +62,14 @@ export default function TimeManagement() {
           <Link className="tm-btn tm-btn-ghost" href={TASKS_ROUTE}>
             <ListChecks size={17} aria-hidden="true" />
             متابعة المهام
+          </Link>
+          <Link className="tm-btn tm-btn-ghost" href={STATISTICS_ROUTE}>
+            <BarChart3 size={17} aria-hidden="true" />
+            الإحصاء
+          </Link>
+          <Link className="tm-btn tm-btn-ghost" href={ARCHIVE_ROUTE}>
+            <Archive size={17} aria-hidden="true" />
+            الأرشيف
           </Link>
         </div>
 

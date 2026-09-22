@@ -29,6 +29,8 @@ export const TIME_METHOD_ROUTES = {
 
 /** متابعة المهام المفتوحة، بلا إنشاء شيء. */
 export const TASKS_ROUTE = "/tasks";
+export const STATISTICS_ROUTE = "/statistics";
+export const ARCHIVE_ROUTE = "/archive";
 
 export const DECISIONS_ROUTE = "/decisions";
 export const STATUS_REPORT_ROUTE = "/status";

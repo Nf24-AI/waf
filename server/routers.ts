@@ -27,6 +27,7 @@ import {
   completeTask,
   createTask,
   listCompletedTasks,
+  listFocusSessions,
   listOpenTasks,
   openFocusSession,
   scheduleTask,
@@ -156,6 +157,10 @@ export const appRouter = router({
     status: appProcedure.query(() => ({ configured: tasksAreConfigured() })),
 
     listOpen: appProcedure.query(() => listOpenTasks()),
+
+    sessions: appProcedure
+      .input(z.object({ since: z.string().optional() }).optional())
+      .query(({ input }) => listFocusSessions(input?.since)),
 
     listCompleted: appProcedure
       .input(z.object({ since: z.string().optional() }).optional())
