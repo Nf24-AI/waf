@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 import type { MeetingAgendaItem, MeetingRecord } from "@shared/meeting-store";
-import { DECISIONS_ROUTE } from "@shared/routes";
+import { DECISIONS_ROUTE, PLATFORM_ROUTE } from "@shared/routes";
 
 const mocks = vi.hoisted(() => ({
   listQuery: vi.fn(() => ({
@@ -161,7 +161,7 @@ describe("decision log page", () => {
   it("leads back to the platform", () => {
     withMeetings(SAMPLE);
     renderPage();
-    expect(screen.getByRole("link", { name: /خدمات واف/ })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /خدمات واف/ })).toHaveAttribute("href", PLATFORM_ROUTE);
   });
 
   it("sends each card to the meeting the decision was taken in, not to the list", () => {

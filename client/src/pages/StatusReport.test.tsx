@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 import type { MeetingAgendaItem, MeetingRecord } from "@shared/meeting-store";
-import { STATUS_REPORT_ROUTE } from "@shared/routes";
+import { PLATFORM_ROUTE, STATUS_REPORT_ROUTE } from "@shared/routes";
 
 const mocks = vi.hoisted(() => ({
   listQuery: vi.fn(() => ({ data: undefined as unknown, isLoading: false, isError: false })),
@@ -210,6 +210,6 @@ describe("status report page", () => {
 
   it("leads back to the platform", () => {
     renderPage();
-    expect(screen.getByRole("link", { name: /خدمات واف/ })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /خدمات واف/ })).toHaveAttribute("href", PLATFORM_ROUTE);
   });
 });

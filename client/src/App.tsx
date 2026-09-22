@@ -16,6 +16,7 @@ import { useIdleLock } from "./hooks/useIdleLock";
 import {
   DECISIONS_ROUTE,
   LANDING_ROUTE,
+  LEGACY_LANDING_ROUTE,
   MEETING_ROUTES,
   PLATFORM_ROUTE,
   STATUS_REPORT_ROUTE,
@@ -83,8 +84,9 @@ function Gate() {
  * صفحة الهبوط تسبق البوّابة عمداً.
  *
  * البوّابة تحمي بيانات الاجتماعات، لا تعريف المنتج. وصفحة هبوط خلف كلمة مرور
- * تشرح واف لمن يعرفه أصلاً — فتُقرأ صفراً من المرات. لذلك يُلتقط المسار هنا
- * قبل Gate: يُقرأ بلا كلمة مرور، وكل رابط فيه يقود إلى البوّابة فتطلبها.
+ * تشرح واف لمن يعرفه أصلاً — فتُقرأ صفراً من المرات. لذلك يحتلّ الوجه العام
+ * الجذر ويُلتقط هنا قبل Gate: يُقرأ بلا كلمة مرور، وكل رابط فيه يقود إلى
+ * البوّابة فتطلبها.
  *
  * البوّابة نفسها على tRPC (server/access.ts)، فخروج هذا المسار من Gate لا
  * يكشف شيئاً: الصفحة لا تطلب أي إجراء محميّ.
@@ -97,6 +99,8 @@ export default function App() {
           <Toaster position="bottom-left" />
           <Switch>
             <Route path={LANDING_ROUTE} component={Landing} />
+            {/* من حفظ العنوان القديم يصل إلى الوجه نفسه، فلا ينكسر رابط. */}
+            <Route path={LEGACY_LANDING_ROUTE} component={Landing} />
             <Route>
               <Gate />
             </Route>
