@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LayoutGrid } from "lucide-react";
 import { Link } from "wouter";
-import { PLATFORM_ROUTE } from "@shared/routes";
 import Atmosphere from "@/components/landing/Atmosphere";
 import Reveal from "@/components/landing/Reveal";
 import ServicesSection from "@/components/landing/ServicesSection";
@@ -171,10 +170,7 @@ function AsciiHero() {
           ترتّب مهامك، أو تقرأ ما تقرّر الأسبوع الماضي — وتخرج.
         </p>
         <div className="landing-acts">
-          <Link className="landing-btn landing-btn-primary" href={PLATFORM_ROUTE}>
-            ادخل المنصّة
-          </Link>
-          <a className="landing-btn landing-btn-ghost" href="#services">
+          <a className="landing-btn landing-btn-primary" href="#services">
             اطّلع على الخدمات
           </a>
         </div>
@@ -304,13 +300,15 @@ export default function Landing() {
             </span>
             <b>واف</b>
           </div>
+          {/*
+            لا «ادخل المنصّة» هنا: الزائر يرى الخدمات أمامه، والباب إلى كل
+            خدمة هو بطاقتها. دعوةٌ عامّة إلى «المنصّة» تَعِد بمكان آخر لا
+            وجود له — وليس فيها اليوم إلا هاتان الخدمتان.
+          */}
           <nav>
             <a href="#services">الخدمات</a>
             {/* مرساة في الصفحة نفسها لا مسار: القسم أسفل هذه الصفحة. */}
             <a href="#about-waf">عن واف</a>
-            <Link className="landing-go-btn" href={PLATFORM_ROUTE}>
-              ادخل المنصّة
-            </Link>
           </nav>
         </div>
       </header>
@@ -327,7 +325,6 @@ export default function Landing() {
 
       <footer className="landing-wrap landing-foot">
         <p>واف — منصّة أدوات مدير المشروع ومالك المنتج</p>
-        <Link href={PLATFORM_ROUTE}>ادخل المنصّة</Link>
       </footer>
     </div>
   );

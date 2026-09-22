@@ -6,7 +6,7 @@ import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 import Landing from "./Landing";
 import { SERVICES } from "@shared/services";
-import { LANDING_ROUTE, PLATFORM_ROUTE } from "@shared/routes";
+import { LANDING_ROUTE } from "@shared/routes";
 
 /**
  * صفحة الهبوط هي المسار الوحيد الذي يُقرأ بلا كلمة مرور، فهي الصفحة الوحيدة
@@ -109,10 +109,11 @@ describe("landing page", () => {
     }
   });
 
-  it("leads into the platform, where the password gate lives", () => {
+  it("offers no vague way in, only the services themselves", () => {
     renderLanding();
-    const ways = screen.getAllByRole("link", { name: "ادخل المنصّة" });
-    expect(ways.length).toBeGreaterThan(0);
-    for (const way of ways) expect(way).toHaveAttribute("href", PLATFORM_ROUTE);
+    // «ادخل المنصّة» كانت تَعِد بمكان وراء الخدمات لا وجود له: الزائر يراها
+    // أمامه، والباب إلى كل واحدة بطاقتها. ثلاث دعوات صارت صفراً.
+    expect(screen.queryByRole("link", { name: "ادخل المنصّة" })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("link", { name: /^ادخل (خدمة الاجتماعات|إدارة الوقت)$/ })).toHaveLength(2);
   });
 });
