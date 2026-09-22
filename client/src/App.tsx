@@ -12,6 +12,8 @@ import Decisions from "./pages/Decisions";
 import Platform from "./pages/Platform";
 import StatusReport from "./pages/StatusReport";
 import Eisenhower from "./pages/Eisenhower";
+import Focus from "./pages/Focus";
+import TimeBlocking from "./pages/TimeBlocking";
 import Tasks from "./pages/Tasks";
 import TimeManagement from "./pages/TimeManagement";
 import { useAuth } from "./_core/hooks/useAuth";
@@ -37,6 +39,8 @@ function Router() {
       <Route path={TIME_MANAGEMENT_ROUTE} component={TimeManagement} />
       <Route path={TASKS_ROUTE} component={Tasks} />
       <Route path={TIME_METHOD_ROUTES.eisenhower} component={Eisenhower} />
+      <Route path={TIME_METHOD_ROUTES.timeBlocking} component={TimeBlocking} />
+      <Route path={TIME_METHOD_ROUTES.focus} component={Focus} />
       <Route path={MEETING_ROUTES.prepare} component={Home} />
       <Route path={MEETING_ROUTES.display} component={Home} />
       <Route path="/404" component={NotFound} />

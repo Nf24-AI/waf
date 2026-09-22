@@ -181,10 +181,33 @@ export async function classifyTask(id: string, quadrant: Quadrant): Promise<Task
   return toTask(row);
 }
 
+/**
+ * الجدولة، مع منع التعارض عند المصدر.
+ *
+ * الفحص هنا لا في الواجهة وحدها: واجهتان مفتوحتان في لسانين تريان القائمة
+ * نفسها وقد تحجزان الوقت ذاته، ولا يمنع ذلك إلا من يكتب. القيد في الجدول
+ * يحرس شكل الموعد؛ هذا يحرس ألّا يتداخل موعدان.
+ */
 export async function scheduleTask(id: string, startIso: string, endIso: string): Promise<Task> {
   if (new Date(endIso) <= new Date(startIso)) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "وقت الانتهاء يجب أن يلي وقت البداية" });
   }
+
+  // موعدان يتداخلان إن بدأ كلٌّ قبل نهاية الآخر. تُستثنى المهمة نفسها كي
+  // تُعاد جدولتها على وقتها دون أن تصطدم بنفسها.
+  const window =
+    `scheduled_start=lt.${encodeURIComponent(endIso)}` +
+    `&scheduled_end=gt.${encodeURIComponent(startIso)}`;
+  const clashes = await rest<{ id: string; name: string }[]>(
+    `${TABLE}?select=id,name&completed_at=is.null&is_archived=eq.false&${window}&id=neq.${id}`,
+  );
+  if (clashes.length) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: `يوجد تعارض في هذا الوقت مع «${clashes[0].name}»`,
+    });
+  }
+
   const [row] = await rest<Row[]>(`${TABLE}?id=eq.${id}&select=${COLUMNS}`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },

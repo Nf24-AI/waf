@@ -3511,3 +3511,225 @@ a.service-card:hover .service-go {
 @media (prefers-reduced-motion: reduce) {
   .ei-chip, .ei-cell, .ei-pick-option { transition: none; }
 }
+
+/* ---- حجز الوقت ---- */
+/*
+ * المهمة أولاً ثم الوقت: البطاقة تُقرأ من أعلى كما تُملأ، والمعاينة أسفلها
+ * تقول ما سيُحجَز فعلاً — فلا يُضغط «حجز» على تخمين.
+ */
+
+.tb-card {
+  margin-block-start: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  padding: var(--space-9);
+  background: var(--surface-card);
+  border: var(--border-w) solid var(--border-hairline);
+  border-radius: var(--radius-card);
+}
+
+.tb-task {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  padding-block-end: var(--space-6);
+  border-block-end: var(--border-w) solid var(--border-hairline);
+  font: var(--text-title-3);
+  color: var(--text-primary);
+}
+.tb-task > span { font: var(--text-caption); color: var(--text-tertiary); }
+
+.tb-durations { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.tb-duration {
+  min-height: 44px;
+  padding-inline: var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-default);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font: var(--text-body-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.tb-duration:hover { border-color: var(--accent); color: var(--accent); }
+.tb-duration.is-current {
+  border-color: var(--accent);
+  background: var(--accent-quiet);
+  color: var(--accent);
+}
+
+/* المعاينة: الوقت بأرقام ثابتة العرض فلا يرقص الرقم وهو يتغيّر. */
+.tb-preview {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-5);
+  font: var(--fw-medium) var(--fs-26)/var(--lh-snug) var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  direction: ltr;
+  /* البطاقة عربية والوقت لاتيني: يُقلب اتجاهه وحده ويبقى محاذىً لبدايتها. */
+  text-align: start;
+}
+.tb-preview > span {
+  font: var(--text-caption);
+  font-family: inherit;
+  color: var(--text-tertiary);
+}
+
+.tb-done {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-9);
+  background: var(--surface-raised);
+  border: var(--border-w) solid var(--border-default);
+  border-radius: var(--radius-card);
+}
+.tb-done-title { margin: 0; font: var(--text-title-3); color: var(--text-primary); }
+.tb-done-when { margin: 0; font: var(--text-body-md); color: var(--accent); }
+
+/* الرقاقة المختارة في أي قائمة مهام — هنا وفي التركيز. */
+.ei-chip.is-current {
+  border-color: var(--accent);
+  background: var(--accent-quiet);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---- جلسة التركيز ---- */
+/*
+ * أهدأ شاشة في المنصّة: لا نقاط في الخلفية ولا حدود ولا شيء يُقرأ. المهمة
+ * واسمها ووقتها، ويُقرأ الوقت من بعيد لأن أحداً لا يقترب من الشاشة ليركّز.
+ */
+
+.fc-shell {
+  min-height: 100vh;
+  display: flex;
+  background: var(--canvas);
+  color: var(--text-body);
+  padding-block: var(--space-11) var(--space-12);
+}
+.fc-inner {
+  width: 100%;
+  max-width: 620px;
+  margin-inline: auto;
+  padding-inline: var(--gutter-inline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+.fc-pick h2 {
+  margin: 0 0 var(--space-6);
+  font: var(--text-title-3);
+  color: var(--text-secondary);
+}
+
+.fc-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-9);
+  text-align: center;
+}
+.fc-task {
+  margin: 0;
+  font: var(--fw-medium) var(--fs-21)/var(--lh-snug) var(--font-serif-display);
+  color: var(--text-primary);
+}
+
+.fc-dial { position: relative; width: min(280px, 72vw); aspect-ratio: 1; }
+.fc-dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.fc-track { fill: none; stroke: var(--border-hairline); stroke-width: 3; }
+.fc-arc {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.fc-clock {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--fw-regular) var(--fs-56)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-tight);
+  color: var(--text-primary);
+  direction: ltr;
+}
+
+.fc-durations {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+}
+.fc-custom input {
+  width: 104px;
+  min-height: 44px;
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-default);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: var(--text-body-md);
+  text-align: center;
+}
+.fc-custom input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.fc-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-5); }
+
+/* زرّ البدء وحده دائرة: هو القرار الوحيد في الشاشة فلا يشبه بقية الأزرار. */
+.fc-go {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: var(--border-w) solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-on);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.fc-go:hover { background: var(--accent-hover); }
+.fc-go:disabled { opacity: .55; cursor: default; }
+/* الأيقونة مثلّث يشير إلى البدء لا إلى جهة، فلا تنقلب مع RTL. */
+.fc-go svg { transform: scaleX(-1); }
+
+.fc-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-10);
+  text-align: center;
+  background: var(--surface-raised);
+  border: var(--border-w) solid var(--border-default);
+  border-radius: var(--radius-card);
+}
+.fc-ask h2 {
+  margin: 0;
+  font: var(--fw-medium) var(--fs-32)/var(--lh-snug) var(--font-serif-display);
+  color: var(--text-primary);
+}
+.fc-ask p { margin: 0; font: var(--text-body-md); color: var(--text-secondary); }
+.fc-ask-actions {
+  margin-block-start: var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-duration, .fc-go, .fc-arc { transition: none; }
+}
