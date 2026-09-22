@@ -91,7 +91,7 @@ interface Row {
  * التطبيق السابق يكتب importance و urgency، وهذا يقرأ quadrant. تخزينه
  * عموداً ثالثاً يعني ثلاث قيم لحقيقة واحدة تتباعد أول ما ينساها أحد.
  */
-function toTask(row: Row): Task {
+function toTask(row: Row, sessions = 0): Task {
   // الأعمدة إلزامية فلكل صفّ قيمة فيها؛ classified_at وحده يقول إن كان
   // صاحبها اختارها. بدونه لا توجد «مهمة غير مصنّفة» في النظام إطلاقاً.
   const quadrant: Quadrant | undefined =
@@ -109,7 +109,7 @@ function toTask(row: Row): Task {
     scheduledStart: row.scheduled_start ?? undefined,
     scheduledEnd: row.scheduled_end ?? undefined,
     estimatedMinutes: row.estimated_minutes ?? undefined,
-    completedSessions: 0,
+    completedSessions: sessions,
     createdAt: row.created_at,
     completedAt: completedAt ?? undefined,
   };
@@ -120,12 +120,42 @@ function toTask(row: Row): Task {
 const COLUMNS =
   "id,name,description,importance,urgency,classified_at,scheduled_start,scheduled_end,estimated_minutes,completed_at,is_done,created_at";
 
+/**
+ * جلسات التركيز المكتملة لكل مهمة، في طلب واحد لا طلب لكل صفّ.
+ *
+ * تُعدّ المكتملة وحدها: جلسة قُطعت في دقيقتها الثالثة ليست جلسة تركيز، وعدّها
+ * يجعل الرقم يكافئ البدء لا الاستمرار.
+ */
+async function sessionCounts(taskIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (!taskIds.length) return counts;
+
+  const list = taskIds.map(id => `"${id}"`).join(",");
+  const rows = await rest<{ task_id: string }[]>(
+    `${SESSIONS}?select=task_id&completed=is.true&task_id=in.(${list})`,
+  );
+  for (const row of rows) counts.set(row.task_id, (counts.get(row.task_id) ?? 0) + 1);
+  return counts;
+}
+
+/**
+ * الصفّ الواحد العائد من كتابة، بعدده الصحيح من الجلسات.
+ *
+ * طلب إضافي، لكن البديل أن تعود المهمة من كلّ كتابة وعدّادها صفر بينما تعرض
+ * القائمة رقمه الحقيقي — فيختلف الرقم باختلاف الشاشة التي جئت منها.
+ */
+async function withSessions(row: Row): Promise<Task> {
+  const counts = await sessionCounts([row.id]);
+  return toTask(row, counts.get(row.id) ?? 0);
+}
+
 /** المهام المفتوحة: ما لم يُنجَز ولم يُؤرشَف. هي ما تعرضه الواجهات كلها. */
 export async function listOpenTasks(): Promise<Task[]> {
   const rows = await rest<Row[]>(
     `${TABLE}?select=${COLUMNS}&completed_at=is.null&is_done=eq.false&is_archived=eq.false&order=created_at.desc`,
   );
-  return rows.map(toTask);
+  const counts = await sessionCounts(rows.map(row => row.id));
+  return rows.map(row => toTask(row, counts.get(row.id) ?? 0));
 }
 
 export async function listCompletedTasks(sinceIso?: string): Promise<Task[]> {
@@ -133,7 +163,8 @@ export async function listCompletedTasks(sinceIso?: string): Promise<Task[]> {
   const rows = await rest<Row[]>(
     `${TABLE}?select=${COLUMNS}&completed_at=not.is.null${since}&order=completed_at.desc`,
   );
-  return rows.map(toTask);
+  const counts = await sessionCounts(rows.map(row => row.id));
+  return rows.map(row => toTask(row, counts.get(row.id) ?? 0));
 }
 
 export async function createTask(input: {
@@ -167,7 +198,7 @@ export async function createTask(input: {
     }),
   });
 
-  return toTask(row);
+  return withSessions(row);
 }
 
 export async function classifyTask(id: string, quadrant: Quadrant): Promise<Task> {
@@ -178,7 +209,7 @@ export async function classifyTask(id: string, quadrant: Quadrant): Promise<Task
     body: JSON.stringify({ importance, urgency, classified_at: new Date().toISOString() }),
   });
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
-  return toTask(row);
+  return withSessions(row);
 }
 
 /**
@@ -214,7 +245,7 @@ export async function scheduleTask(id: string, startIso: string, endIso: string)
     body: JSON.stringify({ scheduled_start: startIso, scheduled_end: endIso }),
   });
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
-  return toTask(row);
+  return withSessions(row);
 }
 
 export async function completeTask(id: string): Promise<Task> {
@@ -224,7 +255,7 @@ export async function completeTask(id: string): Promise<Task> {
     body: JSON.stringify({ completed_at: new Date().toISOString(), is_done: true }),
   });
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
-  return toTask(row);
+  return withSessions(row);
 }
 
 /** جلسة تركيز تُفتح عند البدء وتُغلق عند الانتهاء — ولو لم تُنجَز المهمة. */

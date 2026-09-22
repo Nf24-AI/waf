@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import IdleWarning from "./components/IdleWarning";
+import ScheduleReminder from "./components/time/ScheduleReminder";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
@@ -81,6 +82,7 @@ function Gate() {
   return (
     <>
       <Router />
+      <ScheduleReminder />
       {idle.warning && (
         <IdleWarning
           secondsLeft={idle.secondsLeft}
