@@ -2,10 +2,45 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <meta name="theme-color" content="#f7f8f8" />
-    <meta name="description" content="واف — تضع البيانات الأساسية، وواف يبني صفحة الاجتماع" />
-    <title>واف</title>
+    <!--
+      لا maximum-scale: تثبيته عند ١ يمنع التكبير بالإصبعين على الجوال،
+      وهو ما يحتاجه من لا تكفيه أحجام الخطّ كما هي.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- لون شريط المتصفح على أندرويد: قماش واف نفسه، لا أبيض فوق صفحة داكنة. -->
+    <meta name="theme-color" content="#0C1A2E" />
+
+    <title>واف — أدوات مدير المشروع ومالك المنتج</title>
+    <meta
+      name="description"
+      content="واف منصّة أدوات لمدير المشروع ومالك المنتج: تجهيز الاجتماعات وإدارة الوقت. كل خدمة تقف وحدها."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://waf-silk.vercel.app/" />
+
+    <!--
+      معاينة الروابط: بلا هذه الوسوم يظهر رابط الموقع في واتساب وX بلا
+      صورة ولا عنوان ولا وصف — وصفحة الهبوط غايتها أن تُشارَك.
+      الصورة نسخة ثابتة المسار لأن أصول البناء تحمل بصمة تتغيّر كل مرة.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="واف" />
+    <meta property="og:locale" content="ar_AR" />
+    <meta property="og:url" content="https://waf-silk.vercel.app/" />
+    <meta property="og:title" content="واف — أدوات مدير المشروع ومالك المنتج" />
+    <meta
+      property="og:description"
+      content="من هناك بدأنا، ومن هنا نحكي. تجهيز الاجتماعات وإدارة الوقت — خدمتان، والبداية من هنا."
+    />
+    <meta property="og:image" content="https://waf-silk.vercel.app/og.jpg" />
+    <meta property="og:image:alt" content="قرية حجرية في تنومة عند الغروب، نوافذها مضاءة وخلفها سلاسل الجبال" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="واف — أدوات مدير المشروع ومالك المنتج" />
+    <meta
+      name="twitter:description"
+      content="من هناك بدأنا، ومن هنا نحكي. تجهيز الاجتماعات وإدارة الوقت — خدمتان، والبداية من هنا."
+    />
+    <meta name="twitter:image" content="https://waf-silk.vercel.app/og.jpg" />
   </head>
   <body>
     <div id="root"></div>
