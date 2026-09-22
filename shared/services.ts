@@ -50,8 +50,10 @@ export const SERVICES: readonly Service[] = [
     eyebrow: "TIME MANAGEMENT",
     summary: "مصفوفة أيزنهاور: ترتّب مهامك بين المهم والعاجل، فيظهر ما يستحق وقتك اليوم وما يُفوَّض أو يُلغى.",
     status: "live",
-    href: "https://eisenhower-matrix-black-six.vercel.app",
-    external: true,
+    // انتقلت إلى داخل واف: مهمة واحدة تعبر الطرق الثلاث بلا نسخة ثانية،
+    // وهو ما لا يتحقّق وهي على أصل آخر بقاعدة منفصلة. التطبيق القديم يبقى
+    // شغّالاً على رابطه حتى تطمئنّ.
+    href: "/time-management",
   },
   {
     id: "decisions",

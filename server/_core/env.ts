@@ -11,4 +11,11 @@ export const ENV = {
   notionDatabaseId: process.env.NOTION_DATABASE_ID ?? "",
   // Single-user gate. Empty means open, which is only safe on localhost.
   appPassword: process.env.APP_PASSWORD ?? "",
+
+  // المهام في Supabase. المفاتيح هنا لا في حزمة المتصفح: الريبو عام، وأي
+  // VITE_* يصير مكشوفاً — فيقرأ الغريب مهامك ويكتب فيها. الخادم خلف بوّابة
+  // كلمة المرور، فيمرّ الطلب من عنده.
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
+  tasksOwnerCode: process.env.TASKS_OWNER_CODE ?? "",
 };

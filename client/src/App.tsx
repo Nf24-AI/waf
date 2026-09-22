@@ -11,6 +11,7 @@ import Lock from "./pages/Lock";
 import Decisions from "./pages/Decisions";
 import Platform from "./pages/Platform";
 import StatusReport from "./pages/StatusReport";
+import TimeManagement from "./pages/TimeManagement";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useIdleLock } from "./hooks/useIdleLock";
 import {
@@ -20,6 +21,7 @@ import {
   MEETING_ROUTES,
   PLATFORM_ROUTE,
   STATUS_REPORT_ROUTE,
+  TIME_MANAGEMENT_ROUTE,
 } from "@shared/routes";
 
 function Router() {
@@ -28,6 +30,7 @@ function Router() {
       <Route path={PLATFORM_ROUTE} component={Platform} />
       <Route path={DECISIONS_ROUTE} component={Decisions} />
       <Route path={STATUS_REPORT_ROUTE} component={StatusReport} />
+      <Route path={TIME_MANAGEMENT_ROUTE} component={TimeManagement} />
       <Route path={MEETING_ROUTES.prepare} component={Home} />
       <Route path={MEETING_ROUTES.display} component={Home} />
       <Route path="/404" component={NotFound} />

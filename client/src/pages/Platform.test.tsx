@@ -59,15 +59,24 @@ describe("platform front door", () => {
     expect(card).not.toHaveAttribute("href", PLATFORM_ROUTE);
   });
 
-  it("opens an off-origin service in a new tab, isolated from this one", () => {
+  it("opens an off-origin service isolated, and an in-app one in this tab", () => {
     renderPlatform();
-    const card = screen.getByRole("heading", { name: "خدمة إدارة الوقت" }).closest("a");
-    expect(card).not.toBeNull();
-    expect(card).toHaveAttribute("target", "_blank");
-    // بدونها يحصل الأصل الآخر على window.opener ومرجعنا.
-    expect(card?.getAttribute("rel")).toContain("noopener");
-    expect(card?.getAttribute("rel")).toContain("noreferrer");
-    expect(within(card as HTMLElement).getByText("افتح في لسان جديد")).toBeInTheDocument();
+    // القاعدة تُحرس من الجهتين: خدمة خارج الأصل تُعزل، وخدمة داخل واف لا
+    // تُقذف في لسان جديد بلا سبب. إدارة الوقت صارت داخلية.
+    for (const service of SERVICES.filter(item => item.status === "live")) {
+      const card = screen.getByRole("heading", { name: service.name }).closest("a");
+      expect(card).not.toBeNull();
+      if (service.external) {
+        expect(card).toHaveAttribute("target", "_blank");
+        // بدونها يحصل الأصل الآخر على window.opener ومرجعنا.
+        expect(card?.getAttribute("rel")).toContain("noopener");
+        expect(card?.getAttribute("rel")).toContain("noreferrer");
+        expect(within(card as HTMLElement).getByText("افتح في لسان جديد")).toBeInTheDocument();
+      } else {
+        expect(card).not.toHaveAttribute("target");
+        expect(within(card as HTMLElement).getByText("ادخل الخدمة")).toBeInTheDocument();
+      }
+    }
   });
 
   it("leaves a coming service unclickable rather than linking nowhere", () => {

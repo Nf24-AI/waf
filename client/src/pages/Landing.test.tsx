@@ -100,12 +100,23 @@ describe("landing page", () => {
     expect(enters.map(link => link.getAttribute("href"))).toEqual([href("meetings"), href("time")]);
   });
 
-  it("isolates the externally hosted service from this origin", () => {
+  it("isolates any off-origin service, and keeps the rest in this tab", () => {
     renderLanding();
-    // إدارة الوقت تعيش على أصل آخر: كلا رابطيها يفتح لساناً جديداً معزولاً.
-    for (const link of screen.getAllByRole("link", { name: /إدارة الوقت/ })) {
-      expect(link).toHaveAttribute("target", "_blank");
-      expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+    // القاعدة لا الحالة: كل خدمة على أصل آخر تُفتح معزولة، وما عاد داخل واف
+    // يبقى في اللسان نفسه. إدارة الوقت انتقلت إلى الداخل، فتُحرس بالقاعدة
+    // نفسها من الجهة الأخرى.
+    for (const service of SERVICES.filter(item => item.status === "live")) {
+      const card = screen.queryByRole("heading", { name: new RegExp(service.name.replace("خدمة ", "")) });
+      if (!card) continue;
+      const link = card.closest("a");
+      if (!link) continue;
+      if (service.external) {
+        expect(link).toHaveAttribute("target", "_blank");
+        expect(link.getAttribute("rel")).toContain("noreferrer");
+      } else {
+        expect(link).not.toHaveAttribute("target");
+        expect(link.getAttribute("href")?.startsWith("/")).toBe(true);
+      }
     }
   });
 

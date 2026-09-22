@@ -21,6 +21,20 @@ import {
   updateNotionMeeting,
 } from "./notion";
 import { ENV } from "./_core/env";
+import {
+  classifyTask,
+  closeFocusSession,
+  completeTask,
+  createTask,
+  listCompletedTasks,
+  listOpenTasks,
+  openFocusSession,
+  scheduleTask,
+  tasksAreConfigured,
+} from "./tasks";
+import { QUADRANTS } from "@shared/tasks";
+
+const quadrantId = z.enum(QUADRANTS.map(q => q.id) as [string, ...string[]]);
 
 const agendaItem = z.object({
   title: z.string(),
@@ -130,6 +144,58 @@ export const appRouter = router({
       await deleteNotionMeeting(input.id);
       return { success: true as const };
     }),
+  }),
+
+  /**
+   * المهام — مصدر واحد تقرأ منه الطرق الثلاث وتكتب فيه.
+   *
+   * كلها appProcedure: المهام خلف بوّابة كلمة المرور مثل الاجتماعات، ومفتاح
+   * Supabase ورمز المالك لا يغادران الخادم.
+   */
+  tasks: router({
+    status: appProcedure.query(() => ({ configured: tasksAreConfigured() })),
+
+    listOpen: appProcedure.query(() => listOpenTasks()),
+
+    listCompleted: appProcedure
+      .input(z.object({ since: z.string().optional() }).optional())
+      .query(({ input }) => listCompletedTasks(input?.since)),
+
+    create: appProcedure
+      .input(
+        z.object({
+          title: z.string().trim().min(1, "المهمة تحتاج عنواناً"),
+          description: z.string().trim().optional(),
+          quadrant: quadrantId.optional(),
+          scheduledStart: z.string().datetime().optional(),
+          scheduledEnd: z.string().datetime().optional(),
+          estimatedMinutes: z.number().int().positive().optional(),
+        }),
+      )
+      .mutation(({ input }) => createTask(input as Parameters<typeof createTask>[0])),
+
+    classify: appProcedure
+      .input(z.object({ id: z.string().uuid(), quadrant: quadrantId }))
+      .mutation(({ input }) => classifyTask(input.id, input.quadrant as Parameters<typeof classifyTask>[1])),
+
+    schedule: appProcedure
+      .input(z.object({ id: z.string().uuid(), start: z.string().datetime(), end: z.string().datetime() }))
+      .mutation(({ input }) => scheduleTask(input.id, input.start, input.end)),
+
+    complete: appProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(({ input }) => completeTask(input.id)),
+
+    startFocus: appProcedure
+      .input(z.object({ taskId: z.string().uuid(), minutes: z.number().int().positive().max(240) }))
+      .mutation(async ({ input }) => ({ sessionId: await openFocusSession(input.taskId, input.minutes) })),
+
+    endFocus: appProcedure
+      .input(z.object({ sessionId: z.string().uuid(), completed: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await closeFocusSession(input.sessionId, input.completed);
+        return { success: true as const };
+      }),
   }),
 });
 

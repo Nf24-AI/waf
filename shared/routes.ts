@@ -15,6 +15,21 @@ export const PLATFORM_ROUTE = "/platform";
 /** العنوان القديم للوجه العام؛ يُبقى عاملاً فلا ينكسر رابط حُفظ أو شُورك. */
 export const LEGACY_LANDING_ROUTE = "/welcome";
 
+/**
+ * إدارة الوقت: بوّابة تعرض المهام والطرق الثلاث، وكل طريقة على مسارها.
+ *
+ * الطرق أدوات لا خطوات — فلكل واحدة عنوان يُفتح وحده، ولا يمرّ أحد بغيره.
+ */
+export const TIME_MANAGEMENT_ROUTE = "/time-management";
+export const TIME_METHOD_ROUTES = {
+  eisenhower: "/time-management/eisenhower",
+  timeBlocking: "/time-management/time-blocking",
+  focus: "/time-management/focus",
+} as const;
+
+/** متابعة المهام المفتوحة، بلا إنشاء شيء. */
+export const TASKS_ROUTE = "/tasks";
+
 export const DECISIONS_ROUTE = "/decisions";
 export const STATUS_REPORT_ROUTE = "/status";
 
