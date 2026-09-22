@@ -2421,10 +2421,22 @@ a.service-card:hover .service-go {
 
 
 /* ================================================================ «عن واف» */
+/*
+ * الارتفاع أرضية لا سقف.
+ *
+ * كان aspect-ratio يفرض ارتفاعاً ثابتاً والنصّ موضوعاً absolute فوقه، فلا
+ * يُسهم في القياس: متى طال عن الإطار قصّه overflow — وهو ما كان يبتلع
+ * «وَاف» وسطر معناه على الشاشة العريضة. الآن النصّ في مجرى الشبكة، فإن
+ * طال دفع القسم وطال معه.
+ */
 .frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  display: grid;
+  align-items: center;
+  min-height: 125vw;
+  /* أسفله متّسع يبقى فارغاً للإحداثيات واسم المكان فلا يصطدم بهما النصّ. */
+  padding-block: clamp(64px, 9vw, 104px) clamp(104px, 11vw, 168px);
   overflow: hidden;
   background: var(--surface-sunken);
   isolation: isolate;
@@ -2488,10 +2500,11 @@ a.service-card:hover .service-go {
 
 /* ---- عمود الحكاية ---- */
 .frame-story {
-  position: absolute;
-  inset-inline-start: 62px;
-  inset-block-start: 50%;
-  transform: translateY(-50%);
+  position: relative;
+  z-index: 2;
+  /* في RTL يقع start يميناً — حيث يضعه المرجع. */
+  justify-self: start;
+  margin-inline-start: 62px;
   width: min(46ch, 52vw);
   text-align: right;
 }
@@ -2538,7 +2551,7 @@ a.service-card:hover .service-go {
 
 /* الأصل رأسيّ، فكادر عريض يكبّره كثيراً. ١٦:٩ أقصر ارتفاعاً فيدخل
    الإطار كاملاً في الشاشة، والقرية تبقى داخل الكادر لا تحته. */
-@media (min-width: 860px) { .frame { aspect-ratio: 16 / 9; } }
+@media (min-width: 860px) { .frame { min-height: min(56.25vw, 94svh); } }
 
 @media (max-width: 859px) {
   .frame-photo { object-position: 50% 92%; }
@@ -2553,10 +2566,8 @@ a.service-card:hover .service-go {
   .frame-slug-geo { inset-inline-start: 30px; }
   .frame-slug-en { inset-inline-end: 30px; }
   .frame-story {
-    inset-inline: 30px;
-    inset-block-start: auto;
-    inset-block-end: 88px;
-    transform: none;
+    justify-self: stretch;
+    margin-inline: 30px;
     width: auto;
   }
   .frame-note br { display: none; }
