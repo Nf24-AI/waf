@@ -1,14 +1,11 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
-import React from "react";
-import { ArrowLeft, CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
+import React, { useState } from "react";
+import { CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
 import { Link } from "wouter";
-import { nextActionOf, quadrantTitle, type Task } from "@shared/tasks";
-import {
-  TASKS_ROUTE,
-  TIME_MANAGEMENT_ROUTE,
-  TIME_METHOD_ROUTES,
-} from "@shared/routes";
+import { TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import AddTaskDialog from "@/components/time/AddTaskDialog";
+import TaskRow from "@/components/time/TaskRow";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -23,72 +20,31 @@ import { trpc } from "@/lib/trpc";
  */
 
 const METHODS = [
-  {
-    id: "eisenhower",
-    href: TIME_METHOD_ROUTES.eisenhower,
-    icon: LayoutGrid,
-    title: "مصفوفة أيزنهاور",
-    line: "قرّر ما يستحق وقتك.",
-  },
-  {
-    id: "time-blocking",
-    href: TIME_METHOD_ROUTES.timeBlocking,
-    icon: CalendarClock,
-    title: "حجز الوقت",
-    line: "ضع لكل مهمة وقتاً واضحاً.",
-  },
-  {
-    id: "focus",
-    href: TIME_METHOD_ROUTES.focus,
-    icon: Timer,
-    title: "جلسة التركيز",
-    line: "ركّز على ما بين يديك.",
-  },
+  { id: "eisenhower", href: TIME_METHOD_ROUTES.eisenhower, icon: LayoutGrid, title: "مصفوفة أيزنهاور", line: "قرّر ما يستحق وقتك." },
+  { id: "time-blocking", href: TIME_METHOD_ROUTES.timeBlocking, icon: CalendarClock, title: "حجز الوقت", line: "ضع لكل مهمة وقتاً واضحاً." },
+  { id: "focus", href: TIME_METHOD_ROUTES.focus, icon: Timer, title: "جلسة التركيز", line: "ركّز على ما بين يديك." },
 ] as const;
 
-function scheduleLabel(task: Task) {
-  if (!task.scheduledStart) return null;
-  const start = new Date(task.scheduledStart);
-  const today = new Date();
-  const sameDay = start.toDateString() === today.toDateString();
-  const time = start.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: false });
-  const day = sameDay ? "اليوم" : start.toLocaleDateString("ar-SA", { weekday: "long" });
-  return `${day} ${time}`;
-}
-
-function TaskCard({ task }: { task: Task }) {
-  const action = nextActionOf(task);
-  const when = scheduleLabel(task);
-
-  return (
-    <article className="tm-task">
-      <div className="tm-task-body">
-        <h3>{task.title}</h3>
-        <p className="tm-task-meta">
-          <span>{task.quadrant ? quadrantTitle(task.quadrant) : "غير مصنّفة"}</span>
-          <i aria-hidden="true">·</i>
-          <span>{when ?? "غير مجدولة"}</span>
-        </p>
-      </div>
-      <Link className="tm-task-action" href={`${TIME_METHOD_ROUTES[methodRoute(action.method)]}?task=${task.id}`}>
-        {action.label}
-        <ArrowLeft size={15} aria-hidden="true" />
-      </Link>
-    </article>
-  );
-}
-
-function methodRoute(method: ReturnType<typeof nextActionOf>["method"]) {
-  if (method === "eisenhower") return "eisenhower" as const;
-  if (method === "time-blocking") return "timeBlocking" as const;
-  return "focus" as const;
-}
-
 export default function TimeManagement() {
+  const [adding, setAdding] = useState(false);
+
+  const utils = trpc.useUtils();
   const status = trpc.tasks.status.useQuery();
   const open = trpc.tasks.listOpen.useQuery(undefined, { enabled: status.data?.configured === true });
 
+  // الإضافة والإنجاز يُبطلان القائمة نفسها، فلا تبقى شاشة تعرض ما لم يعد قائماً.
+  const create = trpc.tasks.create.useMutation({
+    onSuccess: async () => {
+      await utils.tasks.listOpen.invalidate();
+      setAdding(false);
+    },
+  });
+  const complete = trpc.tasks.complete.useMutation({
+    onSuccess: () => utils.tasks.listOpen.invalidate(),
+  });
+
   const tasks = open.data ?? [];
+  const configured = status.data?.configured;
 
   return (
     <main className="tm-shell waf-dots" dir="rtl">
@@ -99,10 +55,10 @@ export default function TimeManagement() {
         </header>
 
         <div className="tm-primary">
-          <Link className="tm-btn tm-btn-primary" href={`${TIME_MANAGEMENT_ROUTE}?add=1`}>
+          <button type="button" className="tm-btn tm-btn-primary" onClick={() => setAdding(true)} disabled={!configured}>
             <Plus size={17} aria-hidden="true" />
             إضافة مهمة
-          </Link>
+          </button>
           <Link className="tm-btn tm-btn-ghost" href={TASKS_ROUTE}>
             <ListChecks size={17} aria-hidden="true" />
             متابعة المهام
@@ -131,14 +87,14 @@ export default function TimeManagement() {
         <section className="tm-section" aria-labelledby="tm-open">
           <h2 id="tm-open">مهامك المفتوحة</h2>
 
-          {status.data?.configured === false && (
+          {configured === false && (
             <p className="tm-empty">
               المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> و
               <code>TASKS_OWNER_CODE</code> ثم أعد النشر.
             </p>
           )}
 
-          {open.isLoading && <p className="tm-empty">…جارٍ التحميل</p>}
+          {open.isLoading && configured && <p className="tm-empty">…جارٍ التحميل</p>}
 
           {open.isError && (
             <p className="tm-empty tm-error" role="alert">
@@ -150,22 +106,35 @@ export default function TimeManagement() {
             <div className="tm-empty-state">
               <p>لا توجد مهام بعد.</p>
               <p className="tm-empty-hint">ابدأ بمهمة واحدة.</p>
-              <Link className="tm-btn tm-btn-primary" href={`${TIME_MANAGEMENT_ROUTE}?add=1`}>
+              <button type="button" className="tm-btn tm-btn-primary" onClick={() => setAdding(true)}>
                 <Plus size={17} aria-hidden="true" />
                 إضافة مهمة
-              </Link>
+              </button>
             </div>
           )}
 
           {tasks.length > 0 && (
             <div className="tm-tasks">
               {tasks.map(task => (
-                <TaskCard key={task.id} task={task} />
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  onComplete={id => complete.mutate({ id })}
+                  completing={complete.isPending}
+                />
               ))}
             </div>
           )}
         </section>
       </div>
+
+      <AddTaskDialog
+        open={adding}
+        pending={create.isPending}
+        error={create.error?.message ?? null}
+        onClose={() => setAdding(false)}
+        onSubmit={input => create.mutate(input)}
+      />
     </main>
   );
 }
