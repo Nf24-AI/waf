@@ -328,7 +328,7 @@ export default function ServicesSection() {
         </Reveal>
 
         <footer className="svc-foot">
-          <span>أدوات اليوم — لبناء غدٍ أفضل.</span>
+          <span>أدوات اليوم .. لبناء غدٍ أفضل.</span>
           <span className="svc-foot-mark">
             WAF
             <i className="svc-rule" aria-hidden="true" />

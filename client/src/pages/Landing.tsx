@@ -158,7 +158,7 @@ function AsciiHero() {
             </span>
           </h1>
           <p className={meaningIn ? "landing-brand-meaning is-in" : "landing-brand-meaning"}>
-            من وَفَى — أتمَّ وأكمل.
+            من وَفَى .. أتمَّ وأكمل.
           </p>
         </div>
       </div>
