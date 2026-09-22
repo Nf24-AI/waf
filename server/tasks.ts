@@ -79,6 +79,7 @@ interface Row {
   scheduled_start: string | null;
   scheduled_end: string | null;
   estimated_minutes: number | null;
+  classified_at: string | null;
   completed_at: string | null;
   is_done: boolean;
   created_at: string;
@@ -91,8 +92,12 @@ interface Row {
  * عموداً ثالثاً يعني ثلاث قيم لحقيقة واحدة تتباعد أول ما ينساها أحد.
  */
 function toTask(row: Row): Task {
+  // الأعمدة إلزامية فلكل صفّ قيمة فيها؛ classified_at وحده يقول إن كان
+  // صاحبها اختارها. بدونه لا توجد «مهمة غير مصنّفة» في النظام إطلاقاً.
   const quadrant: Quadrant | undefined =
-    row.importance && row.urgency ? quadrantOf(row.importance, row.urgency) : undefined;
+    row.classified_at && row.importance && row.urgency
+      ? quadrantOf(row.importance, row.urgency)
+      : undefined;
 
   const completedAt = row.completed_at ?? (row.is_done ? row.created_at : undefined);
 
@@ -113,7 +118,7 @@ function toTask(row: Row): Task {
 }
 
 const COLUMNS =
-  "id,name,description,importance,urgency,scheduled_start,scheduled_end,estimated_minutes,completed_at,is_done,created_at";
+  "id,name,description,importance,urgency,classified_at,scheduled_start,scheduled_end,estimated_minutes,completed_at,is_done,created_at";
 
 /** المهام المفتوحة: ما لم يُنجَز ولم يُؤرشَف. هي ما تعرضه الواجهات كلها. */
 export async function listOpenTasks(): Promise<Task[]> {
@@ -155,6 +160,7 @@ export async function createTask(input: {
       // خطأ مثله. نكتب ما اختاره المستخدم، وإن لم يختر فأقلّها ادّعاءً.
       importance: split?.importance ?? "not-important",
       urgency: split?.urgency ?? "not-urgent",
+      classified_at: split ? new Date().toISOString() : null,
       scheduled_start: input.scheduledStart ?? null,
       scheduled_end: input.scheduledEnd ?? null,
       estimated_minutes: input.estimatedMinutes ?? null,
@@ -169,7 +175,7 @@ export async function classifyTask(id: string, quadrant: Quadrant): Promise<Task
   const [row] = await rest<Row[]>(`${TABLE}?id=eq.${id}&select=${COLUMNS}`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ importance, urgency }),
+    body: JSON.stringify({ importance, urgency, classified_at: new Date().toISOString() }),
   });
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
   return toTask(row);

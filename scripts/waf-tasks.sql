@@ -24,6 +24,17 @@ alter table public.eisenhower_tasks add column if not exists estimated_minutes i
 -- يتباعد عمّا يصفه.
 alter table public.eisenhower_tasks add column if not exists completed_at timestamptz;
 
+-- لحظة التصنيف.
+--
+-- عمودا importance و urgency إلزاميان في الجدول، فلكل صفّ قيمة فيهما دائماً
+-- ولو لم يختر صاحبه شيئاً. بدون هذا العمود لا توجد «مهمة غير مصنّفة» في
+-- النظام إطلاقاً: المصفوفة بلا ما تصنّفه، والتبويب فارغ للأبد.
+--
+-- الصفوف السابقة صنّفها صاحبها فعلاً — وضعها بيده في أرباعها — فتأخذ
+-- تاريخ إنشائها لحظةَ تصنيف، ولا تظهر فجأة كأنها لم تُصنَّف قطّ.
+alter table public.eisenhower_tasks add column if not exists classified_at timestamptz;
+update public.eisenhower_tasks set classified_at = created_at where classified_at is null;
+
 -- ═══════════════════════════════════════════════════════════════════
 -- 2) قيود تمنع الحالات المستحيلة عند المصدر
 -- ═══════════════════════════════════════════════════════════════════

@@ -3392,3 +3392,122 @@ a.service-card:hover .service-go {
   .tm-spin { animation-duration: 2.4s; }
   .tm-tab, .tm-check, .tm-icon-btn, .tm-back { transition: none; }
 }
+
+/* ---- مصفوفة أيزنهاور ---- */
+/*
+ * الأربعة مرتّبة كما في الأصل: المهمّ أعلى والعاجل يميناً، فالأعلى يمين هو
+ * «افعل الآن». ترتيب QUADRANTS يوافق ذلك في RTL بلا إعادة صفّ.
+ */
+
+.ei-tray {
+  margin-block-start: var(--space-9);
+  padding: var(--space-7);
+  border: var(--border-w) dashed var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--alpha-fill-weak);
+}
+.ei-tray h2 {
+  margin: 0 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font: var(--text-title-3);
+  color: var(--text-secondary);
+}
+
+.ei-chips { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+
+.ei-chip {
+  /* هدف لمسيّ: تُضغط بالإبهام على الجوال وتُسحب بالفأرة على المكتب. */
+  min-height: 44px;
+  padding-inline: var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-default);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: var(--text-body-md);
+  text-align: start;
+  cursor: grab;
+  transition: var(--transition-control), opacity var(--dur-fast) var(--ease-standard);
+}
+.ei-chip:hover { border-color: var(--accent); color: var(--accent); }
+.ei-chip:active { cursor: grabbing; }
+.ei-chip.is-dragging { opacity: .4; }
+
+.ei-matrix {
+  margin-block-start: var(--space-9);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+}
+@media (min-width: 760px) {
+  .ei-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.ei-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-height: 180px;
+  padding: var(--space-7);
+  background: var(--surface-card);
+  border: var(--border-w) solid var(--border-hairline);
+  border-radius: var(--radius-card);
+  transition: border-color var(--dur-fast) var(--ease-standard),
+              background-color var(--dur-fast) var(--ease-standard);
+}
+/* الرُّبع الذي يقع فوقه المسحوب يُعلن نفسه، فلا يُفلت أحد في الفراغ. */
+.ei-cell.is-over {
+  border-color: var(--accent);
+  background: var(--accent-quiet);
+}
+.ei-cell-head h3 { margin: 0; font: var(--text-title-3); color: var(--text-primary); }
+.ei-cell-head p { margin: var(--space-2) 0 0; font: var(--text-caption); color: var(--accent); }
+.ei-cell-empty { margin: 0; font: var(--text-caption); color: var(--text-disabled); }
+
+/* ---- الاقتراح بعد التصنيف ---- */
+.ei-suggest {
+  margin-block-start: var(--space-9);
+  padding: var(--space-7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  background: var(--surface-raised);
+  border: var(--border-w) solid var(--border-default);
+  border-radius: var(--radius-card);
+  font: var(--text-body-md);
+  color: var(--text-secondary);
+}
+.ei-suggest-actions { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+
+/* ---- اختيار الرُّبع على اللمس ---- */
+.ei-pick {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-block-end: var(--space-6);
+}
+.ei-pick-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 72px;
+  padding: var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-default);
+  background: var(--surface-sunken);
+  text-align: start;
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.ei-pick-option:hover { border-color: var(--accent); background: var(--accent-quiet); }
+.ei-pick-option.is-current { border-color: var(--accent); }
+.ei-pick-option:disabled { opacity: .55; cursor: default; }
+.ei-pick-title { font: var(--text-label); color: var(--text-primary); }
+.ei-pick-verb { font: var(--text-caption); color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ei-chip, .ei-cell, .ei-pick-option { transition: none; }
+}
