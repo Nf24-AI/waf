@@ -1029,3 +1029,51 @@
   --tp-danger: #E5564B;
   --tp-danger-quiet: #3A1614;
 }
+
+/* ---- الشريط السفلي على الجوّال ---- */
+/*
+ * أربعة أقسام و«المزيد». يختفي على المكتب حيث يحمل الشريط الجانبي كل شيء،
+ * ولا يظهر في جلسة التركيز لأن الإطار كلّه يسقط فيها.
+ */
+.tp-bottom {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 35;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding-block-end: env(safe-area-inset-bottom, 0);
+  background: color-mix(in srgb, var(--surface-card) 96%, transparent);
+  border-block-start: var(--border-w) solid var(--border-hairline);
+}
+@media (min-width: 1024px) { .tp-bottom { display: none; } }
+
+.tp-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  /* هدف لمسيّ كامل: أقلّ من هذا يُخطئه الإبهام. */
+  min-height: 58px;
+  border: 0;
+  border-block-end: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font: inherit;
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.tp-tab span { font: var(--fs-11)/1 var(--font-sans); }
+.tp-tab.is-current { color: var(--accent); }
+.tp-tab:hover { color: var(--text-primary); }
+
+/* المحتوى يفسح للشريط فلا يجلس فوق آخر سطر. */
+@media (max-width: 1023px) {
+  .tp-main { padding-block-end: calc(var(--space-12) + 58px); }
+  /* وتنبيه الموعد يرتفع فوقه: تداخلهما يخفي الزرّ لا الخبر. */
+  .rem-banner { inset-block-end: calc(var(--space-6) + 58px + env(safe-area-inset-bottom, 0px)); }
+}
+
+@media (prefers-reduced-motion: reduce) { .tp-tab { transition: none; } }

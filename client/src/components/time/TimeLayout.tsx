@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavDrawer, Sidebar } from "./TimeNav";
+import { BottomNav, NavDrawer, Sidebar } from "./TimeNav";
 import TopBar from "./TopBar";
 
 /**
@@ -40,6 +40,8 @@ export default function TimeLayout({
 
         <main className="tp-main">{children}</main>
       </div>
+
+      <BottomNav onMore={() => setDrawer(true)} />
     </div>
   );
 }

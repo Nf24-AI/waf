@@ -8,6 +8,7 @@ import {
   Home,
   MoreHorizontal,
   LogOut,
+  MoreHorizontal as MoreIcon,
   Settings,
   X,
 } from "lucide-react";
@@ -140,11 +141,45 @@ export function Sidebar() {
 }
 
 /**
- * الدرج — نفس الأقسام على الجوّال.
+ * الشريط السفلي — أربعة أقسام والمزيد.
  *
- * درجٌ لا شريط سفلي: الأقسام سبعة والشريط يسع خمسة، فكان سيخفي اثنين ويقسم
- * الخريطة خريطتين. ويُغلق بالخلفية وبمفتاح الهروب وبأي بند يُختار، فلا
- * يُحبس أحد فيه.
+ * الأقسام سبعة ولا تسعها أربع خانات، والخامسة تفتح الدرج الذي يحمل البقيّة:
+ * فلا يُخفى شيء ولا يضيق البند عن الإبهام. وهذا ما يجعل الشريط والدرج
+ * خريطةً واحدة لا خريطتين — الدرج تتمّةُ الشريط لا بديلُه.
+ */
+export function BottomNav({ onMore }: { onMore: () => void }) {
+  const [location] = useLocation();
+
+  return (
+    <nav className="tp-bottom" aria-label="أقسام واف">
+      {PRIMARY_NAV.map(item => {
+        const Icon = item.icon;
+        const current = isCurrent(location, item.href);
+        return (
+          <Link
+            key={item.href}
+            className={current ? "tp-tab is-current" : "tp-tab"}
+            href={item.href}
+            aria-current={current ? "page" : undefined}
+          >
+            <Icon size={19} aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+
+      <button type="button" className="tp-tab" onClick={onMore}>
+        <MoreIcon size={19} aria-hidden="true" />
+        <span>المزيد</span>
+      </button>
+    </nav>
+  );
+}
+
+/**
+ * الدرج — بقيّة الأقسام والحساب.
+ *
+ * يُغلق بالخلفية وبمفتاح الهروب وبأي بند يُختار، فلا يُحبس أحد فيه.
  */
 export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   React.useEffect(() => {
