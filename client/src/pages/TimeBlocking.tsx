@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { quadrantTitle, type Task } from "@shared/tasks";
 import { TIME_METHOD_ROUTES } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
-import { endTime, nextHalfHour, toDateInput, toIso, toTimeInput } from "@/lib/clock";
+import { dayName, dayStrip, endTime, nextHalfHour, toDateInput, toIso, toTimeInput } from "@/lib/clock";
 import { useTaskParam } from "@/lib/task-param";
 import { trpc } from "@/lib/trpc";
 
@@ -30,6 +30,9 @@ export default function TimeBlocking() {
   const [start, setStart] = useState(() => toTimeInput(nextHalfHour()));
   const [minutes, setMinutes] = useState(60);
   const [done, setDone] = useState<Task | null>(null);
+
+  // الشريط يُبنى مرّة: إعادة بنائه في كل رسم تُنشئ تواريخ جديدة بلا سبب.
+  const days = useMemo(() => dayStrip(), []);
 
   const tasks = open.data ?? [];
   const task = useMemo(() => tasks.find(item => item.id === taskId) ?? null, [tasks, taskId]);
@@ -59,9 +62,9 @@ export default function TimeBlocking() {
   return (
     <TimeLayout>
       <div className="tm-inner">
-        <header className="tm-head">
-          <h1>حجز الوقت</h1>
-          <p>ضع لكل مهمة وقتاً واضحاً.</p>
+        <header className="tp-head">
+          <h1>اختر وقتاً للمهمة</h1>
+          <p>ضع لكل مهمة وقتاً مناسباً.</p>
         </header>
 
         {status.data?.configured === false && (
@@ -107,14 +110,36 @@ export default function TimeBlocking() {
                 <span>{task.quadrant ? quadrantTitle(task.quadrant) : "غير مصنّفة"}</span>
               </p>
 
+              <div className="tm-field">
+                <span>اليوم</span>
+                <div className="tp-days" role="group" aria-label="اليوم">
+                  {days.map(date => {
+                    const value = toDateInput(date);
+                    const current = value === day;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        className={current ? "tp-day is-current" : "tp-day"}
+                        onClick={() => setDay(value)}
+                        aria-pressed={current}
+                      >
+                        <span className="tp-day-name">{dayName(date)}</span>
+                        <span className="tp-day-num">{date.getDate()}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="tm-field-row">
-                <label className="tm-field">
-                  <span>اليوم</span>
-                  <input type="date" value={day} onChange={event => setDay(event.target.value)} required />
-                </label>
                 <label className="tm-field">
                   <span>وقت البداية</span>
                   <input type="time" value={start} onChange={event => setStart(event.target.value)} required />
+                </label>
+                <label className="tm-field">
+                  <span>يوم آخر</span>
+                  <input type="date" value={day} onChange={event => setDay(event.target.value)} required />
                 </label>
               </div>
 
@@ -148,7 +173,7 @@ export default function TimeBlocking() {
               )}
 
               <div className="tm-form-actions">
-                <button type="submit" className="tm-btn tm-btn-primary" disabled={schedule.isPending}>
+                <button type="submit" className="tp-btn tp-btn-primary" disabled={schedule.isPending}>
                   <CalendarClock size={16} aria-hidden="true" />
                   حجز الوقت
                 </button>
@@ -170,13 +195,13 @@ export default function TimeBlocking() {
                 })}
               </p>
               <div className="tm-form-actions">
-                <Link className="tm-btn tm-btn-primary" href={`${TIME_METHOD_ROUTES.focus}?task=${done.id}`}>
+                <Link className="tp-btn tp-btn-primary" href={`${TIME_METHOD_ROUTES.focus}?task=${done.id}`}>
                   <Timer size={16} aria-hidden="true" />
                   ابدأ التركيز الآن
                 </Link>
                 <button
                   type="button"
-                  className="tm-btn tm-btn-ghost"
+                  className="tp-btn"
                   onClick={() => {
                     setDone(null);
                     setTaskId(null);

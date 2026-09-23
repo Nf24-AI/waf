@@ -1,9 +1,9 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useState } from "react";
-import { Archive, ArrowRight, BarChart3, CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
+import { ArrowRight, CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
 import { Link } from "wouter";
-import { ARCHIVE_ROUTE, PLATFORM_ROUTE, STATISTICS_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { PLATFORM_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
 import AddTaskDialog from "@/components/time/AddTaskDialog";
 import TaskRow from "@/components/time/TaskRow";
@@ -50,48 +50,43 @@ export default function TimeManagement() {
   return (
     <TimeLayout>
       <div className="tm-inner">
-        <header className="tm-head">
+        <header className="tp-head">
           {/* على المكتب يحمل الشريط الجانبي هذا المخرج؛ هنا للجوّال. */}
           <Link className="tm-back tl-only-phone" href={PLATFORM_ROUTE}>
             <ArrowRight size={15} aria-hidden="true" />
             المنصّة
           </Link>
           <h1>إدارة الوقت</h1>
-          <p>نفس مهامك، بثلاث طرق مختلفة.</p>
+          <p>نفس مهامك .. بطرق مختلفة.</p>
         </header>
 
-        <div className="tm-primary">
-          <button type="button" className="tm-btn tm-btn-primary" onClick={() => setAdding(true)} disabled={!configured}>
+        <div className="tp-actions">
+          <button type="button" className="tp-btn tp-btn-primary tp-btn-wide" onClick={() => setAdding(true)} disabled={!configured}>
             <Plus size={17} aria-hidden="true" />
             إضافة مهمة
           </button>
-          <Link className="tm-btn tm-btn-ghost" href={TASKS_ROUTE}>
+          <Link className="tp-btn tp-btn-wide" href={TASKS_ROUTE}>
             <ListChecks size={17} aria-hidden="true" />
             متابعة المهام
-          </Link>
-          <Link className="tm-btn tm-btn-ghost" href={STATISTICS_ROUTE}>
-            <BarChart3 size={17} aria-hidden="true" />
-            الإحصاء
-          </Link>
-          <Link className="tm-btn tm-btn-ghost" href={ARCHIVE_ROUTE}>
-            <Archive size={17} aria-hidden="true" />
-            الأرشيف
           </Link>
         </div>
 
         <section className="tm-section" aria-labelledby="tm-methods">
           <h2 id="tm-methods">اختر طريقتك</h2>
           {/* لا ترقيم ولا أسهم بينها: ثلاث أدوات لا ثلاث خطوات. */}
-          <div className="tm-methods">
-            {METHODS.map(method => {
+          <div className="tp-tiles">
+            {METHODS.map((method, index) => {
               const Icon = method.icon;
               return (
-                <Link key={method.id} className="tm-method" href={method.href}>
-                  <span className="tm-method-icon" aria-hidden="true">
-                    <Icon size={19} />
-                  </span>
-                  <span className="tm-method-title">{method.title}</span>
-                  <span className="tm-method-line">{method.line}</span>
+                <Link
+                  key={method.id}
+                  className={index === 2 ? "tp-tile tp-tile-wide" : "tp-tile"}
+                  data-method={method.id}
+                  href={method.href}
+                >
+                  <Icon size={20} aria-hidden="true" />
+                  <span className="tp-tile-name">{method.title}</span>
+                  <span className="tp-tile-line">{method.line}</span>
                 </Link>
               );
             })}
@@ -120,7 +115,7 @@ export default function TimeManagement() {
             <div className="tm-empty-state">
               <p>لا توجد مهام بعد.</p>
               <p className="tm-empty-hint">ابدأ بمهمة واحدة.</p>
-              <button type="button" className="tm-btn tm-btn-primary" onClick={() => setAdding(true)}>
+              <button type="button" className="tp-btn tp-btn-primary tp-btn-wide" onClick={() => setAdding(true)}>
                 <Plus size={17} aria-hidden="true" />
                 إضافة مهمة
               </button>

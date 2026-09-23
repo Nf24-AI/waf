@@ -50,3 +50,25 @@ export function clock(seconds: number): string {
   const s = safe % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
+
+/**
+ * خمسة أيام تبدأ بيومين قبل اليوم.
+ *
+ * المرجع يعرض شريطاً لا خانة تاريخ: الحجز يقع في هذا الأسبوع غالباً، واختيار
+ * يوم بلمسة أسرع من فتح تقويم. وما بعدها يبقى لخانة التاريخ لمن يحتاجها.
+ */
+export function dayStrip(now: Date = new Date(), back = 2, forward = 2): Date[] {
+  const days: Date[] = [];
+  for (let offset = -back; offset <= forward; offset += 1) {
+    const day = new Date(now);
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() + offset);
+    days.push(day);
+  }
+  return days;
+}
+
+/** «السبت» — اسم اليوم وحده، لشريط الأيام. */
+export function dayName(date: Date): string {
+  return date.toLocaleDateString("ar-SA", { weekday: "long" });
+}

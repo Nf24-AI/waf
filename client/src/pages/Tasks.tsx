@@ -52,14 +52,14 @@ export default function Tasks() {
   return (
     <TimeLayout>
       <div className="tm-inner">
-        <header className="tm-head">
+        <header className="tp-head">
           <h1>مهامي المفتوحة</h1>
           <p>
             ما لم يُنجَز بعد. المكتملة في <Link href={ARCHIVE_ROUTE}>الأرشيف</Link>.
           </p>
         </header>
 
-        <div className="tm-tabs" role="tablist" aria-label="تصفية المهام">
+        <div className="tp-tabs" role="tablist" aria-label="تصفية المهام">
           {TABS.map(item => {
             const count = all.filter(task => matches(task, item.id, now)).length;
             return (
@@ -68,11 +68,11 @@ export default function Tasks() {
                 type="button"
                 role="tab"
                 aria-selected={tab === item.id}
-                className="tm-tab"
+                className={tab === item.id ? "tp-tab is-current" : "tp-tab"}
                 onClick={() => setTab(item.id)}
               >
                 {item.label}
-                <span className="tm-tab-count">{count}</span>
+                <span className="tp-tab-count">{count}</span>
               </button>
             );
           })}

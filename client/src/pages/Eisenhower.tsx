@@ -86,16 +86,16 @@ export default function Eisenhower() {
   return (
     <TimeLayout>
       <div className="tm-inner">
-        <header className="tm-head">
-          <h1>مصفوفة أيزنهاور</h1>
-          <p>حدّد ما يستحق وقتك.</p>
+        <header className="tp-head">
+          <h1>صنّف المهمة</h1>
+          <p>حدّد الأولوية بوضوح.</p>
         </header>
 
-        <div className="tm-primary">
-          <Link className="tm-btn tm-btn-ghost" href={TASKS_ROUTE}>
+        <div className="tp-actions">
+          <Link className="tp-btn" href={TASKS_ROUTE}>
             المهام المفتوحة
           </Link>
-          <button type="button" className="tm-btn tm-btn-primary" onClick={() => setAdding(true)} disabled={!status.data?.configured}>
+          <button type="button" className="tp-btn tp-btn-primary" onClick={() => setAdding(true)} disabled={!status.data?.configured}>
             <Plus size={17} aria-hidden="true" />
             إضافة مهمة
           </button>
@@ -143,6 +143,7 @@ export default function Eisenhower() {
               <section
                 key={quadrant.id}
                 className={over === quadrant.id ? "ei-cell is-over" : "ei-cell"}
+                data-q={quadrant.id}
                 aria-label={quadrant.title}
                 onDragOver={event => {
                   event.preventDefault();

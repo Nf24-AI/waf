@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { type Task } from "@shared/tasks";
 import { TIME_METHOD_ROUTES } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
+import tanomah from "@/assets/village-at-dusk.jpg";
 import { clock } from "@/lib/clock";
 import { readFocusMinutes } from "@/lib/preferences";
 import { useTaskParam } from "@/lib/task-param";
@@ -149,14 +150,15 @@ export default function Focus() {
         )}
 
         {task && !asking && (
-          <section className="fc-stage">
-            <p className="fc-task">{task.title}</p>
+          <section className="tp-focus">
+            <img src={tanomah} alt="" aria-hidden="true" />
+            <p className="tp-focus-task">{task.title}</p>
 
-            <div className="fc-dial">
+            <div className="tp-dial">
               <svg viewBox="0 0 200 200" aria-hidden="true">
-                <circle className="fc-track" cx="100" cy="100" r="86" />
+                <circle className="tp-dial-track" cx="100" cy="100" r="86" />
                 <circle
-                  className="fc-arc"
+                  className="tp-dial-arc"
                   cx="100"
                   cy="100"
                   r="86"
@@ -168,8 +170,9 @@ export default function Focus() {
                 />
               </svg>
               {/* لا يُعلَن كل ثانية: قارئ الشاشة لا يقاطع التركيز ستّين مرة في الدقيقة. */}
-              <p className="fc-clock" role="timer" aria-live="off">
+              <p className="tp-dial-num" role="timer" aria-live="off">
                 {clock(left)}
+                <span className="tp-dial-caption">جلسة تركيز</span>
               </p>
             </div>
 
@@ -208,7 +211,7 @@ export default function Focus() {
               {idle && (
                 <button
                   type="button"
-                  className="fc-go"
+                  className="tp-go"
                   onClick={begin}
                   disabled={startSession.isPending}
                   aria-label="ابدأ الجلسة"
@@ -217,19 +220,19 @@ export default function Focus() {
                 </button>
               )}
               {running && (
-                <button type="button" className="tm-btn tm-btn-ghost" onClick={() => setRunning(false)}>
+                <button type="button" className="tp-btn" onClick={() => setRunning(false)}>
                   <Pause size={16} aria-hidden="true" />
                   إيقاف مؤقت
                 </button>
               )}
               {paused && (
-                <button type="button" className="tm-btn tm-btn-primary" onClick={resume}>
+                <button type="button" className="tp-btn tp-btn-primary" onClick={resume}>
                   <Play size={16} aria-hidden="true" />
                   استئناف
                 </button>
               )}
               {(running || paused) && (
-                <button type="button" className="tm-btn tm-btn-ghost" onClick={() => finish(false)}>
+                <button type="button" className="tp-btn" onClick={() => finish(false)}>
                   <Square size={16} aria-hidden="true" />
                   إنهاء الجلسة
                 </button>
@@ -252,7 +255,7 @@ export default function Focus() {
             <div className="fc-ask-actions">
               <button
                 type="button"
-                className="tm-btn tm-btn-primary"
+                className="tp-btn tp-btn-primary"
                 disabled={complete.isPending}
                 onClick={() => {
                   complete.mutate({ id: task.id });
@@ -265,7 +268,7 @@ export default function Focus() {
               </button>
               <button
                 type="button"
-                className="tm-btn tm-btn-ghost"
+                className="tp-btn"
                 onClick={() => {
                   setAsking(false);
                   setLeft(minutes * 60);
@@ -274,7 +277,7 @@ export default function Focus() {
                 أحتاج وقتاً أكثر
               </button>
               {/* «لاحقاً» يعني وقتاً آخر، فتُعاد إلى حجز الوقت لا إلى القائمة. */}
-              <Link className="tm-btn tm-btn-ghost" href={`${TIME_METHOD_ROUTES.timeBlocking}?task=${task.id}`}>
+              <Link className="tp-btn" href={`${TIME_METHOD_ROUTES.timeBlocking}?task=${task.id}`}>
                 جدولها لاحقاً
               </Link>
             </div>

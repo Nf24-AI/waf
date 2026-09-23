@@ -626,3 +626,218 @@
   .tp-tile:hover { transform: none; }
   .tp-drawer { animation: none; }
 }
+
+/* ---- رأس الصفحة داخل المنتج ---- */
+
+.tp-head { margin-block-end: var(--space-8); }
+.tp-head h1 {
+  margin: 0;
+  font: var(--fw-medium) var(--fs-32)/var(--lh-snug) var(--font-serif-display);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-primary);
+}
+.tp-head p { margin: var(--space-3) 0 0; font: var(--text-body-md); color: var(--text-tertiary); }
+
+/* ---- بلاطة عريضة ---- */
+/* الثالثة تمتدّ على العرض في الشاشة الضيّقة: اثنتان فوقها وواحدة تحتهما. */
+@media (max-width: 899px) {
+  .tp-tile-wide { grid-column: 1 / -1; }
+}
+
+/* ---- تبويبات ---- */
+
+.tp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-end: var(--space-7);
+}
+.tp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 38px;
+  padding-inline: var(--space-6);
+  border-radius: 999px;
+  border: var(--border-w) solid var(--border-hairline);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font: var(--text-body-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.tp-tab:hover { color: var(--text-primary); border-color: var(--border-default); }
+.tp-tab.is-current,
+.tp-tab.is-current:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-on);
+}
+.tp-tab-count {
+  font: var(--fs-11)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  opacity: .75;
+}
+
+/* ---- أرباع المصفوفة بألوانها ---- */
+/*
+ * اللون يسبق النصّ: المهمّ العاجل أحمر يُرى قبل أن يُقرأ، والمهمّ غير العاجل
+ * أخضر — وهو الربع الذي يُفترض أن يمتلئ. ولولا اللون لصارت الأربعة أربع
+ * علب متشابهة تُقرأ واحدةً واحدة في كل مرة.
+ */
+.tp-main .ei-cell { background: var(--surface-card); }
+.tp-main .ei-cell[data-q="important_urgent"] {
+  background: color-mix(in srgb, var(--tp-danger) 12%, var(--surface-card));
+  border-color: color-mix(in srgb, var(--tp-danger) 34%, transparent);
+}
+.tp-main .ei-cell[data-q="important_urgent"] .ei-cell-head p { color: var(--tp-danger); }
+.tp-main .ei-cell[data-q="important_not_urgent"] {
+  background: color-mix(in srgb, var(--tp-go) 12%, var(--surface-card));
+  border-color: color-mix(in srgb, var(--tp-go) 34%, transparent);
+}
+.tp-main .ei-cell[data-q="important_not_urgent"] .ei-cell-head p { color: var(--tp-go); }
+.tp-main .ei-cell[data-q="not_important_urgent"] {
+  background: color-mix(in srgb, var(--tp-warn) 12%, var(--surface-card));
+  border-color: color-mix(in srgb, var(--tp-warn) 32%, transparent);
+}
+.tp-main .ei-cell[data-q="not_important_urgent"] .ei-cell-head p { color: var(--tp-warn); }
+.tp-main .ei-cell[data-q="not_important_not_urgent"] {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-card));
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.tp-main .ei-cell[data-q="not_important_not_urgent"] .ei-cell-head p { color: var(--azure-300); }
+.tp-main .ei-cell.is-over { border-color: var(--accent); }
+
+/* ---- شريط الأيام في حجز الوقت ---- */
+
+.tp-days {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-block-end: var(--space-3);
+}
+.tp-day {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  min-inline-size: 58px;
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-hairline);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.tp-day:hover { border-color: var(--border-default); color: var(--text-primary); }
+.tp-day-name { font: var(--fs-11)/1 var(--font-sans); color: var(--text-tertiary); }
+.tp-day-num {
+  font: var(--fw-medium) var(--fs-18)/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.tp-day.is-current,
+.tp-day.is-current:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-on);
+}
+.tp-day.is-current .tp-day-name { color: color-mix(in srgb, var(--accent-on) 80%, transparent); }
+
+/* ---- مسرح جلسة التركيز ---- */
+/*
+ * الجبل خلف المؤقّت لا خلف الصفحة: مساحة واحدة هادئة يُنظر إليها، وما حولها
+ * أسود. والمرجع يضع الصورة هنا وحدها.
+ */
+.tp-focus {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--space-7);
+  min-block-size: 420px;
+  padding: var(--space-10) var(--space-7);
+  border-radius: var(--radius-card);
+  border: var(--border-w) solid var(--border-hairline);
+}
+.tp-focus > img {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: .42;
+}
+.tp-focus::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(60% 55% at 50% 45%, rgba(8, 17, 31, .35) 0%, rgba(8, 17, 31, .93) 100%);
+}
+.tp-focus-task { margin: 0; font: var(--text-body-md); color: var(--text-secondary); text-align: center; }
+
+.tp-dial { position: relative; inline-size: min(264px, 70vw); aspect-ratio: 1; }
+.tp-dial svg { inline-size: 100%; block-size: 100%; transform: rotate(-90deg); }
+.tp-dial-track { fill: none; stroke: rgba(210, 226, 255, .16); stroke-width: 6; }
+.tp-dial-arc { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; }
+.tp-dial-num {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-2);
+  font: var(--fw-regular) var(--fs-56)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-tight);
+  color: var(--text-primary);
+  direction: ltr;
+}
+.tp-dial-caption { font: var(--fs-12)/1 var(--font-sans); color: var(--text-tertiary); direction: rtl; }
+
+/* زرّ البدء دائرة زرقاء: القرار الوحيد في الشاشة، فلا يشبه بقيّة الأزرار. */
+.tp-go {
+  display: grid;
+  place-items: center;
+  inline-size: 68px;
+  block-size: 68px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-on);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 40%, transparent);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.tp-go:hover { background: var(--accent-hover); }
+.tp-go:disabled { opacity: .55; cursor: default; box-shadow: none; }
+/* المثلّث يشير إلى البدء لا إلى جهة، فلا ينقلب مع اتجاه الصفحة. */
+.tp-go svg { transform: scaleX(-1); }
+
+.tp-focus-foot {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-8);
+}
+.tp-ghost-btn {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font: var(--fs-11)/1 var(--font-sans);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.tp-ghost-btn:hover { color: var(--text-primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-tab, .tp-day, .tp-go, .tp-ghost-btn { transition: none; }
+}

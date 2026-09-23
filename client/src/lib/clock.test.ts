@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clock, endTime, nextHalfHour, toDateInput, toTimeInput } from "./clock";
+import { clock, dayStrip, endTime, nextHalfHour, toDateInput, toTimeInput } from "./clock";
 
 /**
  * حسابات الوقت هنا تُخطئ بصمت: موعد مزاح ساعةً يبدو موعداً صحيحاً، وعدّاد
@@ -46,5 +46,37 @@ describe("وقت الانتهاء", () => {
     expect(endTime("2026-09-22", "", 60)).toBe("");
     expect(endTime("", "09:00", 60)).toBe("");
     expect(endTime("غير تاريخ", "09:00", 60)).toBe("");
+  });
+});
+
+describe("شريط الأيام", () => {
+  it("يعطي خمسة أيام متتالية، اليوم في وسطها", () => {
+    const days = dayStrip(new Date(2026, 8, 22, 14, 0));
+    expect(days).toHaveLength(5);
+    expect(days.map(toDateInput)).toEqual([
+      "2026-09-20",
+      "2026-09-21",
+      "2026-09-22",
+      "2026-09-23",
+      "2026-09-24",
+    ]);
+  });
+
+  it("يعبر حدّ الشهر دون أن ينكسر", () => {
+    // الثلاثون من سبتمبر: يومان بعده في أكتوبر، لا «سبتمبر ٣٢».
+    const days = dayStrip(new Date(2026, 8, 30, 9, 0));
+    expect(days.map(toDateInput)).toEqual([
+      "2026-09-28",
+      "2026-09-29",
+      "2026-09-30",
+      "2026-10-01",
+      "2026-10-02",
+    ]);
+  });
+
+  it("يبدأ كل يوم من منتصف الليل فلا تتسرّب ساعة الآن", () => {
+    for (const day of dayStrip(new Date(2026, 8, 22, 23, 59))) {
+      expect([day.getHours(), day.getMinutes(), day.getSeconds()]).toEqual([0, 0, 0]);
+    }
   });
 });
