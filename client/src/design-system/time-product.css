@@ -1077,3 +1077,227 @@
 }
 
 @media (prefers-reduced-motion: reduce) { .tp-tab { transition: none; } }
+
+/* ---- نافذة إضافة مهمة ---- */
+
+.ntk-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  padding: var(--space-7) var(--space-6);
+  background: var(--alpha-scrim);
+  overflow-y: auto;
+}
+
+.ntk {
+  inline-size: 100%;
+  max-inline-size: 640px;
+  margin-block: auto;
+  background: var(--surface-card);
+  border: var(--border-w) solid var(--border-default);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-lg);
+  overflow: clip;
+}
+
+/* ---- ترويسة النافذة ---- */
+.ntk-head {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  min-block-size: 132px;
+  padding: var(--space-8);
+}
+.ntk-head > img {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: .55;
+}
+.ntk-head::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, var(--surface-card) 4%, rgba(12, 26, 46, .55) 100%);
+}
+.ntk-head-text h2 {
+  margin: 0;
+  font: var(--fw-medium) var(--fs-26)/var(--lh-snug) var(--font-serif-display);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-primary);
+}
+.ntk-head-text p { margin: var(--space-2) 0 0; font: var(--text-body-md); color: var(--text-secondary); }
+.ntk-head-aside {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-align: start;
+  font: var(--text-caption);
+  color: var(--text-tertiary);
+}
+.ntk-head-aside b { font: var(--fw-medium) var(--fs-14)/1.4 var(--font-sans); color: var(--text-secondary); }
+@media (max-width: 560px) { .ntk-head-aside { display: none; } }
+
+.ntk-close {
+  position: absolute;
+  inset-block-start: var(--space-6);
+  inset-inline-start: var(--space-6);
+  display: grid;
+  place-items: center;
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-default);
+  background: color-mix(in srgb, var(--surface-sunken) 76%, transparent);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.ntk-close:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+/* ---- الجسد ---- */
+.ntk-body { display: flex; flex-direction: column; gap: var(--space-7); padding: var(--space-8); }
+.ntk-field { display: flex; flex-direction: column; gap: var(--space-4); border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+.ntk-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0;
+  font: var(--text-caption);
+  color: var(--text-secondary);
+}
+.ntk-label i { color: var(--tp-danger); font-style: normal; }
+.ntk-label svg { color: var(--text-disabled); }
+
+.ntk-input {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-hairline);
+  background: var(--surface-sunken);
+  transition: var(--transition-control);
+}
+.ntk-input:focus-within { border-color: var(--accent); }
+.ntk-input > svg { flex: none; margin-block-start: 2px; color: var(--text-disabled); }
+.ntk-input input,
+.ntk-input textarea {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: var(--text-body-md);
+  resize: none;
+}
+.ntk-input input:focus-visible,
+.ntk-input textarea:focus-visible { outline: none; }
+.ntk-input input::placeholder,
+.ntk-input textarea::placeholder { color: var(--text-disabled); }
+.ntk-input-area { padding-block-end: var(--space-8); }
+.ntk-count {
+  position: absolute;
+  inset-block-end: var(--space-4);
+  inset-inline-start: var(--space-6);
+  font: var(--fs-11)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-disabled);
+  font-style: normal;
+}
+
+/* ---- الأرباع ---- */
+.ntk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 560px) { .ntk-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.ntk-quad {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-hairline);
+  background: var(--surface-sunken);
+  text-align: start;
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.ntk-quad-text { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
+.ntk-quad-text b { font: var(--fw-medium) var(--fs-14)/1.4 var(--font-sans); color: var(--text-primary); }
+.ntk-quad-text i { font: var(--fs-12)/1.4 var(--font-sans); font-style: normal; color: var(--text-tertiary); }
+.ntk-quad > svg { flex: none; }
+
+/* الدائرة تمتلئ عند الاختيار: علامة واحدة تكفي، ولا حاجة إلى صحّ ثانٍ. */
+.ntk-radio {
+  flex: none;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  transition: var(--transition-control);
+}
+.ntk-quad.is-picked .ntk-radio { border-color: currentColor; box-shadow: inset 0 0 0 4px currentColor; }
+
+.ntk-quad[data-q="important_urgent"]         { color: var(--tp-danger); }
+.ntk-quad[data-q="important_not_urgent"]     { color: var(--tp-go); }
+.ntk-quad[data-q="not_important_urgent"]     { color: var(--tp-warn); }
+.ntk-quad[data-q="not_important_not_urgent"] { color: var(--azure-300); }
+.ntk-quad.is-picked {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 12%, var(--surface-sunken));
+}
+.ntk-quad:hover { border-color: currentColor; }
+
+/* ---- الصفّ الثلاثي ---- */
+.ntk-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); }
+@media (max-width: 640px) { .ntk-row { grid-template-columns: minmax(0, 1fr); } }
+
+.ntk-field select {
+  min-height: 44px;
+  padding-inline: var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-hairline);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: var(--text-body-md);
+  cursor: pointer;
+}
+.ntk-field select:disabled { opacity: .5; cursor: default; }
+.ntk-field select:focus-visible { outline: none; border-color: var(--accent); }
+
+/* ---- القدم ---- */
+.ntk-foot {
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-6);
+  border-block-start: var(--border-w) solid var(--border-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+.ntk-hint {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font: var(--text-caption);
+  color: var(--text-tertiary);
+}
+.ntk-hint svg { color: var(--accent); }
+.ntk-acts { display: flex; gap: var(--space-4); margin-inline-start: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ntk-quad, .ntk-input, .ntk-close, .ntk-radio { transition: none; }
+}
