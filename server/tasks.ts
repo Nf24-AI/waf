@@ -51,6 +51,28 @@ function credentials() {
   return { url: ENV.supabaseUrl.replace(/\/$/, ""), key: ENV.supabaseAnonKey };
 }
 
+/**
+ * خطأ من Supabase: رسالةٌ للمستخدم وتفصيلٌ للسجلّ.
+ *
+ * النصّ الخام كان يصل إلى الشاشة — رأى المستخدم صباح اليوم
+ * `Supabase 400: {"code":"42703"…}`. وهو لا يعني له شيئاً، ويكشف أسماء
+ * أعمدتنا وبنية جدولنا لمن لا يحتاجها.
+ *
+ * ويبقى التفصيل محفوظاً في `detail` لأن المنطق يقرأه: مظلّة العمود الغائب
+ * تعرف العمود من نصّ الخادم. فلو مُحي التفصيل لصمتت المظلّة وسقط كل شيء.
+ */
+class SupabaseError extends TRPCError {
+  readonly detail: string;
+
+  constructor(status: number, detail: string) {
+    super({
+      code: status === 404 ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR",
+      message: status === 404 ? "لم نجد ما تبحث عنه." : "تعذّر تنفيذ العملية. حاول مرة أخرى.",
+    });
+    this.detail = detail;
+  }
+}
+
 async function rest<T>(who: Identity, path: string, init: RequestInit = {}): Promise<T> {
   const { url, key } = credentials();
   const response = await fetch(`${url}/rest/v1/${path}`, {
@@ -65,17 +87,15 @@ async function rest<T>(who: Identity, path: string, init: RequestInit = {}): Pro
   });
 
   if (!response.ok) {
-    const body = await response.text();
-    throw new TRPCError({
-      code: response.status === 404 ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR",
-      message: `Supabase ${response.status}: ${body.slice(0, 200)}`,
-    });
+    const detail = (await response.text()).slice(0, 400);
+    // المسار بلا معاملات الاستعلام: قد تحمل عناوين أو معرّفات.
+    console.error("[supabase]", response.status, path.split("?")[0], detail);
+    throw new SupabaseError(response.status, detail);
   }
 
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
-
 /** الصفّ كما يخزّنه Supabase. الأعمدة بأسماء التطبيق السابق، فلا تُكسر بياناته. */
 interface Row {
   id: string;
@@ -154,9 +174,10 @@ function columns(): string {
 
 /** العمود الذي اشتكى منه الخادم، إن كان أحد أعمدتنا الاختيارية. */
 function absentColumn(error: unknown): OptionalColumn | null {
-  const message = String((error as Error)?.message ?? "");
-  if (!/42703|does not exist/.test(message)) return null;
-  return OPTIONAL_COLUMNS.find(column => message.includes(column)) ?? null;
+  // التفصيل لا الرسالة: الرسالة صارت جملةً عربية لا تسمّي عموداً.
+  const detail = String((error as { detail?: string })?.detail ?? "");
+  if (!/42703|does not exist/.test(detail)) return null;
+  return OPTIONAL_COLUMNS.find(column => detail.includes(column)) ?? null;
 }
 
 /** ما يُكتب من الخيارات، منزوعاً منه ما لا وجود له في الجدول. */
