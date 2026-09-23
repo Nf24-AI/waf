@@ -1,17 +1,7 @@
-import { COOKIE_NAME } from "@shared/const";
 import { authedProcedure } from "./auth";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import {
-  ACCESS_COOKIE,
-  accessIsOpen,
-  createSessionToken,
-  hasValidSession,
-  passwordMatches,
-  sessionCookieOptions,
-} from "./access";
 import {
   createNotionMeeting,
   deleteNotionMeeting,
@@ -67,48 +57,17 @@ const meetingWithId = z.object({ id: z.string(), ...meetingFields });
 export const appRouter = router({
   system: systemRouter,
 
-  auth: router({
-    /** Reports lock state rather than a Manus identity. */
-    me: publicProcedure.query(async ({ ctx }) => ({
-      locked: !accessIsOpen(),
-      unlocked: await hasValidSession(ctx.req.headers.cookie),
-    })),
-
-    unlock: publicProcedure
-      .input(z.object({ password: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        if (!passwordMatches(input.password)) {
-          return { success: false as const };
-        }
-        const token = await createSessionToken();
-        ctx.res.cookie(ACCESS_COOKIE, token, sessionCookieOptions(ENV.isProduction));
-        return { success: true as const };
-      }),
-
-    /**
-     * Slide the idle window forward without asking for anything.
-     *
-     * The server counts a session idle when no request arrives; the browser
-     * counts it idle when nobody touches the page. Those disagree while
-     * someone types a long note, because saving is a button and not an
-     * autosave — the page is busy and the server hears nothing. Ten minutes
-     * in, Save would fail as UNAUTHORIZED with the note still unsaved.
-     *
-     * authedProcedure re-issues the cookie, so the call needs no body of its own.
-     */
-    touch: authedProcedure.mutation(() => ({ ok: true }) as const),
-
-    logout: publicProcedure.mutation(({ ctx }) => {
-      // No maxAge: clearCookie already expires the cookie immediately, and
-      // passing it makes Express 4 log a deprecation on every logout — which
-      // the idle lock now triggers on its own, so the noise adds up.
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
-      ctx.res.clearCookie(ACCESS_COOKIE, sessionCookieOptions(ENV.isProduction));
-      return { success: true } as const;
-    }),
-  }),
-
+  /**
+   * بقايا البوّابة القديمة ذهبت مع البوّابة.
+   *
+   * `unlock` كان يصدر كعكة جلسة لمن يعرف كلمة المرور المشتركة. تركُه بعد
+   * حلول المصادقة الحقيقية يعني باباً ثانياً إلى نفس التطبيق، يُصدر هويّة
+   * لا تخصّ أحداً بعينه — ولا يُغلق بتسجيل الخروج من Supabase لأنه لا
+   * يعرف به. وباب لا أحد يتذكّره هو الباب الذي يبقى مفتوحاً.
+   *
+   * والخروج الآن عند Supabase: `signOut` في المتصفّح يُنهي الجلسة في كل
+   * الألسنة، ولا كعكة من عندنا تُمحى.
+   */
   meetings: router({
     /** Lets the workspace explain *why* Notion is unavailable instead of failing blankly. */
     status: authedProcedure.query(async () => {
