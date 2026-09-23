@@ -913,3 +913,6 @@
 }
 .tp-panel-row:hover { background: var(--alpha-fill-weak); color: var(--text-primary); }
 .tp-panel-row span { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* الحالة الفارغة تسبق زرّها بفاصل: القاعدة القديمة كانت على .tm-btn. */
+.tm-empty-state .tp-btn { margin-block-start: var(--space-4); }

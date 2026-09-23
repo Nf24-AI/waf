@@ -105,7 +105,7 @@ export default function TimeManagement() {
             <div className="tm-empty-state">
               <p>لا توجد مهام بعد.</p>
               <p className="tm-empty-hint">ابدأ بمهمة واحدة.</p>
-              <Link className="tp-btn tp-btn-primary tp-btn-wide" href={ADD_TASK_ROUTE}>
+              <Link className="tp-btn tp-btn-primary" href={ADD_TASK_ROUTE}>
                 <Plus size={17} aria-hidden="true" />
                 إضافة مهمة
               </Link>
