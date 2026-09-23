@@ -3,12 +3,25 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import RequireAuth from "./components/RequireAuth";
+import { useAuthSession } from "./contexts/AuthContext";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import Login from "./pages/auth/Login";
+import ResetPassword from "./pages/auth/ResetPassword";
+import Signup from "./pages/auth/Signup";
+import VerifyEmail from "./pages/auth/VerifyEmail";
+import {
+  FORGOT_PASSWORD_ROUTE,
+  LOGIN_ROUTE,
+  RESET_PASSWORD_ROUTE,
+  SIGNUP_ROUTE,
+  VERIFY_EMAIL_ROUTE,
+} from "./lib/auth-routes";
 import IdleWarning from "./components/IdleWarning";
 import ScheduleReminder from "./components/time/ScheduleReminder";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
-import Lock from "./pages/Lock";
 import Decisions from "./pages/Decisions";
 import Platform from "./pages/Platform";
 import Settings from "./pages/Settings";
@@ -22,7 +35,6 @@ import Focus from "./pages/Focus";
 import TimeBlocking from "./pages/TimeBlocking";
 import Tasks from "./pages/Tasks";
 import TimeManagement from "./pages/TimeManagement";
-import { useAuth } from "./_core/hooks/useAuth";
 import { useIdleLock } from "./hooks/useIdleLock";
 import {
   DECISIONS_ROUTE,
@@ -66,50 +78,35 @@ function Router() {
 }
 
 /**
- * The workspace is gated only when the server says it is. With APP_PASSWORD
- * unset the gate never appears, which is right for localhost and wrong for a
- * public URL — see server/access.ts.
+ * مساحة العمل خلف حساب.
  *
- * Once past the gate, the workspace locks itself again after IDLE_MINUTES of
- * nothing happening, asking first for the last minute of that. Only when a
- * gate exists: with APP_PASSWORD unset there is nothing to lock back to, and
- * locking would just blank the page.
+ * كانت خلف كلمة مرور واحدة في متغيّر بيئة — بوّابة مقاس مستخدم واحد. وقد
+ * حلّت محلّها المصادقة الحقيقية، وبوّابتان تعنيان تسجيل دخول مرّتين، فذهبت
+ * الأولى.
+ *
+ * وقفل الخمول بقي: يسأل قبل الدقيقة الأخيرة ثم يُنهي الجلسة. الفرق أنّه
+ * صار ينهيها عند Supabase لا عند كعكة محليّة، فيُقفل في كل الألسنة معاً.
  */
 function Gate() {
-  const { locked, unlocked, loading, unlock, logout, keepAlive } = useAuth();
+  const { user, signOut } = useAuthSession();
 
-  const idle = useIdleLock(locked && unlocked, logout, keepAlive);
-
-  if (loading) {
-    return (
-      <div className="state-screen">
-        <div className="state-card">
-          <div className="loading-orb" />
-        </div>
-      </div>
-    );
-  }
-
-  if (locked && !unlocked) {
-    return <Lock onUnlock={unlock} language="ar" />;
-  }
+  const idle = useIdleLock(Boolean(user), signOut, () => {});
 
   return (
-    <>
+    <RequireAuth>
       <Router />
       <ScheduleReminder />
       {idle.warning && (
         <IdleWarning
           secondsLeft={idle.secondsLeft}
           onStay={idle.stay}
-          onLockNow={logout}
+          onLockNow={signOut}
           language="ar"
         />
       )}
-    </>
+    </RequireAuth>
   );
 }
-
 /**
  * صفحة الهبوط تسبق البوّابة عمداً.
  *
@@ -131,6 +128,13 @@ export default function App() {
             <Route path={LANDING_ROUTE} component={Landing} />
             {/* من حفظ العنوان القديم يصل إلى الوجه نفسه، فلا ينكسر رابط. */}
             <Route path={LEGACY_LANDING_ROUTE} component={Landing} />
+
+            {/* المصادقة عامّة: من يصلها لم يدخل بعد. */}
+            <Route path={LOGIN_ROUTE} component={Login} />
+            <Route path={SIGNUP_ROUTE} component={Signup} />
+            <Route path={FORGOT_PASSWORD_ROUTE} component={ForgotPassword} />
+            <Route path={RESET_PASSWORD_ROUTE} component={ResetPassword} />
+            <Route path={VERIFY_EMAIL_ROUTE} component={VerifyEmail} />
             <Route>
               <Gate />
             </Route>

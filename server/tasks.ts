@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
+import { type Identity } from "./auth";
 import {
   type Quadrant,
   type Task,
@@ -14,27 +15,30 @@ import {
 import { type FocusSession } from "@shared/statistics";
 
 /**
- * المهام في Supabase، والوصول من هنا لا من المتصفح.
+ * المهام في Supabase، والملكية من جلسة المستخدم.
  *
- * الريبو عام، وأي مفتاح يدخل حزمة العميل يصير مقروءاً للجميع — ومع نموذج
- * `x-owner-code` يكفي الرمز وحده لقراءة المهام والكتابة فيها. فيبقى المفتاح
- * والرمز في الخادم، والعميل ينادي tRPC خلف بوّابة كلمة المرور القائمة.
+ * كان الوصول برمز مالك واحد في متغيّر بيئة: يكفي وحده لقراءة كل صفّ في
+ * الجدول. كان ذلك مقبولاً ومستخدمُ المنتج واحد، وسقط في اللحظة التي صار فيها
+ * للمنتج حسابات — رمزٌ واحد يعني مساحة واحدة يراها الجميع.
  *
- * ولا مكتبة supabase-js: الطلبات أربعة أفعال على REST، وfetch يكفيها.
+ * الآن يُمرَّر رمز جلسة المستخدم إلى PostgREST كما هو، فتتحقّق قاعدة البيانات
+ * من توقيعه وتطبّق سياسات RLS على `auth.uid()`. الحدّ في قاعدة البيانات لا
+ * في هذا الملف: خطأٌ هنا يعني بياناتٍ ناقصة، لا بياناتِ شخصٍ آخر.
+ *
+ * ولا مكتبة supabase-js هنا: الطلبات أربعة أفعال على REST، وfetch يكفيها.
  */
 
 const TABLE = "eisenhower_tasks";
 const SESSIONS = "waf_focus_sessions";
 
 export function tasksAreConfigured() {
-  return Boolean(ENV.supabaseUrl && ENV.supabaseAnonKey && ENV.tasksOwnerCode);
+  return Boolean(ENV.supabaseUrl && ENV.supabaseAnonKey);
 }
 
 function credentials() {
   const missing = [
     !ENV.supabaseUrl && "SUPABASE_URL",
     !ENV.supabaseAnonKey && "SUPABASE_ANON_KEY",
-    !ENV.tasksOwnerCode && "TASKS_OWNER_CODE",
   ].filter(Boolean);
 
   if (missing.length) {
@@ -44,17 +48,17 @@ function credentials() {
       message: `المهام غير مضبوطة. الناقص: ${missing.join("، ")}`,
     });
   }
-  return { url: ENV.supabaseUrl.replace(/\/$/, ""), key: ENV.supabaseAnonKey, owner: ENV.tasksOwnerCode };
+  return { url: ENV.supabaseUrl.replace(/\/$/, ""), key: ENV.supabaseAnonKey };
 }
 
-async function rest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const { url, key, owner } = credentials();
+async function rest<T>(who: Identity, path: string, init: RequestInit = {}): Promise<T> {
+  const { url, key } = credentials();
   const response = await fetch(`${url}/rest/v1/${path}`, {
     ...init,
     headers: {
       apikey: key,
-      Authorization: `Bearer ${key}`,
-      "x-owner-code": owner,
+      // رمز المستخدم لا المفتاح المجهول: هو ما يجعل auth.uid() له.
+      Authorization: `Bearer ${who.token}`,
       "Content-Type": "application/json",
       ...init.headers,
     },
@@ -188,13 +192,12 @@ async function withSchemaFallback<T>(run: () => Promise<T>): Promise<T> {
  * تُعدّ المكتملة وحدها: جلسة قُطعت في دقيقتها الثالثة ليست جلسة تركيز، وعدّها
  * يجعل الرقم يكافئ البدء لا الاستمرار.
  */
-async function sessionCounts(taskIds: string[]): Promise<Map<string, number>> {
+async function sessionCounts(who: Identity, taskIds: string[]): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   if (!taskIds.length) return counts;
 
   const list = taskIds.map(id => `"${id}"`).join(",");
-  const rows = await rest<{ task_id: string }[]>(
-    `${SESSIONS}?select=task_id&completed=is.true&task_id=in.(${list})`,
+  const rows = await rest<{ task_id: string }[]>(who, `${SESSIONS}?select=task_id&completed=is.true&task_id=in.(${list})`,
   );
   for (const row of rows) counts.set(row.task_id, (counts.get(row.task_id) ?? 0) + 1);
   return counts;
@@ -206,32 +209,32 @@ async function sessionCounts(taskIds: string[]): Promise<Map<string, number>> {
  * طلب إضافي، لكن البديل أن تعود المهمة من كلّ كتابة وعدّادها صفر بينما تعرض
  * القائمة رقمه الحقيقي — فيختلف الرقم باختلاف الشاشة التي جئت منها.
  */
-async function withSessions(row: Row): Promise<Task> {
-  const counts = await sessionCounts([row.id]);
+async function withSessions(who: Identity, row: Row): Promise<Task> {
+  const counts = await sessionCounts(who, [row.id]);
   return toTask(row, counts.get(row.id) ?? 0);
 }
 
 /** المهام المفتوحة: ما لم يُنجَز ولم يُؤرشَف. هي ما تعرضه الواجهات كلها. */
-export async function listOpenTasks(): Promise<Task[]> {
+export async function listOpenTasks(who: Identity): Promise<Task[]> {
   const rows = await withSchemaFallback(() =>
     rest<Row[]>(
+      who,
       `${TABLE}?select=${columns()}&completed_at=is.null&is_done=eq.false&is_archived=eq.false&order=created_at.desc`,
     ),
   );
-  const counts = await sessionCounts(rows.map(row => row.id));
+  const counts = await sessionCounts(who, rows.map(row => row.id));
   return rows.map(row => toTask(row, counts.get(row.id) ?? 0));
 }
 
-export async function listCompletedTasks(sinceIso?: string): Promise<Task[]> {
+export async function listCompletedTasks(who: Identity, sinceIso?: string): Promise<Task[]> {
   const since = sinceIso ? `&completed_at=gte.${encodeURIComponent(sinceIso)}` : "";
-  const rows = await withSchemaFallback(() =>
-    rest<Row[]>(`${TABLE}?select=${columns()}&completed_at=not.is.null${since}&order=completed_at.desc`),
+  const rows = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?select=${columns()}&completed_at=not.is.null${since}&order=completed_at.desc`),
   );
-  const counts = await sessionCounts(rows.map(row => row.id));
+  const counts = await sessionCounts(who, rows.map(row => row.id));
   return rows.map(row => toTask(row, counts.get(row.id) ?? 0));
 }
 
-export async function createTask(input: {
+export async function createTask(who: Identity, input: {
   title: string;
   description?: string;
   quadrant?: Quadrant;
@@ -241,16 +244,14 @@ export async function createTask(input: {
   repeatRule?: RepeatRule;
   reminderMinutes?: number;
 }): Promise<Task> {
-  const { owner } = credentials();
   const split = input.quadrant ? splitQuadrant(input.quadrant) : null;
 
-  const [row] = await withSchemaFallback(() =>
-    rest<Row[]>(`${TABLE}?select=${columns()}`, {
+  const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?select=${columns()}`, {
       method: "POST",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({
         id: crypto.randomUUID(),
-        owner_code: owner,
+        user_id: who.userId,
         name: input.title.trim(),
         description: input.description?.trim() || null,
         // الجدول القديم يشترط العمودين. مهمة بلا تصنيف تبدأ في «غير مهم وغير
@@ -267,20 +268,19 @@ export async function createTask(input: {
     }),
   );
 
-  return withSessions(row);
+  return withSessions(who, row);
 }
 
-export async function classifyTask(id: string, quadrant: Quadrant): Promise<Task> {
+export async function classifyTask(who: Identity, id: string, quadrant: Quadrant): Promise<Task> {
   const { importance, urgency } = splitQuadrant(quadrant);
-  const [row] = await withSchemaFallback(() =>
-    rest<Row[]>(`${TABLE}?id=eq.${id}&select=${columns()}`, {
+  const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({ importance, urgency, classified_at: new Date().toISOString() }),
     }),
   );
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
-  return withSessions(row);
+  return withSessions(who, row);
 }
 
 /**
@@ -291,6 +291,7 @@ export async function classifyTask(id: string, quadrant: Quadrant): Promise<Task
  * يحرس شكل الموعد؛ هذا يحرس ألّا يتداخل موعدان.
  */
 export async function scheduleTask(
+  who: Identity,
   id: string,
   startIso: string,
   endIso: string,
@@ -305,8 +306,7 @@ export async function scheduleTask(
   const window =
     `scheduled_start=lt.${encodeURIComponent(endIso)}` +
     `&scheduled_end=gt.${encodeURIComponent(startIso)}`;
-  const clashes = await rest<{ id: string; name: string }[]>(
-    `${TABLE}?select=id,name&completed_at=is.null&is_archived=eq.false&${window}&id=neq.${id}`,
+  const clashes = await rest<{ id: string; name: string }[]>(who, `${TABLE}?select=id,name&completed_at=is.null&is_archived=eq.false&${window}&id=neq.${id}`,
   );
   if (clashes.length) {
     throw new TRPCError({
@@ -315,8 +315,7 @@ export async function scheduleTask(
     });
   }
 
-  const [row] = await withSchemaFallback(() =>
-    rest<Row[]>(`${TABLE}?id=eq.${id}&select=${columns()}`, {
+  const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({
@@ -328,7 +327,7 @@ export async function scheduleTask(
     }),
   );
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
-  return withSessions(row);
+  return withSessions(who, row);
 }
 
 /**
@@ -338,9 +337,8 @@ export async function scheduleTask(
  * يُعاد فتح الصفّ نفسه — يمحو تاريخه كلّما تكرّر، فتصير مهمةٌ أُنجزت ثلاثين
  * مرّة مهمةً واحدة لم تُنجَز بعد.
  */
-export async function completeTask(id: string): Promise<Task> {
-  const [row] = await withSchemaFallback(() =>
-    rest<Row[]>(`${TABLE}?id=eq.${id}&select=${columns()}`, {
+export async function completeTask(who: Identity, id: string): Promise<Task> {
+  const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({ completed_at: new Date().toISOString(), is_done: true }),
@@ -351,7 +349,7 @@ export async function completeTask(id: string): Promise<Task> {
   // بلا موعد لا تكرار: «كل يوم» تحتاج ساعةً تقع فيها.
   if (row.repeat_rule && row.scheduled_start && row.scheduled_end) {
     const when = nextOccurrence(row.scheduled_start, row.scheduled_end, row.repeat_rule);
-    await createTask({
+    await createTask(who, {
       title: row.name,
       description: row.description ?? undefined,
       quadrant:
@@ -365,18 +363,17 @@ export async function completeTask(id: string): Promise<Task> {
     });
   }
 
-  return withSessions(row);
+  return withSessions(who, row);
 }
 
 /** جلسة تركيز تُفتح عند البدء وتُغلق عند الانتهاء — ولو لم تُنجَز المهمة. */
-export async function openFocusSession(taskId: string, plannedMinutes: number): Promise<string> {
-  const { owner } = credentials();
+export async function openFocusSession(who: Identity, taskId: string, plannedMinutes: number): Promise<string> {
   const id = crypto.randomUUID();
-  await rest<void>(SESSIONS, {
+  await rest<void>(who, SESSIONS, {
     method: "POST",
     body: JSON.stringify({
       id,
-      owner_code: owner,
+      user_id: who.userId,
       task_id: taskId,
       planned_minutes: plannedMinutes,
       started_at: new Date().toISOString(),
@@ -385,8 +382,8 @@ export async function openFocusSession(taskId: string, plannedMinutes: number): 
   return id;
 }
 
-export async function closeFocusSession(id: string, completed: boolean): Promise<void> {
-  await rest<void>(`${SESSIONS}?id=eq.${id}`, {
+export async function closeFocusSession(who: Identity, id: string, completed: boolean): Promise<void> {
+  await rest<void>(who, `${SESSIONS}?id=eq.${id}`, {
     method: "PATCH",
     body: JSON.stringify({ ended_at: new Date().toISOString(), completed }),
   });
@@ -398,11 +395,11 @@ export async function closeFocusSession(id: string, completed: boolean): Promise
  * تُقرأ بالبداية لا بالنهاية: الجلسة التي بدأت أمس وانتهت اليوم تنتمي إلى
  * أمس، وهو اليوم الذي قُضيت فيه.
  */
-export async function listFocusSessions(sinceIso?: string): Promise<FocusSession[]> {
+export async function listFocusSessions(who: Identity, sinceIso?: string): Promise<FocusSession[]> {
   const since = sinceIso ? `&started_at=gte.${encodeURIComponent(sinceIso)}` : "";
   const rows = await rest<
     { started_at: string; ended_at: string | null; planned_minutes: number; completed: boolean }[]
-  >(`${SESSIONS}?select=started_at,ended_at,planned_minutes,completed${since}&order=started_at.desc`);
+  >(who, `${SESSIONS}?select=started_at,ended_at,planned_minutes,completed${since}&order=started_at.desc`);
 
   return rows.map(row => ({
     startedAt: row.started_at,

@@ -7,10 +7,12 @@ import {
   Clock,
   Home,
   MoreHorizontal,
+  LogOut,
   Settings,
   X,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useAuthSession } from "@/contexts/AuthContext";
 import {
   ARCHIVE_ROUTE,
   MEETING_ROUTES,
@@ -88,7 +90,12 @@ function NavList({ items, onPick }: { items: NavItem[]; onPick?: () => void }) {
 
 function NavFoot({ onPick }: { onPick?: () => void }) {
   const [location] = useLocation();
+  const { user, signOut } = useAuthSession();
   const current = isCurrent(location, SETTINGS_ROUTE);
+
+  // الحرف الأوّل من الاسم إن وُجد، وإلا من البريد. ولا يُخترع اسم.
+  const label = (user?.user_metadata?.name as string | undefined)?.trim() || user?.email || "حسابي";
+  const initial = label.slice(0, 1).toLocaleUpperCase("ar");
 
   return (
     <div className="tp-side-foot">
@@ -105,11 +112,16 @@ function NavFoot({ onPick }: { onPick?: () => void }) {
       {/* الحساب واحد في هذه الأداة، فالبطاقة تعريف لا مبدِّل حسابات. */}
       <Link className="tp-user" href={SETTINGS_ROUTE} onClick={onPick}>
         <span className="tp-avatar" aria-hidden="true">
-          و
+          {initial}
         </span>
-        <span className="tp-user-name">حسابي</span>
+        <span className="tp-user-name">{label}</span>
         <MoreHorizontal size={16} aria-hidden="true" className="tp-user-more" />
       </Link>
+
+      <button type="button" className="tp-link" onClick={() => void signOut()}>
+        <LogOut size={17} aria-hidden="true" />
+        تسجيل الخروج
+      </button>
     </div>
   );
 }
