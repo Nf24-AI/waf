@@ -85,6 +85,7 @@ interface Row {
   classified_at: string | null;
   completed_at: string | null;
   repeat_rule: RepeatRule | null;
+  reminder_minutes: number | null;
   is_done: boolean;
   created_at: string;
 }
@@ -114,6 +115,7 @@ function toTask(row: Row, sessions = 0): Task {
     scheduledEnd: row.scheduled_end ?? undefined,
     estimatedMinutes: row.estimated_minutes ?? undefined,
     repeatRule: row.repeat_rule ?? undefined,
+    reminderMinutes: row.reminder_minutes ?? undefined,
     completedSessions: sessions,
     createdAt: row.created_at,
     completedAt: completedAt ?? undefined,
@@ -122,48 +124,64 @@ function toTask(row: Row, sessions = 0): Task {
   return { ...core, state: stateOf(core) };
 }
 
-const FULL_COLUMNS =
-  "id,name,description,importance,urgency,classified_at,scheduled_start,scheduled_end,estimated_minutes,repeat_rule,completed_at,is_done,created_at";
+/** الأعمدة التي قد لا تكون رُحِّلت بعد. تُحذف من الطلب حين يقول الخادم إنها غائبة. */
+const OPTIONAL_COLUMNS = ["repeat_rule", "reminder_minutes"] as const;
+type OptionalColumn = (typeof OPTIONAL_COLUMNS)[number];
 
-/** نفس القائمة بلا العمود الذي قد لا يكون رُحِّل بعد. */
-const LEGACY_COLUMNS = FULL_COLUMNS.replace(",repeat_rule", "");
+const BASE_COLUMNS =
+  "id,name,description,importance,urgency,classified_at,scheduled_start,scheduled_end,estimated_minutes,completed_at,is_done,created_at";
 
 /**
  * الجدول يُرحَّل بيدٍ في لوحة Supabase، والنشر لا ينتظر الترحيل.
  *
- * فإن سبق الكودُ العمودَ لم يسقط كل شيء: يردّ PostgREST بـ42703، فنعيد
- * القراءة بلا العمود ونعلّم أنه غائب. تتعطّل ميزة التكرار وحدها بدل أن
- * تتعطّل قراءة المهام كلّها — والفرق بينهما أن الأولى تُفقد ميزة، والثانية
- * تجعل المنتج يعرض «لا مهام لديك» لمن عنده مهامه كلّها.
+ * فإن سبق الكودُ عموداً لم يسقط كل شيء: يردّ PostgREST بـ42703 ويسمّي
+ * العمود، فنسقطه من الطلب ونعيد مرّة. تتعطّل الخانة وحدها بدل أن تتعطّل
+ * قراءة المهام كلّها — والفرق أن الأولى تُفقد خياراً، والثانية تجعل المنتج
+ * يقول «لا مهام لديك» لمن عنده مهامه كلّها.
  *
- * ويعود العلم إلى true من تلقائه عند أول إقلاع بعد الترحيل.
+ * والمجموعة تُفرَّغ عند كل إقلاع، فيعود العمود من تلقائه بعد الترحيل.
  */
-let hasRepeatColumn = true;
+const missing = new Set<OptionalColumn>();
 
 function columns(): string {
-  return hasRepeatColumn ? FULL_COLUMNS : LEGACY_COLUMNS;
+  const extra = OPTIONAL_COLUMNS.filter(column => !missing.has(column));
+  return extra.length ? `${BASE_COLUMNS},${extra.join(",")}` : BASE_COLUMNS;
 }
 
-function isMissingRepeat(error: unknown): boolean {
-  return /repeat_rule/.test(String((error as Error)?.message ?? "")) && /42703|does not exist/.test(String((error as Error)?.message ?? ""));
+/** العمود الذي اشتكى منه الخادم، إن كان أحد أعمدتنا الاختيارية. */
+function absentColumn(error: unknown): OptionalColumn | null {
+  const message = String((error as Error)?.message ?? "");
+  if (!/42703|does not exist/.test(message)) return null;
+  return OPTIONAL_COLUMNS.find(column => message.includes(column)) ?? null;
+}
+
+/** ما يُكتب من الخيارات، منزوعاً منه ما لا وجود له في الجدول. */
+function optional(values: Partial<Record<OptionalColumn, unknown>>): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const [column, value] of Object.entries(values)) {
+    if (!missing.has(column as OptionalColumn)) body[column] = value;
+  }
+  return body;
 }
 
 /**
- * ينفّذ الطلب، وإن كان سببُ فشله العمودَ الغائب أعاده مرّة واحدة بدونه.
+ * ينفّذ الطلب، وكلّما كان سببُ فشله عموداً غائباً أسقطه وأعاد.
  *
- * مرّة واحدة لا حلقة: بعد الإعادة يكون العلم قد سقط، فأيّ فشل ثانٍ سببه
- * شيء آخر ويجب أن يُرى.
+ * المحاولات محدودة بعدد الأعمدة الاختيارية: كل إعادة تُسقط عموداً جديداً،
+ * فلا تدور الحلقة على خطأٍ سببه شيء آخر.
  */
 async function withSchemaFallback<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    if (!hasRepeatColumn || !isMissingRepeat(error)) throw error;
-    hasRepeatColumn = false;
-    return run();
+  for (let attempt = 0; attempt <= OPTIONAL_COLUMNS.length; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      const column = absentColumn(error);
+      if (!column || missing.has(column)) throw error;
+      missing.add(column);
+    }
   }
+  return run();
 }
-
 /**
  * جلسات التركيز المكتملة لكل مهمة، في طلب واحد لا طلب لكل صفّ.
  *
@@ -221,6 +239,7 @@ export async function createTask(input: {
   scheduledEnd?: string;
   estimatedMinutes?: number;
   repeatRule?: RepeatRule;
+  reminderMinutes?: number;
 }): Promise<Task> {
   const { owner } = credentials();
   const split = input.quadrant ? splitQuadrant(input.quadrant) : null;
@@ -243,7 +262,7 @@ export async function createTask(input: {
         scheduled_start: input.scheduledStart ?? null,
         scheduled_end: input.scheduledEnd ?? null,
         estimated_minutes: input.estimatedMinutes ?? null,
-        ...(hasRepeatColumn ? { repeat_rule: input.repeatRule ?? null } : {}),
+        ...optional({ repeat_rule: input.repeatRule ?? null, reminder_minutes: input.reminderMinutes ?? null }),
       }),
     }),
   );
@@ -304,7 +323,7 @@ export async function scheduleTask(
         scheduled_start: startIso,
         scheduled_end: endIso,
         // undefined يعني «لا تمسّ»، و null يعني «ألغِ التكرار».
-        ...(repeatRule === undefined || !hasRepeatColumn ? {} : { repeat_rule: repeatRule }),
+        ...(repeatRule === undefined ? {} : optional({ repeat_rule: repeatRule })),
       }),
     }),
   );

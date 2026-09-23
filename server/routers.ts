@@ -176,6 +176,7 @@ export const appRouter = router({
           scheduledEnd: z.string().datetime().optional(),
           estimatedMinutes: z.number().int().positive().optional(),
           repeatRule: z.enum(["daily", "weekly"]).optional(),
+          reminderMinutes: z.number().int().min(0).max(1440).optional(),
         }),
       )
       .mutation(({ input }) => createTask(input as Parameters<typeof createTask>[0])),

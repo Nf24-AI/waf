@@ -54,6 +54,8 @@ export interface Task {
   estimatedMinutes?: number;
   /** جلسات التركيز المكتملة على هذه المهمة. */
   repeatRule?: RepeatRule;
+  /** دقائق قبل الموعد يُنبَّه فيها. صفر = عند الموعد، وغياب القيمة = بلا تذكير. */
+  reminderMinutes?: number;
   completedSessions: number;
   createdAt: string;
   completedAt?: string;
