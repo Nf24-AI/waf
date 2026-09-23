@@ -1,10 +1,11 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useState } from "react";
-import { ArrowRight, CalendarClock, Plus } from "lucide-react";
+import { CalendarClock, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { QUADRANTS, type Quadrant, type Task } from "@shared/tasks";
-import { TASKS_ROUTE, TIME_MANAGEMENT_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import TimeLayout from "@/components/time/TimeLayout";
 import AddTaskDialog from "@/components/time/AddTaskDialog";
 import { trpc } from "@/lib/trpc";
 
@@ -83,13 +84,9 @@ export default function Eisenhower() {
   }
 
   return (
-    <main className="tm-shell waf-dots" dir="rtl">
+    <TimeLayout>
       <div className="tm-inner">
         <header className="tm-head">
-          <Link className="tm-back" href={TIME_MANAGEMENT_ROUTE}>
-            <ArrowRight size={15} aria-hidden="true" />
-            إدارة الوقت
-          </Link>
           <h1>مصفوفة أيزنهاور</h1>
           <p>حدّد ما يستحق وقتك.</p>
         </header>
@@ -234,6 +231,6 @@ export default function Eisenhower() {
         onClose={() => setAdding(false)}
         onSubmit={input => create.mutate(input)}
       />
-    </main>
+    </TimeLayout>
   );
 }

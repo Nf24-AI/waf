@@ -1,10 +1,11 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useMemo } from "react";
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { Link } from "wouter";
 import { quadrantTitle, type Task } from "@shared/tasks";
-import { STATISTICS_ROUTE, TIME_MANAGEMENT_ROUTE } from "@shared/routes";
+import { STATISTICS_ROUTE } from "@shared/routes";
+import TimeLayout from "@/components/time/TimeLayout";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -51,13 +52,9 @@ export default function Archive() {
   const days = useMemo(() => groupByDay(completed.data ?? []), [completed.data]);
 
   return (
-    <main className="tm-shell waf-dots" dir="rtl">
+    <TimeLayout>
       <div className="tm-inner">
         <header className="tm-head">
-          <Link className="tm-back" href={TIME_MANAGEMENT_ROUTE}>
-            <ArrowRight size={15} aria-hidden="true" />
-            إدارة الوقت
-          </Link>
           <h1>الأرشيف</h1>
           <p>ما أنجزته، بيومه.</p>
         </header>
@@ -116,6 +113,6 @@ export default function Archive() {
           </div>
         )}
       </div>
-    </main>
+    </TimeLayout>
   );
 }

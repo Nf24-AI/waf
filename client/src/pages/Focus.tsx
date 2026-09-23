@@ -1,10 +1,11 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Pause, Play, Square } from "lucide-react";
+import { Pause, Play, Square } from "lucide-react";
 import { Link } from "wouter";
 import { type Task } from "@shared/tasks";
-import { TIME_MANAGEMENT_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { TIME_METHOD_ROUTES } from "@shared/routes";
+import TimeLayout from "@/components/time/TimeLayout";
 import { clock } from "@/lib/clock";
 import { useTaskParam } from "@/lib/task-param";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -109,12 +110,8 @@ export default function Focus() {
   }
 
   return (
-    <main className="fc-shell" dir="rtl">
+    <TimeLayout quiet={running || paused} dots={false} shell="fc-shell">
       <div className="fc-inner">
-        <Link className="tm-back" href={TIME_MANAGEMENT_ROUTE}>
-          <ArrowRight size={15} aria-hidden="true" />
-          إدارة الوقت
-        </Link>
 
         {status.data?.configured === false && (
           <p className="tm-empty">
@@ -283,6 +280,6 @@ export default function Focus() {
           </section>
         )}
       </div>
-    </main>
+    </TimeLayout>
   );
 }

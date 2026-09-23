@@ -1,10 +1,10 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useState } from "react";
-import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { type Task } from "@shared/tasks";
-import { ARCHIVE_ROUTE, TIME_MANAGEMENT_ROUTE } from "@shared/routes";
+import { ARCHIVE_ROUTE } from "@shared/routes";
+import TimeLayout from "@/components/time/TimeLayout";
 import TaskRow from "@/components/time/TaskRow";
 import { trpc } from "@/lib/trpc";
 
@@ -50,13 +50,9 @@ export default function Tasks() {
   const shown = all.filter(task => matches(task, tab, now));
 
   return (
-    <main className="tm-shell waf-dots" dir="rtl">
+    <TimeLayout>
       <div className="tm-inner">
         <header className="tm-head">
-          <Link className="tm-back" href={TIME_MANAGEMENT_ROUTE}>
-            <ArrowRight size={15} aria-hidden="true" />
-            إدارة الوقت
-          </Link>
           <h1>مهامي المفتوحة</h1>
           <p>
             ما لم يُنجَز بعد. المكتملة في <Link href={ARCHIVE_ROUTE}>الأرشيف</Link>.
@@ -121,6 +117,6 @@ export default function Tasks() {
           )}
         </section>
       </div>
-    </main>
+    </TimeLayout>
   );
 }

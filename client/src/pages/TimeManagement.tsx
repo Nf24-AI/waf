@@ -1,9 +1,10 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useState } from "react";
-import { Archive, BarChart3, CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
+import { Archive, ArrowRight, BarChart3, CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
 import { Link } from "wouter";
-import { ARCHIVE_ROUTE, STATISTICS_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { ARCHIVE_ROUTE, PLATFORM_ROUTE, STATISTICS_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import TimeLayout from "@/components/time/TimeLayout";
 import AddTaskDialog from "@/components/time/AddTaskDialog";
 import TaskRow from "@/components/time/TaskRow";
 import { trpc } from "@/lib/trpc";
@@ -47,9 +48,14 @@ export default function TimeManagement() {
   const configured = status.data?.configured;
 
   return (
-    <main className="tm-shell waf-dots" dir="rtl">
+    <TimeLayout>
       <div className="tm-inner">
         <header className="tm-head">
+          {/* على المكتب يحمل الشريط الجانبي هذا المخرج؛ هنا للجوّال. */}
+          <Link className="tm-back tl-only-phone" href={PLATFORM_ROUTE}>
+            <ArrowRight size={15} aria-hidden="true" />
+            المنصّة
+          </Link>
           <h1>إدارة الوقت</h1>
           <p>نفس مهامك، بثلاث طرق مختلفة.</p>
         </header>
@@ -143,6 +149,6 @@ export default function TimeManagement() {
         onClose={() => setAdding(false)}
         onSubmit={input => create.mutate(input)}
       />
-    </main>
+    </TimeLayout>
   );
 }

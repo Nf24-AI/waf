@@ -1,10 +1,11 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, CalendarClock, Timer } from "lucide-react";
+import { CalendarClock, Timer } from "lucide-react";
 import { Link } from "wouter";
 import { quadrantTitle, type Task } from "@shared/tasks";
-import { TIME_MANAGEMENT_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { TIME_METHOD_ROUTES } from "@shared/routes";
+import TimeLayout from "@/components/time/TimeLayout";
 import { endTime, nextHalfHour, toDateInput, toIso, toTimeInput } from "@/lib/clock";
 import { useTaskParam } from "@/lib/task-param";
 import { trpc } from "@/lib/trpc";
@@ -56,13 +57,9 @@ export default function TimeBlocking() {
   }
 
   return (
-    <main className="tm-shell waf-dots" dir="rtl">
+    <TimeLayout>
       <div className="tm-inner">
         <header className="tm-head">
-          <Link className="tm-back" href={TIME_MANAGEMENT_ROUTE}>
-            <ArrowRight size={15} aria-hidden="true" />
-            إدارة الوقت
-          </Link>
           <h1>حجز الوقت</h1>
           <p>ضع لكل مهمة وقتاً واضحاً.</p>
         </header>
@@ -192,6 +189,6 @@ export default function TimeBlocking() {
           </section>
         )}
       </div>
-    </main>
+    </TimeLayout>
   );
 }

@@ -1,10 +1,10 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useMemo, useState } from "react";
-import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
-import { ARCHIVE_ROUTE, TIME_MANAGEMENT_ROUTE } from "@shared/routes";
+import { ARCHIVE_ROUTE } from "@shared/routes";
 import { formatMinutes, summarize } from "@shared/statistics";
+import TimeLayout from "@/components/time/TimeLayout";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -52,13 +52,9 @@ export default function Statistics() {
   const peak = Math.max(1, ...stats.byQuadrant.map(row => row.count));
 
   return (
-    <main className="tm-shell waf-dots" dir="rtl">
+    <TimeLayout>
       <div className="tm-inner">
         <header className="tm-head">
-          <Link className="tm-back" href={TIME_MANAGEMENT_ROUTE}>
-            <ArrowRight size={15} aria-hidden="true" />
-            إدارة الوقت
-          </Link>
           <h1>الإحصاء</h1>
           <p>ما حدث فعلاً، لا ما كان مخطّطاً.</p>
         </header>
@@ -146,6 +142,6 @@ export default function Statistics() {
           </>
         )}
       </div>
-    </main>
+    </TimeLayout>
   );
 }
