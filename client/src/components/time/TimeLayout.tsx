@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Bell, Menu, Search } from "lucide-react";
 import { NavDrawer, Sidebar } from "./TimeNav";
+import TopBar from "./TopBar";
 
 /**
  * إطار منتج إدارة الوقت: شريط جانبي على المكتب، ودرج على الجوّال، وشريط
@@ -21,12 +21,6 @@ export default function TimeLayout({
 }) {
   const [drawer, setDrawer] = useState(false);
 
-  const today = new Date().toLocaleDateString("ar-SA", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 
   if (quiet) {
     return (
@@ -42,41 +36,7 @@ export default function TimeLayout({
       <NavDrawer open={drawer} onClose={() => setDrawer(false)} />
 
       <div className="tp-body">
-        <header className="tp-top">
-          <button
-            type="button"
-            className="tp-burger"
-            onClick={() => setDrawer(true)}
-            aria-label="فتح القائمة"
-            aria-expanded={drawer}
-          >
-            <Menu size={18} aria-hidden="true" />
-          </button>
-
-          {/*
-            البحث معروض ولا يعمل بعد. عرضُه معطّلاً أصدق من إخفائه: المرجع
-            يضعه، ومن يضغطه يعرف في الحال أنه لم يُبنَ بدل أن يظنّه معطوباً.
-          */}
-          <div className="tp-search">
-            <Search size={16} aria-hidden="true" />
-            <input
-              type="search"
-              disabled
-              placeholder="ابحث عن مهمة، اجتماع، أو أي شيء … (قريباً)"
-              aria-label="بحث — غير متاح بعد"
-            />
-            <span className="tp-kbd" aria-hidden="true">
-              ⌘K
-            </span>
-          </div>
-
-          <div className="tp-top-end">
-            <time className="tp-date">{today}</time>
-            <span className="tp-icon-btn" aria-hidden="true">
-              <Bell size={17} />
-            </span>
-          </div>
-        </header>
+        <TopBar onOpenNav={() => setDrawer(true)} />
 
         <main className="tp-main">{children}</main>
       </div>

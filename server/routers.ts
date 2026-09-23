@@ -175,6 +175,7 @@ export const appRouter = router({
           scheduledStart: z.string().datetime().optional(),
           scheduledEnd: z.string().datetime().optional(),
           estimatedMinutes: z.number().int().positive().optional(),
+          repeatRule: z.enum(["daily", "weekly"]).optional(),
         }),
       )
       .mutation(({ input }) => createTask(input as Parameters<typeof createTask>[0])),
@@ -184,8 +185,15 @@ export const appRouter = router({
       .mutation(({ input }) => classifyTask(input.id, input.quadrant as Parameters<typeof classifyTask>[1])),
 
     schedule: appProcedure
-      .input(z.object({ id: z.string().uuid(), start: z.string().datetime(), end: z.string().datetime() }))
-      .mutation(({ input }) => scheduleTask(input.id, input.start, input.end)),
+      .input(
+        z.object({
+          id: z.string().uuid(),
+          start: z.string().datetime(),
+          end: z.string().datetime(),
+          repeatRule: z.enum(["daily", "weekly"]).nullable().optional(),
+        }),
+      )
+      .mutation(({ input }) => scheduleTask(input.id, input.start, input.end, input.repeatRule)),
 
     complete: appProcedure
       .input(z.object({ id: z.string().uuid() }))

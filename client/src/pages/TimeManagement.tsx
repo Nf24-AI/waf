@@ -3,9 +3,8 @@
 import React, { useState } from "react";
 import { ArrowRight, CalendarClock, LayoutGrid, ListChecks, Plus, Timer } from "lucide-react";
 import { Link } from "wouter";
-import { PLATFORM_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { ADD_TASK_ROUTE, PLATFORM_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
-import AddTaskDialog from "@/components/time/AddTaskDialog";
 import TaskRow from "@/components/time/TaskRow";
 import { trpc } from "@/lib/trpc";
 
@@ -27,19 +26,10 @@ const METHODS = [
 ] as const;
 
 export default function TimeManagement() {
-  const [adding, setAdding] = useState(false);
 
   const utils = trpc.useUtils();
   const status = trpc.tasks.status.useQuery();
   const open = trpc.tasks.listOpen.useQuery(undefined, { enabled: status.data?.configured === true });
-
-  // الإضافة والإنجاز يُبطلان القائمة نفسها، فلا تبقى شاشة تعرض ما لم يعد قائماً.
-  const create = trpc.tasks.create.useMutation({
-    onSuccess: async () => {
-      await utils.tasks.listOpen.invalidate();
-      setAdding(false);
-    },
-  });
   const complete = trpc.tasks.complete.useMutation({
     onSuccess: () => utils.tasks.listOpen.invalidate(),
   });
@@ -61,10 +51,10 @@ export default function TimeManagement() {
         </header>
 
         <div className="tp-actions">
-          <button type="button" className="tp-btn tp-btn-primary tp-btn-wide" onClick={() => setAdding(true)} disabled={!configured}>
+          <Link className="tp-btn tp-btn-primary tp-btn-wide" href={ADD_TASK_ROUTE}>
             <Plus size={17} aria-hidden="true" />
             إضافة مهمة
-          </button>
+          </Link>
           <Link className="tp-btn tp-btn-wide" href={TASKS_ROUTE}>
             <ListChecks size={17} aria-hidden="true" />
             متابعة المهام
@@ -115,10 +105,10 @@ export default function TimeManagement() {
             <div className="tm-empty-state">
               <p>لا توجد مهام بعد.</p>
               <p className="tm-empty-hint">ابدأ بمهمة واحدة.</p>
-              <button type="button" className="tp-btn tp-btn-primary tp-btn-wide" onClick={() => setAdding(true)}>
+              <Link className="tp-btn tp-btn-primary tp-btn-wide" href={ADD_TASK_ROUTE}>
                 <Plus size={17} aria-hidden="true" />
                 إضافة مهمة
-              </button>
+              </Link>
             </div>
           )}
 
@@ -136,14 +126,6 @@ export default function TimeManagement() {
           )}
         </section>
       </div>
-
-      <AddTaskDialog
-        open={adding}
-        pending={create.isPending}
-        error={create.error?.message ?? null}
-        onClose={() => setAdding(false)}
-        onSubmit={input => create.mutate(input)}
-      />
     </TimeLayout>
   );
 }

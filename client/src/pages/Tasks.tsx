@@ -1,7 +1,7 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useState } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { type Task } from "@shared/tasks";
 import { ARCHIVE_ROUTE } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
@@ -26,6 +26,20 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
+/**
+ * البحث: تطابق جزئي بلا حساسية لحالة الأحرف، على الاسم والوصف.
+ *
+ * الكلمة تأتي من الشريط العلوي في `?q=`، فالنتيجة قابلة للمشاركة ولا تضيع
+ * بتحديث الصفحة. ولا ترتيب بالصلة: من له عشرون مهمة لا يحتاج محرّك بحث.
+ */
+export function search(tasks: Task[], query: string): Task[] {
+  const needle = query.trim().toLocaleLowerCase("ar");
+  if (!needle) return tasks;
+  return tasks.filter(task =>
+    `${task.title} ${task.description ?? ""}`.toLocaleLowerCase("ar").includes(needle),
+  );
+}
+
 function matches(task: Task, tab: TabId, now: number): boolean {
   if (tab === "all") return true;
   if (tab === "unclassified") return !task.quadrant;
@@ -45,15 +59,17 @@ export default function Tasks() {
     onSuccess: () => utils.tasks.listOpen.invalidate(),
   });
 
+  const query = new URLSearchParams(useSearch()).get("q") ?? "";
+
   const now = Date.now();
-  const all = open.data ?? [];
+  const all = search(open.data ?? [], query);
   const shown = all.filter(task => matches(task, tab, now));
 
   return (
     <TimeLayout>
       <div className="tm-inner">
         <header className="tp-head">
-          <h1>مهامي المفتوحة</h1>
+          <h1>{query ? "نتائج البحث" : "مهامي المفتوحة"}</h1>
           <p>
             ما لم يُنجَز بعد. المكتملة في <Link href={ARCHIVE_ROUTE}>الأرشيف</Link>.
           </p>

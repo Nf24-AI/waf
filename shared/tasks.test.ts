@@ -3,6 +3,7 @@ import {
   QUADRANTS,
   isOpen,
   nextActionOf,
+  nextOccurrence,
   quadrantOf,
   splitQuadrant,
   stateOf,
@@ -83,5 +84,31 @@ describe("task model", () => {
         }),
       ).method,
     ).toBe("focus");
+  });
+});
+
+describe("تكرار المهمة", () => {
+  it("يزيح الموعد يوماً أو أسبوعاً ويحفظ طوله", () => {
+    const daily = nextOccurrence("2026-09-22T09:00:00.000Z", "2026-09-22T10:00:00.000Z", "daily");
+    expect(daily.start).toBe("2026-09-23T09:00:00.000Z");
+    expect(daily.end).toBe("2026-09-23T10:00:00.000Z");
+
+    const weekly = nextOccurrence("2026-09-22T09:00:00.000Z", "2026-09-22T10:00:00.000Z", "weekly");
+    expect(weekly.start).toBe("2026-09-29T09:00:00.000Z");
+  });
+
+  it("يعبر حدّ الشهر والسنة", () => {
+    expect(nextOccurrence("2026-12-31T22:00:00.000Z", "2026-12-31T23:00:00.000Z", "daily").start).toBe(
+      "2027-01-01T22:00:00.000Z",
+    );
+  });
+
+  it("يبقى الفارق بين البداية والنهاية كما هو", () => {
+    const start = "2026-09-22T09:15:00.000Z";
+    const end = "2026-09-22T11:45:00.000Z";
+    const next = nextOccurrence(start, end, "weekly");
+    const before = new Date(end).getTime() - new Date(start).getTime();
+    const after = new Date(next.end).getTime() - new Date(next.start).getTime();
+    expect(after).toBe(before);
   });
 });

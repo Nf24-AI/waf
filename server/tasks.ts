@@ -3,10 +3,12 @@ import { ENV } from "./_core/env";
 import {
   type Quadrant,
   type Task,
+  nextOccurrence,
   quadrantOf,
   splitQuadrant,
   stateOf,
   type Importance,
+  type RepeatRule,
   type Urgency,
 } from "@shared/tasks";
 import { type FocusSession } from "@shared/statistics";
@@ -82,6 +84,7 @@ interface Row {
   estimated_minutes: number | null;
   classified_at: string | null;
   completed_at: string | null;
+  repeat_rule: RepeatRule | null;
   is_done: boolean;
   created_at: string;
 }
@@ -110,6 +113,7 @@ function toTask(row: Row, sessions = 0): Task {
     scheduledStart: row.scheduled_start ?? undefined,
     scheduledEnd: row.scheduled_end ?? undefined,
     estimatedMinutes: row.estimated_minutes ?? undefined,
+    repeatRule: row.repeat_rule ?? undefined,
     completedSessions: sessions,
     createdAt: row.created_at,
     completedAt: completedAt ?? undefined,
@@ -119,7 +123,7 @@ function toTask(row: Row, sessions = 0): Task {
 }
 
 const COLUMNS =
-  "id,name,description,importance,urgency,classified_at,scheduled_start,scheduled_end,estimated_minutes,completed_at,is_done,created_at";
+  "id,name,description,importance,urgency,classified_at,scheduled_start,scheduled_end,estimated_minutes,repeat_rule,completed_at,is_done,created_at";
 
 /**
  * جلسات التركيز المكتملة لكل مهمة، في طلب واحد لا طلب لكل صفّ.
@@ -175,6 +179,7 @@ export async function createTask(input: {
   scheduledStart?: string;
   scheduledEnd?: string;
   estimatedMinutes?: number;
+  repeatRule?: RepeatRule;
 }): Promise<Task> {
   const { owner } = credentials();
   const split = input.quadrant ? splitQuadrant(input.quadrant) : null;
@@ -196,6 +201,7 @@ export async function createTask(input: {
       scheduled_start: input.scheduledStart ?? null,
       scheduled_end: input.scheduledEnd ?? null,
       estimated_minutes: input.estimatedMinutes ?? null,
+      repeat_rule: input.repeatRule ?? null,
     }),
   });
 
@@ -220,7 +226,12 @@ export async function classifyTask(id: string, quadrant: Quadrant): Promise<Task
  * نفسها وقد تحجزان الوقت ذاته، ولا يمنع ذلك إلا من يكتب. القيد في الجدول
  * يحرس شكل الموعد؛ هذا يحرس ألّا يتداخل موعدان.
  */
-export async function scheduleTask(id: string, startIso: string, endIso: string): Promise<Task> {
+export async function scheduleTask(
+  id: string,
+  startIso: string,
+  endIso: string,
+  repeatRule?: RepeatRule | null,
+): Promise<Task> {
   if (new Date(endIso) <= new Date(startIso)) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "وقت الانتهاء يجب أن يلي وقت البداية" });
   }
@@ -243,12 +254,24 @@ export async function scheduleTask(id: string, startIso: string, endIso: string)
   const [row] = await rest<Row[]>(`${TABLE}?id=eq.${id}&select=${COLUMNS}`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ scheduled_start: startIso, scheduled_end: endIso }),
+    body: JSON.stringify({
+      scheduled_start: startIso,
+      scheduled_end: endIso,
+      // undefined يعني «لا تمسّ»، و null يعني «ألغِ التكرار».
+      ...(repeatRule === undefined ? {} : { repeat_rule: repeatRule }),
+    }),
   });
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
   return withSessions(row);
 }
 
+/**
+ * الإنجاز — ومعه نسخة الغد إن كانت المهمة متكرّرة.
+ *
+ * المنجَز يبقى منجَزاً في الأرشيف، والقادم صفٌّ جديد بمعرّفه. والبديل — أن
+ * يُعاد فتح الصفّ نفسه — يمحو تاريخه كلّما تكرّر، فتصير مهمةٌ أُنجزت ثلاثين
+ * مرّة مهمةً واحدة لم تُنجَز بعد.
+ */
 export async function completeTask(id: string): Promise<Task> {
   const [row] = await rest<Row[]>(`${TABLE}?id=eq.${id}&select=${COLUMNS}`, {
     method: "PATCH",
@@ -256,6 +279,24 @@ export async function completeTask(id: string): Promise<Task> {
     body: JSON.stringify({ completed_at: new Date().toISOString(), is_done: true }),
   });
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
+
+  // بلا موعد لا تكرار: «كل يوم» تحتاج ساعةً تقع فيها.
+  if (row.repeat_rule && row.scheduled_start && row.scheduled_end) {
+    const when = nextOccurrence(row.scheduled_start, row.scheduled_end, row.repeat_rule);
+    await createTask({
+      title: row.name,
+      description: row.description ?? undefined,
+      quadrant:
+        row.classified_at && row.importance && row.urgency
+          ? quadrantOf(row.importance, row.urgency)
+          : undefined,
+      scheduledStart: when.start,
+      scheduledEnd: when.end,
+      estimatedMinutes: row.estimated_minutes ?? undefined,
+      repeatRule: row.repeat_rule,
+    });
+  }
+
   return withSessions(row);
 }
 

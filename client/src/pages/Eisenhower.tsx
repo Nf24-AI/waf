@@ -4,9 +4,10 @@ import React, { useState } from "react";
 import { CalendarClock, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { QUADRANTS, type Quadrant, type Task } from "@shared/tasks";
-import { TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { ADD_TASK_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import FlowSteps from "@/components/time/FlowSteps";
 import TimeLayout from "@/components/time/TimeLayout";
-import AddTaskDialog from "@/components/time/AddTaskDialog";
+import { flowHref, useInFlow } from "@/lib/flow";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -53,7 +54,9 @@ export default function Eisenhower() {
   const [over, setOver] = useState<Quadrant | null>(null);
   const [picking, setPicking] = useState<Task | null>(null);
   const [justPlaced, setJustPlaced] = useState<Task | null>(null);
-  const [adding, setAdding] = useState(false);
+
+  // الرحلة تُغيّر الوجهة التالية وحدها، لا ما تفعله الصفحة.
+  const inFlow = useInFlow();
 
   const utils = trpc.useUtils();
   const status = trpc.tasks.status.useQuery();
@@ -65,12 +68,6 @@ export default function Eisenhower() {
       // اقتراح واحد بعد التصنيف، ولمن لم يجدول بعدُ فقط.
       setJustPlaced(task.scheduledStart ? null : task);
       setPicking(null);
-    },
-  });
-  const create = trpc.tasks.create.useMutation({
-    onSuccess: async () => {
-      await utils.tasks.listOpen.invalidate();
-      setAdding(false);
     },
   });
 
@@ -86,6 +83,8 @@ export default function Eisenhower() {
   return (
     <TimeLayout>
       <div className="tm-inner">
+        <FlowSteps current="classify" />
+
         <header className="tp-head">
           <h1>صنّف المهمة</h1>
           <p>حدّد الأولوية بوضوح.</p>
@@ -95,10 +94,10 @@ export default function Eisenhower() {
           <Link className="tp-btn" href={TASKS_ROUTE}>
             المهام المفتوحة
           </Link>
-          <button type="button" className="tp-btn tp-btn-primary" onClick={() => setAdding(true)} disabled={!status.data?.configured}>
+          <Link className="tp-btn tp-btn-primary" href={ADD_TASK_ROUTE}>
             <Plus size={17} aria-hidden="true" />
             إضافة مهمة
-          </button>
+          </Link>
         </div>
 
         {status.data?.configured === false && (
@@ -183,11 +182,14 @@ export default function Eisenhower() {
           <div className="ei-suggest" role="status">
             <span>هل تريد إعطاء «{justPlaced.title}» وقتاً؟</span>
             <div className="ei-suggest-actions">
-              <Link className="tm-btn tm-btn-primary" href={`${TIME_METHOD_ROUTES.timeBlocking}?task=${justPlaced.id}`}>
+              <Link
+                className="tp-btn tp-btn-primary"
+                href={inFlow ? flowHref(TIME_METHOD_ROUTES.timeBlocking, justPlaced.id) : `${TIME_METHOD_ROUTES.timeBlocking}?task=${justPlaced.id}`}
+              >
                 <CalendarClock size={16} aria-hidden="true" />
                 حجز الوقت
               </Link>
-              <button type="button" className="tm-btn tm-btn-ghost" onClick={() => setJustPlaced(null)}>
+              <button type="button" className="tp-btn" onClick={() => setJustPlaced(null)}>
                 لاحقاً
               </button>
             </div>
@@ -224,14 +226,6 @@ export default function Eisenhower() {
           </div>
         </div>
       )}
-
-      <AddTaskDialog
-        open={adding}
-        pending={create.isPending}
-        error={create.error?.message ?? null}
-        onClose={() => setAdding(false)}
-        onSubmit={input => create.mutate(input)}
-      />
     </TimeLayout>
   );
 }

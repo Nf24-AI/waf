@@ -37,6 +37,9 @@ export type Urgency = (typeof QUADRANTS)[number]["urgency"];
 export const TASK_STATES = ["new", "classified", "scheduled", "focusing", "completed"] as const;
 export type TaskState = (typeof TASK_STATES)[number];
 
+/** التكرار: يوميّ أو أسبوعيّ، أو لا تكرار. أكثر من ذلك يحتاج قواعد لا عموداً. */
+export type RepeatRule = "daily" | "weekly";
+
 export interface Task {
   id: string;
   title: string;
@@ -50,6 +53,7 @@ export interface Task {
   /** المدة المتوقّعة بالدقائق، كما قدّرها صاحبها لا كما حسبناها. */
   estimatedMinutes?: number;
   /** جلسات التركيز المكتملة على هذه المهمة. */
+  repeatRule?: RepeatRule;
   completedSessions: number;
   createdAt: string;
   completedAt?: string;
@@ -105,4 +109,25 @@ export function nextActionOf(task: Task): { label: string; method: "eisenhower" 
 
 export function isOpen(task: Task): boolean {
   return !task.completedAt;
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * الموعد التالي لمهمة متكرّرة.
+ *
+ * الإزاحة بالمللي ثانية لا بتقويم: الرياض بلا توقيت صيفي، فالإضافة الثابتة
+ * تعطي نفس الساعة في اليوم التالي دائماً. ولو تغيّر ذلك يوماً فهذا هو
+ * الموضع الواحد الذي يُصحَّح فيه.
+ */
+export function nextOccurrence(
+  startIso: string,
+  endIso: string,
+  rule: RepeatRule,
+): { start: string; end: string } {
+  const step = rule === "daily" ? DAY_MS : 7 * DAY_MS;
+  return {
+    start: new Date(new Date(startIso).getTime() + step).toISOString(),
+    end: new Date(new Date(endIso).getTime() + step).toISOString(),
+  };
 }

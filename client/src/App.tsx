@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import Statistics from "./pages/Statistics";
 import TimeHome from "./pages/TimeHome";
 import StatusReport from "./pages/StatusReport";
+import AddTask from "./pages/AddTask";
 import Archive from "./pages/Archive";
 import Eisenhower from "./pages/Eisenhower";
 import Focus from "./pages/Focus";
@@ -30,6 +31,7 @@ import {
   MEETING_ROUTES,
   PLATFORM_ROUTE,
   STATUS_REPORT_ROUTE,
+  ADD_TASK_ROUTE,
   ARCHIVE_ROUTE,
   SETTINGS_ROUTE,
   TIME_HOME_ROUTE,
@@ -48,6 +50,7 @@ function Router() {
       <Route path={TIME_HOME_ROUTE} component={TimeHome} />
       <Route path={SETTINGS_ROUTE} component={Settings} />
       <Route path={TIME_MANAGEMENT_ROUTE} component={TimeManagement} />
+      <Route path={ADD_TASK_ROUTE} component={AddTask} />
       <Route path={TASKS_ROUTE} component={Tasks} />
       <Route path={STATISTICS_ROUTE} component={Statistics} />
       <Route path={ARCHIVE_ROUTE} component={Archive} />

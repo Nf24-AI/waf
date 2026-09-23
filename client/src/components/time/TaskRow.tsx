@@ -24,6 +24,19 @@ function methodHref(task: Task) {
   return `${route}?task=${task.id}`;
 }
 
+/**
+ * نقطة اللون: الربع يُقرأ قبل الاسم.
+ *
+ * الشارة النصّية تُقرأ، والنقطة تُرى. في قائمة من عشرين صفّاً الفرق بينهما
+ * هو الفرق بين المسح بالعين والقراءة سطراً سطراً.
+ */
+export function quadrantTone(task: Task): "danger" | "go" | "warn" | "mute" {
+  if (task.quadrant === "important_urgent") return "danger";
+  if (task.quadrant === "important_not_urgent") return "go";
+  if (task.quadrant === "not_important_urgent") return "warn";
+  return "mute";
+}
+
 export function scheduleLabel(task: Task): string | null {
   if (!task.scheduledStart) return null;
   const start = new Date(task.scheduledStart);
@@ -58,6 +71,8 @@ export default function TaskRow({
           <Check size={14} aria-hidden="true" />
         </button>
       )}
+
+      <span className="tp-dot" data-tone={quadrantTone(task)} aria-hidden="true" />
 
       <div className="tm-task-body">
         <h3>{task.title}</h3>

@@ -3,9 +3,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Timer } from "lucide-react";
 import { Link } from "wouter";
-import { quadrantTitle, type Task } from "@shared/tasks";
+import { quadrantTitle, type RepeatRule, type Task } from "@shared/tasks";
 import { TIME_METHOD_ROUTES } from "@shared/routes";
+import FlowSteps from "@/components/time/FlowSteps";
 import TimeLayout from "@/components/time/TimeLayout";
+import { flowHref, useInFlow } from "@/lib/flow";
 import { dayName, dayStrip, endTime, nextHalfHour, toDateInput, toIso, toTimeInput } from "@/lib/clock";
 import { useTaskParam } from "@/lib/task-param";
 import { trpc } from "@/lib/trpc";
@@ -21,6 +23,9 @@ import { trpc } from "@/lib/trpc";
 export default function TimeBlocking() {
   const preselected = useTaskParam();
 
+  // الرحلة تُغيّر الوجهة التالية وحدها، لا ما تفعله الصفحة.
+  const inFlow = useInFlow();
+
   const utils = trpc.useUtils();
   const status = trpc.tasks.status.useQuery();
   const open = trpc.tasks.listOpen.useQuery(undefined, { enabled: status.data?.configured === true });
@@ -29,6 +34,7 @@ export default function TimeBlocking() {
   const [day, setDay] = useState(() => toDateInput(new Date()));
   const [start, setStart] = useState(() => toTimeInput(nextHalfHour()));
   const [minutes, setMinutes] = useState(60);
+  const [repeat, setRepeat] = useState<RepeatRule | null>(null);
   const [done, setDone] = useState<Task | null>(null);
 
   // الشريط يُبنى مرّة: إعادة بنائه في كل رسم تُنشئ تواريخ جديدة بلا سبب.
@@ -56,12 +62,14 @@ export default function TimeBlocking() {
     if (!task || !start) return;
     const startIso = toIso(day, start);
     const endIso = new Date(new Date(startIso).getTime() + minutes * 60_000).toISOString();
-    schedule.mutate({ id: task.id, start: startIso, end: endIso });
+    schedule.mutate({ id: task.id, start: startIso, end: endIso, repeatRule: repeat });
   }
 
   return (
     <TimeLayout>
       <div className="tm-inner">
+        <FlowSteps current="schedule" />
+
         <header className="tp-head">
           <h1>اختر وقتاً للمهمة</h1>
           <p>ضع لكل مهمة وقتاً مناسباً.</p>
@@ -160,6 +168,31 @@ export default function TimeBlocking() {
                 </div>
               </div>
 
+              <div className="tm-field">
+                <span>تكرار المهمة</span>
+                {/*
+                  ثلاث حالات لا مفتاحان: «نعم» وحدها لا تقول كل كم يتكرّر،
+                  ومن يضغطها يبقى لا يعرف ماذا حجز.
+                */}
+                <div className="tb-durations" role="group" aria-label="تكرار المهمة">
+                  {([
+                    { value: null, label: "لا يتكرّر" },
+                    { value: "daily" as const, label: "كل يوم" },
+                    { value: "weekly" as const, label: "كل أسبوع" },
+                  ]).map(option => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      className={repeat === option.value ? "tb-duration is-current" : "tb-duration"}
+                      onClick={() => setRepeat(option.value)}
+                      aria-pressed={repeat === option.value}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <p className="tb-preview">
                 {start} — {endLabel}
                 <span>{minutes} دقيقة</span>
@@ -195,7 +228,10 @@ export default function TimeBlocking() {
                 })}
               </p>
               <div className="tm-form-actions">
-                <Link className="tp-btn tp-btn-primary" href={`${TIME_METHOD_ROUTES.focus}?task=${done.id}`}>
+                <Link
+                  className="tp-btn tp-btn-primary"
+                  href={inFlow ? flowHref(TIME_METHOD_ROUTES.focus, done.id) : `${TIME_METHOD_ROUTES.focus}?task=${done.id}`}
+                >
                   <Timer size={16} aria-hidden="true" />
                   ابدأ التركيز الآن
                 </Link>

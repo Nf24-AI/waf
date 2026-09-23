@@ -841,3 +841,75 @@
 @media (prefers-reduced-motion: reduce) {
   .tp-tab, .tp-day, .tp-go, .tp-ghost-btn { transition: none; }
 }
+
+/* ---- نقطة الربع في صفّ المهمة ---- */
+.tp-dot {
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  align-self: center;
+}
+.tp-dot[data-tone="danger"] { background: var(--tp-danger); }
+.tp-dot[data-tone="go"]     { background: var(--tp-go); }
+.tp-dot[data-tone="warn"]   { background: var(--tp-warn); }
+.tp-dot[data-tone="mute"]   { background: var(--text-disabled); }
+
+/* ---- نقاط الرحلة ---- */
+.tp-steps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin-block-end: var(--space-7);
+}
+.tp-steps-dots { display: flex; align-items: center; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.tp-step {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--alpha-fill-strong);
+}
+/* المقطوع خلفك ممتلئ، والحاضر أطول: الشكل يقول أين أنت بلا رقم. */
+.tp-step.is-done { background: var(--accent); opacity: .55; }
+.tp-step.is-current { inline-size: 22px; border-radius: 999px; background: var(--accent); }
+.tp-steps-label { margin: 0; font: var(--text-caption); color: var(--text-tertiary); }
+
+/* ---- لوحة الجرس ---- */
+.tp-bell-wrap { position: relative; }
+.tp-bell-dot {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 2px;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--tp-danger);
+  border: 2px solid var(--canvas);
+}
+.tp-panel {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-4));
+  inset-inline-end: 0;
+  z-index: 40;
+  inline-size: min(320px, calc(100vw - var(--space-9)));
+  padding: var(--space-6);
+  background: var(--surface-overlay);
+  border: var(--border-w) solid var(--border-default);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+}
+.tp-panel h2 { margin: 0 0 var(--space-5); font: var(--text-caption); color: var(--text-tertiary); }
+.tp-panel-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.tp-panel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-control);
+  border-block-end: 0;
+  color: var(--text-secondary);
+  font: var(--text-body-md);
+  transition: var(--transition-control);
+}
+.tp-panel-row:hover { background: var(--alpha-fill-weak); color: var(--text-primary); }
+.tp-panel-row span { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

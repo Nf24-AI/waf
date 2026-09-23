@@ -1,10 +1,11 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, Square } from "lucide-react";
+import { Pause, Play, Settings, SkipForward, Square } from "lucide-react";
 import { Link } from "wouter";
 import { type Task } from "@shared/tasks";
-import { TIME_METHOD_ROUTES } from "@shared/routes";
+import { SETTINGS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import FlowSteps from "@/components/time/FlowSteps";
 import TimeLayout from "@/components/time/TimeLayout";
 import tanomah from "@/assets/village-at-dusk.jpg";
 import { clock } from "@/lib/clock";
@@ -114,6 +115,7 @@ export default function Focus() {
   return (
     <TimeLayout quiet={running || paused}>
       <div className="fc-inner">
+        <FlowSteps current="focus" />
 
         {status.data?.configured === false && (
           <p className="tm-empty">
@@ -235,6 +237,23 @@ export default function Focus() {
                 <button type="button" className="tp-btn" onClick={() => finish(false)}>
                   <Square size={16} aria-hidden="true" />
                   إنهاء الجلسة
+                </button>
+              )}
+            </div>
+
+            {/*
+              «تخطّي» ينهي الجلسة ولا ينجز المهمة: من تخطّى لم يُتمّ، وعدّه
+              إنجازاً يُفسد كل رقم في الإحصاء بعد ذلك.
+            */}
+            <div className="tp-focus-foot">
+              <Link className="tp-ghost-btn" href={SETTINGS_ROUTE}>
+                <Settings size={17} aria-hidden="true" />
+                إعدادات
+              </Link>
+              {(running || paused) && (
+                <button type="button" className="tp-ghost-btn" onClick={() => finish(false)}>
+                  <SkipForward size={17} aria-hidden="true" />
+                  تخطّي
                 </button>
               )}
             </div>

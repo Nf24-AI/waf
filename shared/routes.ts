@@ -31,6 +31,7 @@ export const TIME_METHOD_ROUTES = {
 export const TIME_HOME_ROUTE = "/home";
 export const SETTINGS_ROUTE = "/settings";
 export const TASKS_ROUTE = "/tasks";
+export const ADD_TASK_ROUTE = "/tasks/new";
 export const STATISTICS_ROUTE = "/statistics";
 export const ARCHIVE_ROUTE = "/archive";
 
