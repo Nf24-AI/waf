@@ -1,140 +1,167 @@
 import React from "react";
 import {
   Archive,
-  ArrowRight,
   BarChart3,
-  CalendarClock,
-  LayoutDashboard,
-  LayoutGrid,
-  ListChecks,
-  Timer,
+  CalendarDays,
+  ClipboardList,
+  Clock,
+  Home,
+  MoreHorizontal,
+  Settings,
+  X,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   ARCHIVE_ROUTE,
-  PLATFORM_ROUTE,
+  MEETING_ROUTES,
+  SETTINGS_ROUTE,
   STATISTICS_ROUTE,
   TASKS_ROUTE,
+  TIME_HOME_ROUTE,
   TIME_MANAGEMENT_ROUTE,
-  TIME_METHOD_ROUTES,
 } from "@shared/routes";
 
 /**
- * تنقّل إدارة الوقت — داخل إدارة الوقت وحدها.
+ * تنقّل منتج إدارة الوقت.
  *
- * بقية المنصّة (الاجتماعات، القرارات، التقرير) تبقى كما هي: شريط جانبي عام
- * كان سيغيّر تخطيط صفحات مُعتمَدة من أجل قسم واحد.
+ * مجموعتان: ما يُعمل فيه (الرئيسية، المهام، إدارة الوقت، الاجتماعات) وما
+ * يُقرأ (الإحصائيات، الأرشيف). الفاصل بينهما سطرٌ لا عنوان — المرجع لا
+ * يسمّي المجموعتين، وتسميتهما كلامٌ لا يحتاجه من يعرف مكانه.
  *
- * الطرق الثلاث في مجموعة واحدة بلا ترقيم: أدوات لا خطوات، ومن يراها مرقّمة
- * يظنّ أن عليه المرور بها بالترتيب. والسجلّ (الإحصاء، الأرشيف) في مجموعة
- * أخرى لأنه يُقرأ ولا يُعمل فيه.
+ * والاجتماعات رابط إلى الأداة القائمة لا قسم جديد: تبقى على تخطيطها المعتمَد.
  */
 
 export interface NavItem {
   href: string;
   label: string;
-  icon: typeof Timer;
-  /** يظهر في شريط الجوّال السفلي — خمسة على الأكثر، فالسادس يصير غير قابل للّمس. */
-  onPhone?: boolean;
+  icon: typeof Clock;
 }
 
-export const NAV_GROUPS: { id: string; label?: string; items: NavItem[] }[] = [
-  {
-    id: "work",
-    items: [
-      { href: TIME_MANAGEMENT_ROUTE, label: "إدارة الوقت", icon: LayoutDashboard, onPhone: true },
-      { href: TASKS_ROUTE, label: "مهامي", icon: ListChecks, onPhone: true },
-    ],
-  },
-  {
-    id: "methods",
-    label: "الطرق",
-    items: [
-      { href: TIME_METHOD_ROUTES.eisenhower, label: "المصفوفة", icon: LayoutGrid, onPhone: true },
-      { href: TIME_METHOD_ROUTES.timeBlocking, label: "حجز الوقت", icon: CalendarClock, onPhone: true },
-      { href: TIME_METHOD_ROUTES.focus, label: "التركيز", icon: Timer, onPhone: true },
-    ],
-  },
-  {
-    id: "record",
-    label: "السجلّ",
-    items: [
-      { href: STATISTICS_ROUTE, label: "الإحصاء", icon: BarChart3 },
-      { href: ARCHIVE_ROUTE, label: "الأرشيف", icon: Archive },
-    ],
-  },
+export const PRIMARY_NAV: NavItem[] = [
+  { href: TIME_HOME_ROUTE, label: "الرئيسية", icon: Home },
+  { href: TASKS_ROUTE, label: "المهام", icon: ClipboardList },
+  { href: TIME_MANAGEMENT_ROUTE, label: "إدارة الوقت", icon: Clock },
+  { href: MEETING_ROUTES.prepare, label: "الاجتماعات", icon: CalendarDays },
 ];
 
-export const PHONE_ITEMS = NAV_GROUPS.flatMap(group => group.items).filter(item => item.onPhone);
+export const RECORD_NAV: NavItem[] = [
+  { href: STATISTICS_ROUTE, label: "الإحصائيات", icon: BarChart3 },
+  { href: ARCHIVE_ROUTE, label: "الأرشيف", icon: Archive },
+];
+
+export const NAV_ITEMS = [...PRIMARY_NAV, ...RECORD_NAV];
 
 /**
  * المطابقة تامّة لا ببادئة.
  *
- * «‎/time-management» بادئةٌ لكل طريق تحته، فالمطابقة بالبادئة تُضيء البوّابة
+ * «‎/time-management» بادئةٌ لكل طريق تحته، فالمطابقة بالبادئة تُضيء البند
  * وأنت في المصفوفة — بندان مُضاءان وواحد صحيح.
  */
 export function isCurrent(location: string, href: string): boolean {
   return location === href;
 }
 
-export function Sidebar() {
+function NavList({ items, onPick }: { items: NavItem[]; onPick?: () => void }) {
   const [location] = useLocation();
 
   return (
-    <nav className="tn-side" aria-label="أقسام إدارة الوقت">
-      {NAV_GROUPS.map(group => (
-        <div className="tn-group" key={group.id}>
-          {group.label && <p className="tn-group-label">{group.label}</p>}
-          <ul className="tn-list">
-            {group.items.map(item => {
-              const Icon = item.icon;
-              const current = isCurrent(location, item.href);
-              return (
-                <li key={item.href}>
-                  <Link
-                    className={current ? "tn-link is-current" : "tn-link"}
-                    href={item.href}
-                    aria-current={current ? "page" : undefined}
-                  >
-                    <Icon size={17} aria-hidden="true" />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
-
-      {/* المخرج: بدونه تصير إدارة الوقت غرفةً لا باب لها. */}
-      <Link className="tn-out" href={PLATFORM_ROUTE}>
-        <ArrowRight size={15} aria-hidden="true" />
-        المنصّة
-      </Link>
-    </nav>
-  );
-}
-
-export function MobileBottomNav() {
-  const [location] = useLocation();
-
-  return (
-    <nav className="tn-bottom" aria-label="أقسام إدارة الوقت">
-      {PHONE_ITEMS.map(item => {
+    <div className="tp-nav">
+      {items.map(item => {
         const Icon = item.icon;
         const current = isCurrent(location, item.href);
         return (
           <Link
             key={item.href}
-            className={current ? "tn-tab is-current" : "tn-tab"}
+            className={current ? "tp-link is-current" : "tp-link"}
             href={item.href}
             aria-current={current ? "page" : undefined}
+            onClick={onPick}
           >
-            <Icon size={19} aria-hidden="true" />
-            <span>{item.label}</span>
+            <Icon size={17} aria-hidden="true" />
+            {item.label}
           </Link>
         );
       })}
+    </div>
+  );
+}
+
+function NavFoot({ onPick }: { onPick?: () => void }) {
+  const [location] = useLocation();
+  const current = isCurrent(location, SETTINGS_ROUTE);
+
+  return (
+    <div className="tp-side-foot">
+      <Link
+        className={current ? "tp-link is-current" : "tp-link"}
+        href={SETTINGS_ROUTE}
+        aria-current={current ? "page" : undefined}
+        onClick={onPick}
+      >
+        <Settings size={17} aria-hidden="true" />
+        الإعدادات
+      </Link>
+
+      {/* الحساب واحد في هذه الأداة، فالبطاقة تعريف لا مبدِّل حسابات. */}
+      <Link className="tp-user" href={SETTINGS_ROUTE} onClick={onPick}>
+        <span className="tp-avatar" aria-hidden="true">
+          و
+        </span>
+        <span className="tp-user-name">حسابي</span>
+        <MoreHorizontal size={16} aria-hidden="true" className="tp-user-more" />
+      </Link>
+    </div>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <nav className="tp-side" aria-label="أقسام واف">
+      <Link className="tp-brand" href={TIME_HOME_ROUTE}>
+        واف
+      </Link>
+      <NavList items={PRIMARY_NAV} />
+      <NavList items={RECORD_NAV} />
+      <NavFoot />
     </nav>
+  );
+}
+
+/**
+ * الدرج — نفس الأقسام على الجوّال.
+ *
+ * درجٌ لا شريط سفلي: الأقسام سبعة والشريط يسع خمسة، فكان سيخفي اثنين ويقسم
+ * الخريطة خريطتين. ويُغلق بالخلفية وبمفتاح الهروب وبأي بند يُختار، فلا
+ * يُحبس أحد فيه.
+ */
+export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <>
+      <button type="button" className="tp-scrim" aria-label="إغلاق القائمة" onClick={onClose} />
+      <nav className="tp-drawer" aria-label="أقسام واف">
+        <div className="tp-drawer-head">
+          <Link className="tp-brand" href={TIME_HOME_ROUTE} onClick={onClose}>
+            واف
+          </Link>
+          <button type="button" className="tp-icon-btn" onClick={onClose} aria-label="إغلاق">
+            <X size={17} aria-hidden="true" />
+          </button>
+        </div>
+        <NavList items={PRIMARY_NAV} onPick={onClose} />
+        <NavList items={RECORD_NAV} onPick={onClose} />
+        <NavFoot onPick={onClose} />
+      </nav>
+    </>
   );
 }

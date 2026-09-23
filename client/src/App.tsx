@@ -11,7 +11,9 @@ import Landing from "./pages/Landing";
 import Lock from "./pages/Lock";
 import Decisions from "./pages/Decisions";
 import Platform from "./pages/Platform";
+import Settings from "./pages/Settings";
 import Statistics from "./pages/Statistics";
+import TimeHome from "./pages/TimeHome";
 import StatusReport from "./pages/StatusReport";
 import Archive from "./pages/Archive";
 import Eisenhower from "./pages/Eisenhower";
@@ -29,6 +31,8 @@ import {
   PLATFORM_ROUTE,
   STATUS_REPORT_ROUTE,
   ARCHIVE_ROUTE,
+  SETTINGS_ROUTE,
+  TIME_HOME_ROUTE,
   STATISTICS_ROUTE,
   TASKS_ROUTE,
   TIME_MANAGEMENT_ROUTE,
@@ -41,6 +45,8 @@ function Router() {
       <Route path={PLATFORM_ROUTE} component={Platform} />
       <Route path={DECISIONS_ROUTE} component={Decisions} />
       <Route path={STATUS_REPORT_ROUTE} component={StatusReport} />
+      <Route path={TIME_HOME_ROUTE} component={TimeHome} />
+      <Route path={SETTINGS_ROUTE} component={Settings} />
       <Route path={TIME_MANAGEMENT_ROUTE} component={TimeManagement} />
       <Route path={TASKS_ROUTE} component={Tasks} />
       <Route path={STATISTICS_ROUTE} component={Statistics} />

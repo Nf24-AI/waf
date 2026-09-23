@@ -7,6 +7,7 @@ import { type Task } from "@shared/tasks";
 import { TIME_METHOD_ROUTES } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
 import { clock } from "@/lib/clock";
+import { readFocusMinutes } from "@/lib/preferences";
 import { useTaskParam } from "@/lib/task-param";
 import { prefersReducedMotion } from "@/lib/motion";
 import { trpc } from "@/lib/trpc";
@@ -32,9 +33,9 @@ export default function Focus() {
   const open = trpc.tasks.listOpen.useQuery(undefined, { enabled: status.data?.configured === true });
 
   const [taskId, setTaskId] = useState<string | null>(preselected);
-  const [minutes, setMinutes] = useState<number>(25);
+  const [minutes, setMinutes] = useState<number>(() => readFocusMinutes());
   const [custom, setCustom] = useState("");
-  const [left, setLeft] = useState(25 * 60);
+  const [left, setLeft] = useState(() => readFocusMinutes() * 60);
   const [running, setRunning] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
@@ -110,7 +111,7 @@ export default function Focus() {
   }
 
   return (
-    <TimeLayout quiet={running || paused} dots={false} shell="fc-shell">
+    <TimeLayout quiet={running || paused}>
       <div className="fc-inner">
 
         {status.data?.configured === false && (

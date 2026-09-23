@@ -11,6 +11,8 @@
 @import "./design-system/waf.css";
 @import "tailwindcss";
 @import "tw-animate-css";
+/* طبقة منتج إدارة الوقت: بعد tailwind كي تغلب أدواته العامة. */
+@import "./design-system/time-product.css";
 
 :root {
   font-family: var(--font-sans);
@@ -3888,119 +3890,14 @@ a.service-card:hover .service-go {
   .ar-meta { grid-column: 2 / -1; }
 }
 
-/* ---- إطار إدارة الوقت ---- */
 /*
- * شريط جانبي على المكتب وشريط سفلي على الجوّال، بنفس الأقسام. وهما داخل
- * إدارة الوقت وحدها: بقية المنصّة على تخطيطها.
+ * صفحات إدارة الوقت داخل إطار المنتج: الإطار (tp-main) يحمل العرض والهوامش،
+ * فتتخلّى الأغلفة القديمة عنهما ولا يُحسب الهامش مرّتين.
  */
-
-.tl-frame { min-height: 100vh; background: var(--canvas); }
-.tl-frame > .tm-shell,
-.tl-frame > .fc-shell {
-  /* مكان الشريط السفلي، فلا يجلس فوق آخر سطر في الصفحة. */
-  padding-block-end: calc(var(--space-12) + 72px);
+.tp-main > .tm-inner {
+  max-width: none;
+  margin-inline: 0;
+  padding-inline: 0;
 }
-/* المخرج إلى المنصّة يظهر في الرأس على الجوّال فقط: الشريط الجانبي يحمله. */
-.tl-only-phone { display: inline-flex; }
-
-/* ---- الشريط الجانبي ---- */
-.tn-side { display: none; }
-
-@media (min-width: 1024px) {
-  .tn-side {
-    position: fixed;
-    inset-block: 0;
-    inset-inline-start: 0;
-    z-index: 30;
-    inline-size: 232px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-9);
-    padding: var(--space-11) var(--space-7);
-    background: var(--surface-sunken);
-    border-inline-end: var(--border-w) solid var(--border-hairline);
-    overflow-y: auto;
-  }
-  /* الشريط ثابت فلا يدفع المحتوى: المحتوى يفسح له بنفسه. */
-  .tl-frame > .tm-shell,
-  .tl-frame > .fc-shell {
-    padding-inline-start: 232px;
-    padding-block-end: var(--space-12);
-  }
-  .tl-frame.is-quiet > .fc-shell { padding-inline-start: 0; }
-  .tl-only-phone { display: none; }
-  .tn-bottom { display: none; }
-}
-
-.tn-group { display: flex; flex-direction: column; gap: var(--space-3); }
-.tn-group-label {
-  margin: 0 0 var(--space-2);
-  padding-inline: var(--space-5);
-  font: var(--text-caption);
-  letter-spacing: var(--ls-wide);
-  color: var(--text-disabled);
-}
-.tn-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
-
-.tn-link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-height: 40px;
-  padding-inline: var(--space-5);
-  border-radius: var(--radius-control);
-  border-block-end: 0;
-  font: var(--text-body-md);
-  color: var(--text-secondary);
-  transition: var(--transition-control);
-}
-.tn-link:hover { background: var(--alpha-fill-weak); color: var(--text-primary); }
-.tn-link svg { flex: none; color: var(--text-tertiary); }
-/* القسم الحالي يُعرف باللون والخلفية لا بعلامة إضافية: بند واحد يختلف يكفي. */
-.tn-link.is-current { background: var(--accent-quiet); color: var(--accent); }
-.tn-link.is-current svg { color: var(--accent); }
-
-.tn-out {
-  margin-block-start: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border-block-end: 0;
-  font: var(--text-caption);
-  color: var(--text-tertiary);
-  transition: var(--transition-control);
-}
-.tn-out:hover { color: var(--text-primary); }
-
-/* ---- الشريط السفلي ---- */
-.tn-bottom {
-  position: fixed;
-  inset-inline: 0;
-  inset-block-end: 0;
-  z-index: 30;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  /* فوق شريط المتصفّح على iOS، وإلا سقط البند الأخير تحت حافّة الشاشة. */
-  padding-block-end: env(safe-area-inset-bottom, 0);
-  background: color-mix(in srgb, var(--surface-card) 94%, transparent);
-  border-block-start: var(--border-w) solid var(--border-hairline);
-}
-.tn-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 60px;
-  border-block-end: 0;
-  color: var(--text-tertiary);
-  transition: var(--transition-control);
-}
-.tn-tab span { font: var(--fs-11)/1 var(--font-sans); }
-.tn-tab.is-current { color: var(--accent); }
-
-@media (prefers-reduced-motion: reduce) {
-  .tn-link, .tn-tab, .tn-out { transition: none; }
-}
+.tp-main > .tm-shell,
+.tp-main > .fc-shell { min-height: 0; padding-block: 0; background: transparent; }
