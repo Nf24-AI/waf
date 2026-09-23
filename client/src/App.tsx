@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import RedirectIfAuthed from "./components/RedirectIfAuthed";
 import RequireAuth from "./components/RequireAuth";
 import { useAuthSession } from "./contexts/AuthContext";
 import ForgotPassword from "./pages/auth/ForgotPassword";
@@ -138,10 +139,27 @@ export default function App() {
             <Route path={SERVICES_ROUTE} component={Landing} />
             <Route path={ABOUT_ROUTE} component={Landing} />
 
-            {/* المصادقة عامّة: من يصلها لم يدخل بعد. */}
-            <Route path={LOGIN_ROUTE} component={Login} />
-            <Route path={SIGNUP_ROUTE} component={Signup} />
-            <Route path={FORGOT_PASSWORD_ROUTE} component={ForgotPassword} />
+            {/*
+              المصادقة عامّة: من يصلها لم يدخل بعد — ومن دخل يُعاد من فوقها
+              إلى وجهته. عرضُ نموذج الدخول لمن هو داخل يطلب منه ما فعله.
+              وتُستثنى «كلمة مرور جديدة»: يُفتح رابطها وصاحبه مسجَّل بالفعل،
+              فإعادتُه منها تمنعه من تغيير كلمته.
+            */}
+            <Route path={LOGIN_ROUTE}>
+              <RedirectIfAuthed>
+                <Login />
+              </RedirectIfAuthed>
+            </Route>
+            <Route path={SIGNUP_ROUTE}>
+              <RedirectIfAuthed>
+                <Signup />
+              </RedirectIfAuthed>
+            </Route>
+            <Route path={FORGOT_PASSWORD_ROUTE}>
+              <RedirectIfAuthed>
+                <ForgotPassword />
+              </RedirectIfAuthed>
+            </Route>
             <Route path={RESET_PASSWORD_ROUTE} component={ResetPassword} />
             <Route path={VERIFY_EMAIL_ROUTE} component={VerifyEmail} />
             <Route>

@@ -1,6 +1,5 @@
 import { useAuthSession } from "@/contexts/AuthContext";
-import { LOGIN_ROUTE, SIGNUP_ROUTE, loginHref } from "@/lib/auth-routes";
-import { TIME_HOME_ROUTE } from "@shared/routes";
+import { loginHref } from "@/lib/auth-routes";
 
 /**
  * باب الخدمة — واحد لكل بطاقة، ويعرف من يقف أمامه.
@@ -23,15 +22,3 @@ export function useServiceHref(route: string): string {
   return serviceHref(route, !loading && Boolean(user));
 }
 
-/**
- * «ابدأ الآن» — دعوة واحدة تتصرّف بحسب حالك.
- *
- * إرسال مسجَّلٍ إلى صفحة التسجيل يقول له إن المنتج لا يعرفه، وهو يعرفه.
- */
-export function useStartHref(): string {
-  const { user, loading } = useAuthSession();
-  if (loading) return SIGNUP_ROUTE;
-  return user ? TIME_HOME_ROUTE : SIGNUP_ROUTE;
-}
-
-export { LOGIN_ROUTE, SIGNUP_ROUTE };

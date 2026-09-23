@@ -71,6 +71,21 @@ alter table public.eisenhower_tasks
 alter table public.waf_focus_sessions
   add column if not exists user_id uuid references auth.users(id) on delete cascade;
 
+-- owner_code كان إلزامياً، والكود لم يعد يكتبه. بلا هذا السطر يفشل كل
+-- إدراج بعد الدمج — الجلسات أوّلاً، لأن عمودها معرَّف `not null` صراحةً.
+-- ولا يُحذف العمود: الصفوف القديمة تُعرَف به، وحذفه يفقدها نسبها قبل أن
+-- تُتبنّى.
+alter table public.waf_focus_sessions alter column owner_code drop not null;
+alter table public.eisenhower_tasks   alter column owner_code drop not null;
+
+-- المهمة الجديدة لا تُرسل is_archived. لو كان العمود بلا قيمة افتراضية
+-- لوُلدت كل مهمة بـNULL، ولأسقطها فلتر `is_archived=eq.false` من القائمة:
+-- تُحفظ ولا تُرى، وهو أسوأ من ألّا تُحفظ.
+alter table public.eisenhower_tasks
+  alter column is_archived set default false;
+
+update public.eisenhower_tasks set is_archived = false where is_archived is null;
+
 create index if not exists eisenhower_tasks_user_idx on public.eisenhower_tasks (user_id, created_at desc);
 create index if not exists waf_focus_sessions_user_idx on public.waf_focus_sessions (user_id, started_at desc);
 
@@ -133,6 +148,14 @@ from information_schema.columns
 where table_schema = 'public'
   and column_name = 'user_id'
   and table_name in ('eisenhower_tasks', 'waf_focus_sessions');
+
+-- أي عمود إلزاميّ بقي يمنع الإدراج؟ يجب أن يعود فارغاً.
+select table_name, column_name
+from information_schema.columns
+where table_schema = 'public'
+  and table_name in ('eisenhower_tasks', 'waf_focus_sessions')
+  and column_name = 'owner_code'
+  and is_nullable = 'NO';
 
 -- كم صفّاً قديماً بلا مالك؟ إن كان صفراً فلا شيء يحتاج نقلاً.
 select count(*) as rows_without_owner from public.eisenhower_tasks where user_id is null;
