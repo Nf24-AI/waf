@@ -16,6 +16,8 @@ import {
   RESET_PASSWORD_ROUTE,
   SIGNUP_ROUTE,
   VERIFY_EMAIL_ROUTE,
+  ABOUT_ROUTE,
+  SERVICES_ROUTE,
 } from "./lib/auth-routes";
 import IdleWarning from "./components/IdleWarning";
 import ScheduleReminder from "./components/time/ScheduleReminder";
@@ -128,6 +130,13 @@ export default function App() {
             <Route path={LANDING_ROUTE} component={Landing} />
             {/* من حفظ العنوان القديم يصل إلى الوجه نفسه، فلا ينكسر رابط. */}
             <Route path={LEGACY_LANDING_ROUTE} component={Landing} />
+            {/*
+              «الخدمات» و«عن واف» قسمان في صفحة الهبوط لا صفحتان. تسجيلهما
+              مسارين يحفظ الروابط التي يطلبها البريد، ونسخهما صفحتين يعني
+              نصّين لنفس الشيء يتباعدان.
+            */}
+            <Route path={SERVICES_ROUTE} component={Landing} />
+            <Route path={ABOUT_ROUTE} component={Landing} />
 
             {/* المصادقة عامّة: من يصلها لم يدخل بعد. */}
             <Route path={LOGIN_ROUTE} component={Login} />

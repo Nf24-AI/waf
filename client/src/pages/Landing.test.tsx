@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 import Landing from "./Landing";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { SERVICES } from "@shared/services";
 import { LANDING_ROUTE } from "@shared/routes";
 
@@ -17,10 +18,14 @@ import { LANDING_ROUTE } from "@shared/routes";
 
 function renderLanding() {
   const { hook } = memoryLocation({ path: LANDING_ROUTE });
+  // صفحة الهبوط صارت تعرف من يقرؤها: تعرض «ابدأ الآن» لزائر و«الرئيسية»
+  // لمسجَّل. وبلا مصادقة مضبوطة في الاختبار تبقى الحالة زائراً، وهو المقصود.
   return render(
-    <Router hook={hook}>
-      <Landing />
-    </Router>,
+    <AuthProvider>
+      <Router hook={hook}>
+        <Landing />
+      </Router>
+    </AuthProvider>,
   );
 }
 
@@ -94,10 +99,22 @@ describe("landing page", () => {
     expect(screen.queryByText("قريباً")).not.toBeInTheDocument();
   });
 
-  it("takes both services' destinations from the catalogue", () => {
+  it("carries a guest to sign-in without losing which service they wanted", () => {
+    // الوجهة لا تُفقد عند الباب: الزائر يعود إلى الخدمة التي ضغطها، لا إلى
+    // صفحة رئيسية يبحث فيها عمّا كان يريده قبل لحظة.
     renderLanding();
     const enters = screen.getAllByRole("link", { name: /^ادخل (خدمة الاجتماعات|إدارة الوقت)$/ });
-    expect(enters.map(link => link.getAttribute("href"))).toEqual([href("meetings"), href("time")]);
+    expect(enters.map(link => link.getAttribute("href"))).toEqual([
+      `/login?redirect=${encodeURIComponent(href("meetings"))}`,
+      `/login?redirect=${encodeURIComponent(href("time"))}`,
+    ]);
+  });
+
+  it("offers a guest both ways in, and neither to a member", () => {
+    renderLanding();
+    expect(screen.getByRole("link", { name: "ابدأ الآن" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "تسجيل الدخول" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "الرئيسية" })).not.toBeInTheDocument();
   });
 
   it("isolates any off-origin service, and keeps the rest in this tab", () => {

@@ -3901,3 +3901,17 @@ a.service-card:hover .service-go {
 }
 .tp-main > .tm-shell,
 .tp-main > .fc-shell { min-height: 0; padding-block: 0; background: transparent; }
+
+/*
+ * دعوتا الرأس العامّ.
+ *
+ * الروابط تبقى يمين الشعار، والدعوتان في آخر الشريط: العين العربية تبدأ من
+ * الاسم وتنتهي عند الفعل.
+ */
+.landing-topbar-acts { margin-inline-start: auto; gap: var(--space-4); }
+.landing-topbar-in { display: flex; align-items: center; gap: var(--space-7); }
+@media (max-width: 640px) {
+  /* على الجوّال يبقى الفعل وحده: الروابط أسفل الصفحة على أي حال. */
+  .landing-topbar-in nav { display: none; }
+  .landing-topbar-acts .landing-btn:not(.landing-btn-primary) { display: none; }
+}
