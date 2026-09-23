@@ -122,8 +122,47 @@ function toTask(row: Row, sessions = 0): Task {
   return { ...core, state: stateOf(core) };
 }
 
-const COLUMNS =
+const FULL_COLUMNS =
   "id,name,description,importance,urgency,classified_at,scheduled_start,scheduled_end,estimated_minutes,repeat_rule,completed_at,is_done,created_at";
+
+/** نفس القائمة بلا العمود الذي قد لا يكون رُحِّل بعد. */
+const LEGACY_COLUMNS = FULL_COLUMNS.replace(",repeat_rule", "");
+
+/**
+ * الجدول يُرحَّل بيدٍ في لوحة Supabase، والنشر لا ينتظر الترحيل.
+ *
+ * فإن سبق الكودُ العمودَ لم يسقط كل شيء: يردّ PostgREST بـ42703، فنعيد
+ * القراءة بلا العمود ونعلّم أنه غائب. تتعطّل ميزة التكرار وحدها بدل أن
+ * تتعطّل قراءة المهام كلّها — والفرق بينهما أن الأولى تُفقد ميزة، والثانية
+ * تجعل المنتج يعرض «لا مهام لديك» لمن عنده مهامه كلّها.
+ *
+ * ويعود العلم إلى true من تلقائه عند أول إقلاع بعد الترحيل.
+ */
+let hasRepeatColumn = true;
+
+function columns(): string {
+  return hasRepeatColumn ? FULL_COLUMNS : LEGACY_COLUMNS;
+}
+
+function isMissingRepeat(error: unknown): boolean {
+  return /repeat_rule/.test(String((error as Error)?.message ?? "")) && /42703|does not exist/.test(String((error as Error)?.message ?? ""));
+}
+
+/**
+ * ينفّذ الطلب، وإن كان سببُ فشله العمودَ الغائب أعاده مرّة واحدة بدونه.
+ *
+ * مرّة واحدة لا حلقة: بعد الإعادة يكون العلم قد سقط، فأيّ فشل ثانٍ سببه
+ * شيء آخر ويجب أن يُرى.
+ */
+async function withSchemaFallback<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (!hasRepeatColumn || !isMissingRepeat(error)) throw error;
+    hasRepeatColumn = false;
+    return run();
+  }
+}
 
 /**
  * جلسات التركيز المكتملة لكل مهمة، في طلب واحد لا طلب لكل صفّ.
@@ -156,8 +195,10 @@ async function withSessions(row: Row): Promise<Task> {
 
 /** المهام المفتوحة: ما لم يُنجَز ولم يُؤرشَف. هي ما تعرضه الواجهات كلها. */
 export async function listOpenTasks(): Promise<Task[]> {
-  const rows = await rest<Row[]>(
-    `${TABLE}?select=${COLUMNS}&completed_at=is.null&is_done=eq.false&is_archived=eq.false&order=created_at.desc`,
+  const rows = await withSchemaFallback(() =>
+    rest<Row[]>(
+      `${TABLE}?select=${columns()}&completed_at=is.null&is_done=eq.false&is_archived=eq.false&order=created_at.desc`,
+    ),
   );
   const counts = await sessionCounts(rows.map(row => row.id));
   return rows.map(row => toTask(row, counts.get(row.id) ?? 0));
@@ -165,8 +206,8 @@ export async function listOpenTasks(): Promise<Task[]> {
 
 export async function listCompletedTasks(sinceIso?: string): Promise<Task[]> {
   const since = sinceIso ? `&completed_at=gte.${encodeURIComponent(sinceIso)}` : "";
-  const rows = await rest<Row[]>(
-    `${TABLE}?select=${COLUMNS}&completed_at=not.is.null${since}&order=completed_at.desc`,
+  const rows = await withSchemaFallback(() =>
+    rest<Row[]>(`${TABLE}?select=${columns()}&completed_at=not.is.null${since}&order=completed_at.desc`),
   );
   const counts = await sessionCounts(rows.map(row => row.id));
   return rows.map(row => toTask(row, counts.get(row.id) ?? 0));
@@ -184,37 +225,41 @@ export async function createTask(input: {
   const { owner } = credentials();
   const split = input.quadrant ? splitQuadrant(input.quadrant) : null;
 
-  const [row] = await rest<Row[]>(`${TABLE}?select=${COLUMNS}`, {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
-      id: crypto.randomUUID(),
-      owner_code: owner,
-      name: input.title.trim(),
-      description: input.description?.trim() || null,
-      // الجدول القديم يشترط العمودين. مهمة بلا تصنيف تبدأ في «غير مهم وغير
-      // عاجل» لو تُركت للقيد، وهذا حكم لم يصدره أحد — فالافتراض «مهم وعاجل»
-      // خطأ مثله. نكتب ما اختاره المستخدم، وإن لم يختر فأقلّها ادّعاءً.
-      importance: split?.importance ?? "not-important",
-      urgency: split?.urgency ?? "not-urgent",
-      classified_at: split ? new Date().toISOString() : null,
-      scheduled_start: input.scheduledStart ?? null,
-      scheduled_end: input.scheduledEnd ?? null,
-      estimated_minutes: input.estimatedMinutes ?? null,
-      repeat_rule: input.repeatRule ?? null,
+  const [row] = await withSchemaFallback(() =>
+    rest<Row[]>(`${TABLE}?select=${columns()}`, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        id: crypto.randomUUID(),
+        owner_code: owner,
+        name: input.title.trim(),
+        description: input.description?.trim() || null,
+        // الجدول القديم يشترط العمودين. مهمة بلا تصنيف تبدأ في «غير مهم وغير
+        // عاجل» لو تُركت للقيد، وهذا حكم لم يصدره أحد — فالافتراض «مهم وعاجل»
+        // خطأ مثله. نكتب ما اختاره المستخدم، وإن لم يختر فأقلّها ادّعاءً.
+        importance: split?.importance ?? "not-important",
+        urgency: split?.urgency ?? "not-urgent",
+        classified_at: split ? new Date().toISOString() : null,
+        scheduled_start: input.scheduledStart ?? null,
+        scheduled_end: input.scheduledEnd ?? null,
+        estimated_minutes: input.estimatedMinutes ?? null,
+        ...(hasRepeatColumn ? { repeat_rule: input.repeatRule ?? null } : {}),
+      }),
     }),
-  });
+  );
 
   return withSessions(row);
 }
 
 export async function classifyTask(id: string, quadrant: Quadrant): Promise<Task> {
   const { importance, urgency } = splitQuadrant(quadrant);
-  const [row] = await rest<Row[]>(`${TABLE}?id=eq.${id}&select=${COLUMNS}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ importance, urgency, classified_at: new Date().toISOString() }),
-  });
+  const [row] = await withSchemaFallback(() =>
+    rest<Row[]>(`${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ importance, urgency, classified_at: new Date().toISOString() }),
+    }),
+  );
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
   return withSessions(row);
 }
@@ -251,16 +296,18 @@ export async function scheduleTask(
     });
   }
 
-  const [row] = await rest<Row[]>(`${TABLE}?id=eq.${id}&select=${COLUMNS}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
-      scheduled_start: startIso,
-      scheduled_end: endIso,
-      // undefined يعني «لا تمسّ»، و null يعني «ألغِ التكرار».
-      ...(repeatRule === undefined ? {} : { repeat_rule: repeatRule }),
+  const [row] = await withSchemaFallback(() =>
+    rest<Row[]>(`${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        scheduled_start: startIso,
+        scheduled_end: endIso,
+        // undefined يعني «لا تمسّ»، و null يعني «ألغِ التكرار».
+        ...(repeatRule === undefined || !hasRepeatColumn ? {} : { repeat_rule: repeatRule }),
+      }),
     }),
-  });
+  );
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
   return withSessions(row);
 }
@@ -273,11 +320,13 @@ export async function scheduleTask(
  * مرّة مهمةً واحدة لم تُنجَز بعد.
  */
 export async function completeTask(id: string): Promise<Task> {
-  const [row] = await rest<Row[]>(`${TABLE}?id=eq.${id}&select=${COLUMNS}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ completed_at: new Date().toISOString(), is_done: true }),
-  });
+  const [row] = await withSchemaFallback(() =>
+    rest<Row[]>(`${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ completed_at: new Date().toISOString(), is_done: true }),
+    }),
+  );
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
 
   // بلا موعد لا تكرار: «كل يوم» تحتاج ساعةً تقع فيها.

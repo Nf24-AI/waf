@@ -117,6 +117,9 @@ export default function Focus() {
       <div className="fc-inner">
         <FlowSteps current="focus" />
 
+        {/* كل صفحة تحتاج عنواناً واحداً: قارئ الشاشة يبدأ منه، والصفحة بلا h1 تبدأ من لا شيء. */}
+        <h1 className="sr-only">جلسة التركيز</h1>
+
         {status.data?.configured === false && (
           <p className="tm-empty">
             المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> و

@@ -87,6 +87,18 @@ export default function TimeHome() {
 
   return (
     <TimeLayout>
+      {/*
+        قراءة فاشلة تُعرض خطأً لا صفراً.
+
+        الأصفار جوابٌ صحيح لمن لا مهام له، وكذبٌ لمن انقطع اتصاله: يقرأ
+        «لا شيء يحتاج انتباهك» ويمضي في يومه وعنده ما يحتاجه.
+      */}
+      {(open.isError || week.isError) && (
+        <p className="tp-empty tm-error" role="alert" style={{ marginBlockEnd: "var(--space-7)" }}>
+          تعذّر قراءة المهام — الأرقام تحت غير صحيحة. {(open.error ?? week.error)?.message}
+        </p>
+      )}
+
       {status.data?.configured === false && (
         <p className="tp-empty" style={{ marginBlockEnd: "var(--space-7)" }}>
           المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> و
