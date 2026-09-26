@@ -75,8 +75,7 @@ export default function Statistics() {
 
         {status.data?.configured === false && (
           <p className="tm-empty" style={{ marginBlockStart: "var(--space-9)" }}>
-            المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> و
-            <code>TASKS_OWNER_CODE</code> ثم أعد النشر.
+            المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> ثم أعد النشر.
           </p>
         )}
 

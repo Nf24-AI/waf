@@ -4,6 +4,8 @@ import { httpBatchLink } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
+import { AuthProvider } from "./contexts/AuthContext";
+import { accessToken } from "@/lib/supabase";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -28,10 +30,20 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      fetch(input, init) {
+      /**
+       * رمز الجلسة يُرفق بكل نداء.
+       *
+       * الخادم يمرّره إلى PostgREST فتُطبَّق سياسات RLS على auth.uid().
+       * ويُقرأ عند كل نداء لا مرّة واحدة: العميل يجدّد الرمز في الخلفية،
+       * ورمزٌ محفوظ عند الإقلاع يصير منتهياً بعد ساعة.
+       */
+      async fetch(input, init) {
+        const token = await accessToken();
+        const headers = new Headers(init?.headers);
+        if (token) headers.set("authorization", `Bearer ${token}`);
         return globalThis.fetch(input, {
           ...(init ?? {}),
-          // Carries the single-user session cookie.
+          headers,
           credentials: "include",
         });
       },
@@ -42,7 +54,9 @@ const trpcClient = trpc.createClient({
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </QueryClientProvider>
   </trpc.Provider>
 );

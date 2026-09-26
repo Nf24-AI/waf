@@ -1,17 +1,7 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
+import { authedProcedure } from "./auth";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import {
-  ACCESS_COOKIE,
-  accessIsOpen,
-  appProcedure,
-  createSessionToken,
-  hasValidSession,
-  passwordMatches,
-  sessionCookieOptions,
-} from "./access";
 import {
   createNotionMeeting,
   deleteNotionMeeting,
@@ -67,51 +57,20 @@ const meetingWithId = z.object({ id: z.string(), ...meetingFields });
 export const appRouter = router({
   system: systemRouter,
 
-  auth: router({
-    /** Reports lock state rather than a Manus identity. */
-    me: publicProcedure.query(async ({ ctx }) => ({
-      locked: !accessIsOpen(),
-      unlocked: await hasValidSession(ctx.req.headers.cookie),
-    })),
-
-    unlock: publicProcedure
-      .input(z.object({ password: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        if (!passwordMatches(input.password)) {
-          return { success: false as const };
-        }
-        const token = await createSessionToken();
-        ctx.res.cookie(ACCESS_COOKIE, token, sessionCookieOptions(ENV.isProduction));
-        return { success: true as const };
-      }),
-
-    /**
-     * Slide the idle window forward without asking for anything.
-     *
-     * The server counts a session idle when no request arrives; the browser
-     * counts it idle when nobody touches the page. Those disagree while
-     * someone types a long note, because saving is a button and not an
-     * autosave — the page is busy and the server hears nothing. Ten minutes
-     * in, Save would fail as UNAUTHORIZED with the note still unsaved.
-     *
-     * appProcedure re-issues the cookie, so the call needs no body of its own.
-     */
-    touch: appProcedure.mutation(() => ({ ok: true }) as const),
-
-    logout: publicProcedure.mutation(({ ctx }) => {
-      // No maxAge: clearCookie already expires the cookie immediately, and
-      // passing it makes Express 4 log a deprecation on every logout — which
-      // the idle lock now triggers on its own, so the noise adds up.
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
-      ctx.res.clearCookie(ACCESS_COOKIE, sessionCookieOptions(ENV.isProduction));
-      return { success: true } as const;
-    }),
-  }),
-
+  /**
+   * بقايا البوّابة القديمة ذهبت مع البوّابة.
+   *
+   * `unlock` كان يصدر كعكة جلسة لمن يعرف كلمة المرور المشتركة. تركُه بعد
+   * حلول المصادقة الحقيقية يعني باباً ثانياً إلى نفس التطبيق، يُصدر هويّة
+   * لا تخصّ أحداً بعينه — ولا يُغلق بتسجيل الخروج من Supabase لأنه لا
+   * يعرف به. وباب لا أحد يتذكّره هو الباب الذي يبقى مفتوحاً.
+   *
+   * والخروج الآن عند Supabase: `signOut` في المتصفّح يُنهي الجلسة في كل
+   * الألسنة، ولا كعكة من عندنا تُمحى.
+   */
   meetings: router({
     /** Lets the workspace explain *why* Notion is unavailable instead of failing blankly. */
-    status: appProcedure.query(async () => {
+    status: authedProcedure.query(async () => {
       if (!isNotionConfigured()) {
         const missing = [
           !ENV.notionApiToken && "NOTION_API_TOKEN",
@@ -129,19 +88,19 @@ export const appRouter = router({
       }
     }),
 
-    list: appProcedure.query(async () => ({
+    list: authedProcedure.query(async () => ({
       source: "notion" as const,
       meetings: await listNotionMeetings(),
     })),
 
-    create: appProcedure.input(meetingInput).mutation(({ input }) => createNotionMeeting(input)),
+    create: authedProcedure.input(meetingInput).mutation(({ input }) => createNotionMeeting(input)),
 
-    update: appProcedure.input(meetingWithId).mutation(async ({ input }) => {
+    update: authedProcedure.input(meetingWithId).mutation(async ({ input }) => {
       await updateNotionMeeting(input);
       return { success: true as const };
     }),
 
-    remove: appProcedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+    remove: authedProcedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
       await deleteNotionMeeting(input.id);
       return { success: true as const };
     }),
@@ -150,23 +109,27 @@ export const appRouter = router({
   /**
    * المهام — مصدر واحد تقرأ منه الطرق الثلاث وتكتب فيه.
    *
-   * كلها appProcedure: المهام خلف بوّابة كلمة المرور مثل الاجتماعات، ومفتاح
+   * كلها authedProcedure: المهام خلف بوّابة كلمة المرور مثل الاجتماعات، ومفتاح
    * Supabase ورمز المالك لا يغادران الخادم.
    */
   tasks: router({
-    status: appProcedure.query(() => ({ configured: tasksAreConfigured() })),
+    /**
+     * `status` وحده عامّ: الصفحات تسأله قبل أن تعرف إن كان هناك مستخدم،
+     * وجوابه إعداد الخادم لا بيانات أحد.
+     */
+    status: publicProcedure.query(() => ({ configured: tasksAreConfigured() })),
 
-    listOpen: appProcedure.query(() => listOpenTasks()),
+    listOpen: authedProcedure.query(({ ctx }) => listOpenTasks(ctx.identity)),
 
-    sessions: appProcedure
+    sessions: authedProcedure
       .input(z.object({ since: z.string().optional() }).optional())
-      .query(({ input }) => listFocusSessions(input?.since)),
+      .query(({ ctx, input }) => listFocusSessions(ctx.identity, input?.since)),
 
-    listCompleted: appProcedure
+    listCompleted: authedProcedure
       .input(z.object({ since: z.string().optional() }).optional())
-      .query(({ input }) => listCompletedTasks(input?.since)),
+      .query(({ ctx, input }) => listCompletedTasks(ctx.identity, input?.since)),
 
-    create: appProcedure
+    create: authedProcedure
       .input(
         z.object({
           title: z.string().trim().min(1, "المهمة تحتاج عنواناً"),
@@ -179,13 +142,17 @@ export const appRouter = router({
           reminderMinutes: z.number().int().min(0).max(1440).optional(),
         }),
       )
-      .mutation(({ input }) => createTask(input as Parameters<typeof createTask>[0])),
+      .mutation(({ ctx, input }) =>
+        createTask(ctx.identity, input as Parameters<typeof createTask>[1]),
+      ),
 
-    classify: appProcedure
+    classify: authedProcedure
       .input(z.object({ id: z.string().uuid(), quadrant: quadrantId }))
-      .mutation(({ input }) => classifyTask(input.id, input.quadrant as Parameters<typeof classifyTask>[1])),
+      .mutation(({ ctx, input }) =>
+        classifyTask(ctx.identity, input.id, input.quadrant as Parameters<typeof classifyTask>[2]),
+      ),
 
-    schedule: appProcedure
+    schedule: authedProcedure
       .input(
         z.object({
           id: z.string().uuid(),
@@ -194,23 +161,26 @@ export const appRouter = router({
           repeatRule: z.enum(["daily", "weekly"]).nullable().optional(),
         }),
       )
-      .mutation(({ input }) => scheduleTask(input.id, input.start, input.end, input.repeatRule)),
+      .mutation(({ ctx, input }) =>
+        scheduleTask(ctx.identity, input.id, input.start, input.end, input.repeatRule),
+      ),
 
-    complete: appProcedure
+    complete: authedProcedure
       .input(z.object({ id: z.string().uuid() }))
-      .mutation(({ input }) => completeTask(input.id)),
+      .mutation(({ ctx, input }) => completeTask(ctx.identity, input.id)),
 
-    startFocus: appProcedure
+    startFocus: authedProcedure
       .input(z.object({ taskId: z.string().uuid(), minutes: z.number().int().positive().max(240) }))
-      .mutation(async ({ input }) => ({ sessionId: await openFocusSession(input.taskId, input.minutes) })),
+      .mutation(async ({ ctx, input }) => ({
+        sessionId: await openFocusSession(ctx.identity, input.taskId, input.minutes),
+      })),
 
-    endFocus: appProcedure
+    endFocus: authedProcedure
       .input(z.object({ sessionId: z.string().uuid(), completed: z.boolean() }))
-      .mutation(async ({ input }) => {
-        await closeFocusSession(input.sessionId, input.completed);
+      .mutation(async ({ ctx, input }) => {
+        await closeFocusSession(ctx.identity, input.sessionId, input.completed);
         return { success: true as const };
       }),
-  }),
-});
+  }),});
 
 export type AppRouter = typeof appRouter;

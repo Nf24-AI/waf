@@ -34,9 +34,10 @@ begin
   end if;
 end $$;
 
--- المتكرّر المفتوح وحده يُبحث عنه، فالفهرس جزئيّ.
+-- المتكرّر المفتوح وحده يُبحث عنه، فالفهرس جزئيّ. وعلى user_id لا owner_code:
+-- الملكية صارت من الحساب، وفهرسٌ على عمود لا يُرشَّح به لا يُستعمل.
 create index if not exists eisenhower_tasks_repeat_idx
-  on public.eisenhower_tasks (owner_code)
+  on public.eisenhower_tasks (user_id)
   where repeat_rule is not null and completed_at is null;
 
 -- تحقّق: يجب أن يعود صفّان.

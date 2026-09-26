@@ -2,7 +2,7 @@
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LayoutGrid } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import Atmosphere from "@/components/landing/Atmosphere";
 import Reveal from "@/components/landing/Reveal";
 import ServicesSection from "@/components/landing/ServicesSection";
@@ -10,6 +10,10 @@ import { createAsciiStage, type AsciiStage, type RenderMode } from "@/lib/ascii-
 import { prefersReducedMotion } from "@/lib/motion";
 import { useSmoothScroll } from "@/lib/smooth-scroll";
 import tanomah from "@/assets/village-at-dusk.jpg";
+import { useAuthSession } from "@/contexts/AuthContext";
+import { LOGIN_ROUTE, SIGNUP_ROUTE } from "@/lib/auth-routes";
+import { TIME_HOME_ROUTE } from "@shared/routes";
+import { ABOUT_ROUTE, SERVICES_ROUTE } from "@/lib/auth-routes";
 
 /**
  * الوجه العام لواف — المسار الوحيد الذي يُقرأ قبل كلمة المرور.
@@ -287,6 +291,28 @@ function AboutWaf() {
 const HEADER_OFFSET = 68;
 
 export default function Landing() {
+  const { user } = useAuthSession();
+  const [location] = useLocation();
+
+  /**
+   * ‎/services و‎/about يهبطان على قسمَيهما.
+   *
+   * القسمان في هذه الصفحة، والمساران موجودان لأن الروابط تُشارَك وتُكتب في
+   * البريد. فيُنقل القارئ إلى موضعه بدل أن يُلقى في أعلى الصفحة ويبحث.
+   */
+  useEffect(() => {
+    const anchor =
+      location === SERVICES_ROUTE ? "services" : location === ABOUT_ROUTE ? "about-waf" : null;
+    if (!anchor) return;
+    const id = window.setTimeout(() => {
+      document.getElementById(anchor)?.scrollIntoView({
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+        block: "start",
+      });
+    }, 120);
+    return () => window.clearTimeout(id);
+  }, [location]);
+
   useSmoothScroll(true, HEADER_OFFSET);
 
   return (
@@ -310,6 +336,28 @@ export default function Landing() {
             {/* مرساة في الصفحة نفسها لا مسار: القسم أسفل هذه الصفحة. */}
             <a href="#about-waf">عن واف</a>
           </nav>
+
+          {/*
+            الدعوتان تعرفان من يقرؤهما: من سجّل دخوله يرى «الرئيسية» لا
+            «ابدأ الآن» — إرساله إلى التسجيل يقول له إن المنتج لا يعرفه،
+            وهو يعرفه.
+          */}
+          <div className="landing-acts landing-topbar-acts">
+            {user ? (
+              <Link className="landing-btn landing-btn-primary" href={TIME_HOME_ROUTE}>
+                الرئيسية
+              </Link>
+            ) : (
+              <>
+                <Link className="landing-btn" href={LOGIN_ROUTE}>
+                  تسجيل الدخول
+                </Link>
+                <Link className="landing-btn landing-btn-primary" href={SIGNUP_ROUTE}>
+                  ابدأ الآن
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </header>
 

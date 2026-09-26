@@ -3,6 +3,7 @@
 import React from "react";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
+import { useServiceHref } from "@/lib/service-access";
 import { rootServices } from "@shared/services";
 import Reveal from "./Reveal";
 
@@ -225,6 +226,10 @@ function ServiceVisual({ kind }: { kind: LandingService["visual"] }) {
 function ServiceCard({ service }: { service: LandingService }) {
   const enterLabel = `ادخل ${service.title}`;
 
+  // الزائر يُنقل إلى الدخول حاملاً وجهته؛ المسجَّل يدخل مباشرة. والخدمة
+  // الخارجية تبقى رابطاً مفتوحاً: ليست لنا حتى نحرسها.
+  const gate = useServiceHref(service.href);
+
   return (
     <article className="svc-card">
       <header className="svc-meta">
@@ -257,7 +262,7 @@ function ServiceCard({ service }: { service: LandingService }) {
             </span>
           </a>
         ) : (
-          <Link className="svc-enter" href={service.href} aria-label={enterLabel}>
+          <Link className="svc-enter" href={gate} aria-label={enterLabel}>
             ادخل الخدمة
             <span className="svc-arrow" aria-hidden="true">
               <ArrowLeft size={17} />

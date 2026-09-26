@@ -97,8 +97,7 @@ export default function Tasks() {
         <section className="tm-section" aria-live="polite">
           {status.data?.configured === false && (
             <p className="tm-empty">
-              المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> و
-              <code>TASKS_OWNER_CODE</code> ثم أعد النشر.
+              المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> ثم أعد النشر.
             </p>
           )}
 

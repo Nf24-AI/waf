@@ -7,10 +7,13 @@ import {
   Clock,
   Home,
   MoreHorizontal,
+  LogOut,
+  MoreHorizontal as MoreIcon,
   Settings,
   X,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useAuthSession } from "@/contexts/AuthContext";
 import {
   ARCHIVE_ROUTE,
   MEETING_ROUTES,
@@ -88,7 +91,12 @@ function NavList({ items, onPick }: { items: NavItem[]; onPick?: () => void }) {
 
 function NavFoot({ onPick }: { onPick?: () => void }) {
   const [location] = useLocation();
+  const { user, signOut } = useAuthSession();
   const current = isCurrent(location, SETTINGS_ROUTE);
+
+  // الحرف الأوّل من الاسم إن وُجد، وإلا من البريد. ولا يُخترع اسم.
+  const label = (user?.user_metadata?.name as string | undefined)?.trim() || user?.email || "حسابي";
+  const initial = label.slice(0, 1).toLocaleUpperCase("ar");
 
   return (
     <div className="tp-side-foot">
@@ -105,11 +113,16 @@ function NavFoot({ onPick }: { onPick?: () => void }) {
       {/* الحساب واحد في هذه الأداة، فالبطاقة تعريف لا مبدِّل حسابات. */}
       <Link className="tp-user" href={SETTINGS_ROUTE} onClick={onPick}>
         <span className="tp-avatar" aria-hidden="true">
-          و
+          {initial}
         </span>
-        <span className="tp-user-name">حسابي</span>
+        <span className="tp-user-name">{label}</span>
         <MoreHorizontal size={16} aria-hidden="true" className="tp-user-more" />
       </Link>
+
+      <button type="button" className="tp-link" onClick={() => void signOut()}>
+        <LogOut size={17} aria-hidden="true" />
+        تسجيل الخروج
+      </button>
     </div>
   );
 }
@@ -128,11 +141,45 @@ export function Sidebar() {
 }
 
 /**
- * الدرج — نفس الأقسام على الجوّال.
+ * الشريط السفلي — أربعة أقسام والمزيد.
  *
- * درجٌ لا شريط سفلي: الأقسام سبعة والشريط يسع خمسة، فكان سيخفي اثنين ويقسم
- * الخريطة خريطتين. ويُغلق بالخلفية وبمفتاح الهروب وبأي بند يُختار، فلا
- * يُحبس أحد فيه.
+ * الأقسام سبعة ولا تسعها أربع خانات، والخامسة تفتح الدرج الذي يحمل البقيّة:
+ * فلا يُخفى شيء ولا يضيق البند عن الإبهام. وهذا ما يجعل الشريط والدرج
+ * خريطةً واحدة لا خريطتين — الدرج تتمّةُ الشريط لا بديلُه.
+ */
+export function BottomNav({ onMore }: { onMore: () => void }) {
+  const [location] = useLocation();
+
+  return (
+    <nav className="tp-bottom" aria-label="أقسام واف">
+      {PRIMARY_NAV.map(item => {
+        const Icon = item.icon;
+        const current = isCurrent(location, item.href);
+        return (
+          <Link
+            key={item.href}
+            className={current ? "tp-tab is-current" : "tp-tab"}
+            href={item.href}
+            aria-current={current ? "page" : undefined}
+          >
+            <Icon size={19} aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+
+      <button type="button" className="tp-tab" onClick={onMore}>
+        <MoreIcon size={19} aria-hidden="true" />
+        <span>المزيد</span>
+      </button>
+    </nav>
+  );
+}
+
+/**
+ * الدرج — بقيّة الأقسام والحساب.
+ *
+ * يُغلق بالخلفية وبمفتاح الهروب وبأي بند يُختار، فلا يُحبس أحد فيه.
  */
 export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   React.useEffect(() => {

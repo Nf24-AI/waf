@@ -1,16 +1,24 @@
 -- واف — الهوية والملكية وعزل البيانات.
 --
--- شغّله على المشروع الذي يشير إليه SUPABASE_URL في Vercel، مرّة واحدة.
+-- شغّله على المشروع الذي يشير إليه SUPABASE_URL، مرّة واحدة.
 -- الملف قابل لإعادة التشغيل: كل شيء فيه `if not exists` أو `drop … create`.
 --
--- ما يفعله:
---   1. جدول profiles مربوط بـauth.users
---   2. عمود user_id على المهام والجلسات، مربوط بـauth.users
---   3. RLS على auth.uid() — الحدّ في قاعدة البيانات لا في الواجهة
+-- ============================================================
+-- ما وجدناه في الجدول قبل كتابة هذا (لا ما افترضناه)
+-- ============================================================
 --
--- ولا يحذف شيئاً. الصفوف القديمة المملوكة بـowner_code تبقى كما هي، وتصير
--- غير مرئية لأنها بلا user_id — فإن كان فيها ما يهمّك فاربطه بحسابك بعد
--- التسجيل (الاستعلام في آخر الملف).
+-- جدول eisenhower_tasks مشترك مع تطبيق مصفوفة أيزنهاور المستقلّ، وذاك
+-- التطبيق يستعمل Supabase Auth أصلاً: عمود user_id موجود، وسياساته
+-- (`read own tasks` وأخواتها) مبنيّة على auth.uid() = user_id منذ البداية.
+--
+-- ثم أضافت واف فوقه طبقةً ثانية: owner_code ورمزاً واحداً في متغيّر بيئة.
+-- ولم يطابق ذلك الرمز أيّاً من الرمزين في الجدول، فكانت واف تقرأ صفراً
+-- بينما في الجدول ستّ مهام. لم تكن البيانات مفقودة — كانت محجوبة بطبقة
+-- لا لزوم لها.
+--
+-- ولذلك: لا نبني ملكيةً جديدة، بل نحذف الطبقة الزائدة ونرجع إلى ما كان
+-- صحيحاً. وسياسات التطبيق المستقلّ تبقى كما هي — هو حيّ ويستعمل الجدول،
+-- وحذفها يكسره.
 
 -- ============================================================
 -- 1) الملفّات الشخصية
@@ -57,53 +65,53 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- ولمن سجّل قبل وجود المُشغِّل: ملفٌّ بأثر رجعيّ.
+insert into public.profiles (id, name)
+select id, coalesce(raw_user_meta_data->>'name', '')
+from auth.users
+on conflict (id) do nothing;
+
 -- ============================================================
--- 2) الملكية على المهام والجلسات
+-- 2) الملكية
 -- ============================================================
 --
--- العمود يُضاف قابلاً للفراغ: الصفوف القديمة لا user_id لها، وجعله NOT NULL
--- الآن يُفشل الترحيل عليها. الحارس هو RLS لا القيد — ولا تُقرأ ولا تُكتب
--- صفّاً بلا مالك مطابق على أي حال.
-
-alter table public.eisenhower_tasks
-  add column if not exists user_id uuid references auth.users(id) on delete cascade;
+-- المهام لها user_id أصلاً. الجلسات لا، فتُعطاه.
 
 alter table public.waf_focus_sessions
   add column if not exists user_id uuid references auth.users(id) on delete cascade;
 
-create index if not exists eisenhower_tasks_user_idx on public.eisenhower_tasks (user_id, created_at desc);
-create index if not exists waf_focus_sessions_user_idx on public.waf_focus_sessions (user_id, started_at desc);
+-- owner_code كان إلزامياً في الجلسات، والكود لم يعد يكتبه: بلا هذا يفشل كل
+-- إدراج جلسة. ولا يُحذف العمود — الصفوف القديمة تُعرَف به.
+alter table public.waf_focus_sessions alter column owner_code drop not null;
+
+-- المهمة الجديدة لا تُرسل is_archived. لو كان العمود بلا قيمة افتراضية
+-- لوُلدت كل مهمة بـNULL، ولأسقطها فلتر `is_archived=eq.false` من القائمة:
+-- تُحفظ ولا تُرى، وهو أسوأ من ألّا تُحفظ.
+alter table public.eisenhower_tasks alter column is_archived set default false;
+update public.eisenhower_tasks set is_archived = false where is_archived is null;
+
+create index if not exists waf_focus_sessions_user_idx
+  on public.waf_focus_sessions (user_id, started_at desc);
 
 -- ============================================================
--- 3) العزل
+-- 3) حذف الطبقة الزائدة
 -- ============================================================
 --
--- سياسات owner_code القديمة تُحذف: بقاؤها يعني باباً ثانياً للجدول نفسه،
--- ومن يعرف الرمز يقرأ مهام الجميع. الرمز كان يكفي لمستخدم واحد، ولا يكفي
--- للحظة التي يسجّل فيها ثانٍ.
-
-alter table public.eisenhower_tasks  enable row level security;
-alter table public.waf_focus_sessions enable row level security;
+-- سياسات owner_code تُحذف: من يعرف الرمز الواحد يقرأ مهام الجميع، وهو باب
+-- ثانٍ إلى نفس الجدول لا يعرف به تسجيل الخروج. وسياسات التطبيق المستقلّ
+-- (auth.uid() = user_id) تبقى: هي الصحيحة، وهي ما ستقرأ به واف بعد الدمج.
 
 drop policy if exists "code reads own tasks"      on public.eisenhower_tasks;
 drop policy if exists "code inserts own tasks"    on public.eisenhower_tasks;
 drop policy if exists "code updates own tasks"    on public.eisenhower_tasks;
 drop policy if exists "code deletes own tasks"    on public.eisenhower_tasks;
+
+alter table public.waf_focus_sessions enable row level security;
+
 drop policy if exists "code reads own sessions"   on public.waf_focus_sessions;
 drop policy if exists "code inserts own sessions" on public.waf_focus_sessions;
 drop policy if exists "code updates own sessions" on public.waf_focus_sessions;
 drop policy if exists "code deletes own sessions" on public.waf_focus_sessions;
-
-drop policy if exists "owner reads tasks"    on public.eisenhower_tasks;
-drop policy if exists "owner inserts tasks"  on public.eisenhower_tasks;
-drop policy if exists "owner updates tasks"  on public.eisenhower_tasks;
-drop policy if exists "owner deletes tasks"  on public.eisenhower_tasks;
-
-create policy "owner reads tasks"   on public.eisenhower_tasks for select using (auth.uid() = user_id);
-create policy "owner inserts tasks" on public.eisenhower_tasks for insert with check (auth.uid() = user_id);
-create policy "owner updates tasks" on public.eisenhower_tasks for update
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "owner deletes tasks" on public.eisenhower_tasks for delete using (auth.uid() = user_id);
 
 drop policy if exists "owner reads sessions"   on public.waf_focus_sessions;
 drop policy if exists "owner inserts sessions" on public.waf_focus_sessions;
@@ -117,33 +125,40 @@ create policy "owner updates sessions" on public.waf_focus_sessions for update
 create policy "owner deletes sessions" on public.waf_focus_sessions for delete using (auth.uid() = user_id);
 
 -- anon لم يعد يكتب بالرمز؛ الوصول كلّه بجلسة موثّقة.
-revoke all on public.eisenhower_tasks  from anon;
 revoke all on public.waf_focus_sessions from anon;
-grant select, insert, update, delete on public.eisenhower_tasks  to authenticated;
 grant select, insert, update, delete on public.waf_focus_sessions to authenticated;
 grant select, insert, update on public.profiles to authenticated;
 
 -- ============================================================
--- تحقّق
+-- 4) المهمة اليتيمة
+-- ============================================================
+--
+-- صفّ واحد بلا user_id لن يراه أحد بعد اليوم. يُنسَب إلى صاحب بقيّة المهام
+-- حين يكون في الجدول صاحبٌ واحد — وإن تعدّد الملّاك تُرك كما هو، فنسبة
+-- مهمةٍ إلى الشخص الخطأ أسوأ من تركها مخفيّة.
+
+update public.eisenhower_tasks
+   set user_id = (
+     select t.user_id
+     from public.eisenhower_tasks t
+     where t.user_id is not null
+     group by t.user_id
+     having count(*) = (select count(*) from public.eisenhower_tasks where user_id is not null)
+   )
+ where user_id is null;
+
+-- ============================================================
+-- تحقّق — يجب أن يكون كل شيء أدناه صحيحاً
 -- ============================================================
 
--- الأعمدة الجديدة موجودة؟ يجب أن يعود صفّان.
-select table_name, column_name
-from information_schema.columns
-where table_schema = 'public'
-  and column_name = 'user_id'
-  and table_name in ('eisenhower_tasks', 'waf_focus_sessions');
-
--- كم صفّاً قديماً بلا مالك؟ إن كان صفراً فلا شيء يحتاج نقلاً.
-select count(*) as rows_without_owner from public.eisenhower_tasks where user_id is null;
-
--- لنقل صفوف قديمة إلى حسابك بعد التسجيل، استبدل البريد ثم شغّل:
---
---   update public.eisenhower_tasks
---      set user_id = (select id from auth.users where email = 'you@example.com')
---    where user_id is null;
---
---   update public.waf_focus_sessions s
---      set user_id = t.user_id
---     from public.eisenhower_tasks t
---    where s.task_id = t.id and s.user_id is null;
+select
+  (select count(*) from information_schema.tables
+    where table_schema='public' and table_name='profiles')                                as profiles_table,
+  (select count(*) from information_schema.columns
+    where table_schema='public' and table_name='waf_focus_sessions' and column_name='user_id') as sessions_user_id,
+  (select is_nullable from information_schema.columns
+    where table_schema='public' and table_name='waf_focus_sessions' and column_name='owner_code') as sessions_owner_nullable,
+  (select count(*) from pg_policies
+    where tablename='eisenhower_tasks' and policyname like 'code %')                      as leftover_code_policies,
+  (select count(*) from public.eisenhower_tasks where user_id is null)                    as tasks_without_owner,
+  (select count(*) from public.eisenhower_tasks)                                          as total_tasks;
