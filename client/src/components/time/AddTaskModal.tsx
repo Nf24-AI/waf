@@ -10,12 +10,14 @@ import {
   Loader2,
   Plus,
   Sparkles,
+  FolderPlus,
   Target,
   Trash2,
   Users,
   X,
 } from "lucide-react";
 import { QUADRANTS, type Quadrant, type RepeatRule } from "@shared/tasks";
+import { type Project } from "@shared/projects";
 import mountains from "@/assets/night-mountains.jpg";
 
 /**
@@ -63,6 +65,7 @@ const DURATION_OPTIONS = [25, 45, 60, 90] as const;
 
 export interface NewTask {
   title: string;
+  projectId?: string;
   description?: string;
   quadrant?: Quadrant;
   estimatedMinutes?: number;
@@ -91,13 +94,17 @@ export function scheduleFrom(
 export default function AddTaskModal({
   pending,
   error,
+  projects,
   onClose,
   onSubmit,
+  onCreateProject,
 }: {
   pending: boolean;
   error: string | null;
+  projects: Project[];
   onClose: () => void;
   onSubmit: (task: NewTask) => void;
+  onCreateProject: (name: string) => Promise<Project | null>;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -105,6 +112,9 @@ export default function AddTaskModal({
   const [minutes, setMinutes] = useState(60);
   const [when, setWhen] = useState("");
   const [reminder, setReminder] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [newProject, setNewProject] = useState("");
+  const [addingProject, setAddingProject] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -132,6 +142,7 @@ export default function AddTaskModal({
       estimatedMinutes: minutes,
       scheduledStart: slot?.start,
       scheduledEnd: slot?.end,
+      projectId: projectId || undefined,
       // التذكير بلا موعد لا معنى له: لا شيء يُنبَّه عنده.
       reminderMinutes: slot && reminder !== "" ? Number(reminder) : undefined,
     });
@@ -227,6 +238,57 @@ export default function AddTaskModal({
               })}
             </div>
           </fieldset>
+
+          {/*
+            المشروع اختياري، وإنشاؤه من هنا لا من صفحة أخرى: من يكتب مهمةً
+            لمشروع جديد يريد المشروع الآن، ونقلُه إلى مكان آخر يقطع ما يفعله.
+          */}
+          <div className="ntk-field">
+            <span className="ntk-label">المشروع (اختياري)</span>
+            {addingProject ? (
+              <span className="ntk-input">
+                <FolderPlus size={17} aria-hidden="true" />
+                <input
+                  type="text"
+                  value={newProject}
+                  maxLength={80}
+                  autoFocus
+                  placeholder="اسم المشروع الجديد"
+                  onChange={e => setNewProject(e.target.value)}
+                  onKeyDown={async e => {
+                    if (e.key !== "Enter") return;
+                    // داخل نموذج: الضغط هنا لا يُرسل المهمة قبل أوانها.
+                    e.preventDefault();
+                    const name = newProject.trim();
+                    if (!name) return;
+                    const made = await onCreateProject(name);
+                    if (made) setProjectId(made.id);
+                    setNewProject("");
+                    setAddingProject(false);
+                  }}
+                />
+              </span>
+            ) : (
+              <select
+                value={projectId}
+                onChange={e => {
+                  if (e.target.value === "__new") {
+                    setAddingProject(true);
+                    return;
+                  }
+                  setProjectId(e.target.value);
+                }}
+              >
+                <option value="">بدون مشروع</option>
+                {projects.map(project => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+                <option value="__new">+ مشروع جديد…</option>
+              </select>
+            )}
+          </div>
 
           <div className="ntk-row">
             <label className="ntk-field">

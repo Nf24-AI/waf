@@ -22,6 +22,12 @@ export default function AddTask() {
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
+  const projects = trpc.projects.list.useQuery();
+
+  const addProject = trpc.projects.create.useMutation({
+    onSuccess: () => utils.projects.list.invalidate(),
+  });
+
   const create = trpc.tasks.create.useMutation({
     onSuccess: async task => {
       await utils.tasks.listOpen.invalidate();
@@ -47,8 +53,10 @@ export default function AddTask() {
       <AddTaskModal
         pending={create.isPending}
         error={create.error ? "تعذّر حفظ المهمة. حاول مرة أخرى." : null}
+        projects={projects.data ?? []}
         onClose={() => navigate(TIME_MANAGEMENT_ROUTE)}
         onSubmit={submit}
+        onCreateProject={name => addProject.mutateAsync({ name }).catch(() => null)}
       />
     </>
   );
