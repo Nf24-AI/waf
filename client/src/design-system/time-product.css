@@ -15,11 +15,29 @@
  */
 .tp-frame,
 .ntk-scrim {
+  /* لوحة المرجع (§15) — تحلّ محلّ الكحليّ العامّ داخل المنتج وحده. */
+  --canvas: #07111F;
+  --surface-sunken: #0B1728;
+  --surface-card: #0F2035;
+  --surface-raised: #12263F;
+  --surface-overlay: #12263F;
+  --border-hairline: #18293E;
+  --border-default: #20344D;
+  --border-strong: #2C4665;
+
+  --text-primary: #F4F7FB;
+  --text-body: #F4F7FB;
+  --text-secondary: #9AAAC0;
+  --text-tertiary: #9AAAC0;
+  --text-disabled: #687A92;
+
   --azure-200: #B9CEFF;
   --azure-300: #8FB2FF;
-  --azure-400: #4C82F7;
-  --azure-500: #2F62E0;
+  --azure-400: #3F7FF5;
+  --azure-500: #5590FF;
   --azure-900: #16294F;
+
+  --tp-purple: #8B6FF7;
 
   --accent: var(--azure-400);
   --accent-hover: var(--azure-500);
@@ -29,12 +47,13 @@
   --focus-ring: 0 0 0 2px var(--navy-950), 0 0 0 4px var(--azure-400);
 
   /* ألوان الحالة كما في المرجع: الشارة تُقرأ بلونها قبل نصّها. */
-  --tp-danger: #E5564B;
-  --tp-danger-quiet: #3A1614;
-  --tp-warn: #E0A33C;
-  --tp-warn-quiet: #33260F;
-  --tp-go: #35B47E;
-  --tp-go-quiet: #102C22;
+  --tp-danger: #F45B69;
+  --tp-danger-quiet: #3A1620;
+  --tp-warn: #F2B233;
+  --tp-warn-quiet: #33270F;
+  --tp-go: #35C98A;
+  --tp-go-quiet: #0F2C22;
+  --tp-purple-quiet: #221B45;
 
   --tp-side: 236px;
   --tp-rail: 76px;
@@ -56,7 +75,7 @@
 
 @media (min-width: 1024px) {
   /* الشريط ثابت، والمحتوى يفسح له بالهامش لا بالتدفّق: تمريرة واحدة للصفحة. */
-  .tp-body { padding-inline-start: var(--tp-side); }
+  .tp-body { padding-left: var(--tp-side); }
 }
 
 .tp-main {
@@ -75,7 +94,14 @@
   .tp-side {
     position: fixed;
     inset-block: 0;
-    inset-inline-start: 0;
+    /*
+     * على اليسار لا على بداية السطر.
+     *
+     * الصفحة RTL فبدايتها اليمين، لكن مراجع التصميم الثلاثة تضع الشريط
+     * يساراً. فيُثبَّت بـ`left` صراحةً بدل `inset-inline-start` الذي ينقلب
+     * مع الاتجاه.
+     */
+    left: 0;
     z-index: 30;
     inline-size: var(--tp-side);
     display: flex;
@@ -83,7 +109,7 @@
     gap: var(--space-9);
     padding: var(--space-10) var(--space-6) var(--space-8);
     background: var(--surface-sunken);
-    border-inline-end: var(--border-w) solid var(--border-hairline);
+    border-right: var(--border-w) solid var(--border-default);
     overflow-y: auto;
   }
 }

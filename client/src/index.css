@@ -13,6 +13,7 @@
 @import "tw-animate-css";
 /* طبقة منتج إدارة الوقت: بعد tailwind كي تغلب أدواته العامة. */
 @import "./design-system/time-product.css";
+@import "./design-system/board.css";
 
 :root {
   font-family: var(--font-sans);
