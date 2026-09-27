@@ -62,7 +62,7 @@ export default function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, [panel]);
 
-  const today = new Date().toLocaleDateString("ar-SA", {
+  const today = new Date().toLocaleDateString("ar", {
     weekday: "long",
     day: "numeric",
     month: "long",

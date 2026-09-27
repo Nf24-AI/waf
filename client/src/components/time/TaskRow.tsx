@@ -41,8 +41,8 @@ export function scheduleLabel(task: Task): string | null {
   if (!task.scheduledStart) return null;
   const start = new Date(task.scheduledStart);
   const sameDay = start.toDateString() === new Date().toDateString();
-  const time = start.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: false });
-  const day = sameDay ? "اليوم" : start.toLocaleDateString("ar-SA", { weekday: "long" });
+  const time = start.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const day = sameDay ? "اليوم" : start.toLocaleDateString("ar", { weekday: "long" });
   return `${day} ${time}`;
 }
 

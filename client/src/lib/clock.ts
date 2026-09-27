@@ -68,7 +68,12 @@ export function dayStrip(now: Date = new Date(), back = 2, forward = 2): Date[] 
   return days;
 }
 
-/** «السبت» — اسم اليوم وحده، لشريط الأيام. */
+/**
+ * «السبت» — اسم اليوم وحده، لشريط الأيام.
+ *
+ * بـ«ar» لا «ar-SA»: الأخيرة تُخرج أرقاماً هندية (٢٨) بينما بقيّة الواجهة
+ * والمرجع بأرقام غربية (28). واجتماعهما في شاشة واحدة يبدو عطلاً.
+ */
 export function dayName(date: Date): string {
-  return date.toLocaleDateString("ar-SA", { weekday: "long" });
+  return date.toLocaleDateString("ar", { weekday: "long" });
 }

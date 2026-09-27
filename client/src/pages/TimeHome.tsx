@@ -45,8 +45,8 @@ function timeLabel(task: Task): string {
   const start = new Date(task.scheduledStart);
   const today = new Date();
   const sameDay = start.toDateString() === today.toDateString();
-  const clock = start.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: false });
-  return sameDay ? clock : `${start.toLocaleDateString("ar-SA", { weekday: "long" })} ${clock}`;
+  const clock = start.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return sameDay ? clock : `${start.toLocaleDateString("ar", { weekday: "long" })} ${clock}`;
 }
 
 /** لون الشارة من الربع: الأحمر للمهمّ العاجل وحده، وإلا فقد فقد معناه. */

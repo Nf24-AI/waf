@@ -18,7 +18,7 @@ import { trpc } from "@/lib/trpc";
 
 /** «الثلاثاء ٢٢ سبتمبر» — العنوان الذي يُفصل به اليوم عمّا قبله. */
 function dayTitle(iso: string): string {
-  return new Date(iso).toLocaleDateString("ar-SA", {
+  return new Date(iso).toLocaleDateString("ar", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -26,7 +26,7 @@ function dayTitle(iso: string): string {
 }
 
 function timeOf(iso: string): string {
-  return new Date(iso).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date(iso).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 /** المنجَز مجموعاً بيومه، بالترتيب الذي جاء به من الخادم (الأحدث أولاً). */

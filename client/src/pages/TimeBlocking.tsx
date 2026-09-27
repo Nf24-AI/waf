@@ -219,7 +219,7 @@ export default function TimeBlocking() {
             <div className="tb-done">
               <p className="tb-done-title">حُجز وقت «{done.title}».</p>
               <p className="tb-done-when">
-                {done.scheduledStart && new Date(done.scheduledStart).toLocaleString("ar-SA", {
+                {done.scheduledStart && new Date(done.scheduledStart).toLocaleString("ar", {
                   weekday: "long",
                   hour: "2-digit",
                   minute: "2-digit",
