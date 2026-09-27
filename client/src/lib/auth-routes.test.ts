@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAuthRoute, isPrivateRoute, loginHref, redirectTarget } from "./auth-routes";
-import { TASKS_ROUTE, TIME_HOME_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { PLATFORM_ROUTE, TASKS_ROUTE, TIME_HOME_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
 
 /**
  * الحارس يُخطئ في اتجاهين: يترك صفحة خاصّة مكشوفة، أو يحوّل الزائر إلى
@@ -45,12 +45,12 @@ describe("حفظ الوجهة", () => {
   it("يسقط الوجهة الخارجية — صفحة الدخول ليست أداة تحويل", () => {
     expect(loginHref("https://evil.example/steal")).toBe("/login");
     expect(loginHref("//evil.example")).toBe("/login");
-    expect(redirectTarget("?redirect=https%3A%2F%2Fevil.example")).toBe(TIME_HOME_ROUTE);
-    expect(redirectTarget("?redirect=%2F%2Fevil.example")).toBe(TIME_HOME_ROUTE);
+    expect(redirectTarget("?redirect=https%3A%2F%2Fevil.example")).toBe(PLATFORM_ROUTE);
+    expect(redirectTarget("?redirect=%2F%2Fevil.example")).toBe(PLATFORM_ROUTE);
   });
 
-  it("يعود إلى الرئيسية حين لا وجهة", () => {
-    expect(redirectTarget("")).toBe(TIME_HOME_ROUTE);
-    expect(redirectTarget("?other=1")).toBe(TIME_HOME_ROUTE);
+  it("يعود إلى المنصّة حين لا وجهة", () => {
+    expect(redirectTarget("")).toBe(PLATFORM_ROUTE);
+    expect(redirectTarget("?other=1")).toBe(PLATFORM_ROUTE);
   });
 });

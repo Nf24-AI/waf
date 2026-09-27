@@ -3,6 +3,7 @@ import {
   ARCHIVE_ROUTE,
   DECISIONS_ROUTE,
   MEETING_ROUTES,
+  PLATFORM_ROUTE,
   SETTINGS_ROUTE,
   STATISTICS_ROUTE,
   STATUS_REPORT_ROUTE,
@@ -77,9 +78,9 @@ export function loginHref(intended?: string): string {
   return `${LOGIN_ROUTE}?redirect=${encodeURIComponent(intended)}`;
 }
 
-/** الوجهة بعد الدخول: ما طُلب، وإلا الرئيسية. */
+/** الوجهة بعد الدخول: ما طُلب، وإلا المنصّة — منها يختار الخدمة. */
 export function redirectTarget(search: string): string {
   const raw = new URLSearchParams(search).get("redirect");
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return TIME_HOME_ROUTE;
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return PLATFORM_ROUTE;
   return raw;
 }
