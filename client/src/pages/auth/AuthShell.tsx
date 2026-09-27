@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "wouter";
 import { LANDING_ROUTE } from "@shared/routes";
-import tanomah from "@/assets/village-at-dusk.jpg";
+import mountains from "@/assets/night-mountains.jpg";
 
 /**
  * إطار صفحات المصادقة.
@@ -25,7 +25,7 @@ export default function AuthShell({
 }) {
   return (
     <div className="au-screen" data-waf-theme="navy" dir="rtl">
-      <img className="au-photo" src={tanomah} alt="" aria-hidden="true" />
+      <img className="au-photo" src={mountains} alt="" aria-hidden="true" />
 
       <main className="au-card">
         <Link className="au-brand" href={LANDING_ROUTE}>

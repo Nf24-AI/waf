@@ -20,7 +20,7 @@ import { lastWeekStart } from "@shared/statistics";
 import { quadrantTitle, type Task } from "@shared/tasks";
 import { TASKS_ROUTE, TIME_MANAGEMENT_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
-import tanomah from "@/assets/village-at-dusk.jpg";
+import mountains from "@/assets/night-mountains.jpg";
 import { readName } from "@/lib/preferences";
 import { trpc } from "@/lib/trpc";
 
@@ -106,7 +106,7 @@ export default function TimeHome() {
       )}
 
       <section className="tp-hero">
-        <img className="tp-hero-photo" src={tanomah} alt="" aria-hidden="true" />
+        <img className="tp-hero-photo" src={mountains} alt="" aria-hidden="true" />
         <div className="tp-hero-text">
           <h1 className="tp-hello">{name ? `${greeting()}، ${name}` : greeting()}</h1>
           <p className="tp-hello-line">خطوة اليوم تصنع فرقاً أكبر غداً.</p>
@@ -269,7 +269,7 @@ export default function TimeHome() {
           </section>
 
           <section className="tp-quote" aria-label="اقتباس اليوم">
-            <img src={tanomah} alt="" aria-hidden="true" />
+            <img src={mountains} alt="" aria-hidden="true" />
             <p className="tp-quote-eyebrow">اقتباس اليوم</p>
             <p className="tp-quote-text">«الوقت المناسب يبدأ من قرار بسيط.»</p>
           </section>

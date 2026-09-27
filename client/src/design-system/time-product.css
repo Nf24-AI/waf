@@ -1301,3 +1301,57 @@
 @media (prefers-reduced-motion: reduce) {
   .ntk-quad, .ntk-input, .ntk-close, .ntk-radio { transition: none; }
 }
+
+/* ---- جوّ المنتج: الجبل خلف كل شيء ---- */
+/*
+ * في المرجع لا تقف الصورة داخل البطاقات وحدها — الليل خلف التطبيق كلّه،
+ * يُرى أعلى اليمين ويخفت نزولاً حتى يصير كحليّاً خالصاً. وهذا ما يجعل واف
+ * تبدو مكاناً لا لوحةَ تحكّم.
+ *
+ * ثابتة لا تتمرّر: خلفيةٌ تتحرّك مع المحتوى تصير عنصراً يُتابَع بالعين،
+ * والمقصود ضدّ ذلك — أن تُنسى ويبقى أثرها.
+ */
+.tp-frame::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("../assets/night-mountains.jpg");
+  background-size: cover;
+  background-position: 50% 0;
+  /* خافتة جداً: النصّ فوقها يجب أن يُقرأ بلا جهد، والصورة تُحسّ لا تُشاهَد. */
+  opacity: .3;
+}
+.tp-frame::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* حجابٌ يثقل نزولاً: القمم تبقى أعلى اليمين، والأسفل يصفو للقراءة. */
+  background:
+    linear-gradient(to bottom, rgba(8, 17, 31, .58) 0%, rgba(8, 17, 31, .93) 62%, var(--canvas) 100%),
+    linear-gradient(to left, rgba(8, 17, 31, 0) 0%, rgba(8, 17, 31, .75) 70%);
+}
+
+/*
+ * المحتوى فوق الحجاب، والشريط الجانبي صلب كما في المرجع: الأقسام تُقرأ
+ * عشرات المرات في اليوم، وقراءتها فوق سماءٍ متغيّرة تُتعب.
+ *
+ * ولا backdrop-filter هنا: جرّبناه في هذا المشروع فأوقف الرسم. والحجاب
+ * أعلاه يؤدّي الغرض بلا تلك الكلفة.
+ */
+.tp-frame > * { position: relative; z-index: 1; }
+.tp-side { background: var(--surface-sunken); }
+.tp-top { background: color-mix(in srgb, var(--canvas) 88%, transparent); }
+
+/* والبطاقات شبه شفّافة ليُحسّ الجبل خلفها، كما في المرجع. */
+.tp-frame .tp-card,
+.tp-frame .tp-kpi,
+.tp-frame .ei-cell,
+.tp-frame .tb-card { background: color-mix(in srgb, var(--surface-card) 82%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-side, .tp-top { backdrop-filter: none; }
+}

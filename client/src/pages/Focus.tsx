@@ -7,7 +7,7 @@ import { type Task } from "@shared/tasks";
 import { SETTINGS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
 import FlowSteps from "@/components/time/FlowSteps";
 import TimeLayout from "@/components/time/TimeLayout";
-import tanomah from "@/assets/village-at-dusk.jpg";
+import mountains from "@/assets/night-mountains.jpg";
 import { clock } from "@/lib/clock";
 import { readFocusMinutes } from "@/lib/preferences";
 import { useTaskParam } from "@/lib/task-param";
@@ -155,7 +155,7 @@ export default function Focus() {
 
         {task && !asking && (
           <section className="tp-focus">
-            <img src={tanomah} alt="" aria-hidden="true" />
+            <img src={mountains} alt="" aria-hidden="true" />
             <p className="tp-focus-task">{task.title}</p>
 
             <div className="tp-dial">

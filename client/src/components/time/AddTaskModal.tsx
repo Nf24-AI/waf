@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { QUADRANTS, type Quadrant, type RepeatRule } from "@shared/tasks";
-import tanomah from "@/assets/village-at-dusk.jpg";
+import mountains from "@/assets/night-mountains.jpg";
 
 /**
  * إضافة مهمة — نافذة فوق مكانك، لا صفحة تنقلك عنه.
@@ -141,7 +141,7 @@ export default function AddTaskModal({
     <div className="ntk-scrim" role="presentation" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="ntk" role="dialog" aria-modal="true" aria-labelledby="ntk-title" dir="rtl">
         <header className="ntk-head">
-          <img src={tanomah} alt="" aria-hidden="true" />
+          <img src={mountains} alt="" aria-hidden="true" />
           <button type="button" className="ntk-close" onClick={onClose} aria-label="إغلاق">
             <X size={18} aria-hidden="true" />
           </button>
