@@ -18,10 +18,10 @@ export default function SummaryCards({ counts }: { counts: BoardCounts }) {
     {
       tone: "purple",
       icon: Target,
-      value: counts.undecided,
-      title: "تحتاج قراراً",
-      line: "صنّفها لتعرف أولويتها",
-      href: TIME_METHOD_ROUTES.eisenhower,
+      value: counts.needsTime,
+      title: "بلا وقت",
+      line: "احجز لها وقتاً",
+      href: TIME_METHOD_ROUTES.timeBlocking,
     },
     {
       tone: "go",
@@ -45,7 +45,7 @@ export default function SummaryCards({ counts }: { counts: BoardCounts }) {
       value: counts.late,
       title: "مهام متأخّرة",
       line: "حان وقت إتمامها",
-      href: TIME_METHOD_ROUTES.timeBlocking,
+      href: TASKS_ROUTE,
     },
   ] as const;
 

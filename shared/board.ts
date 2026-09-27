@@ -56,8 +56,8 @@ export function applyFilter(tasks: Task[], filter: FilterId, now: Date = new Dat
 }
 
 export interface BoardCounts {
-  /** ما لم يُصنَّف ولم يُجدوَل — ما يحتاج قراراً. */
-  undecided: number;
+  /** ما لا موعد له — العنق الحقيقي بين التصنيف والإنجاز. */
+  needsTime: number;
   week: number;
   today: number;
   late: number;
@@ -66,16 +66,19 @@ export interface BoardCounts {
 /**
  * الأرقام الأربعة — محسوبة من المهام نفسها.
  *
- * المرجع يسمّي الأولى «أهداف قيد التنفيذ»، ولا أهداف في هذا المنتج بعد.
- * وعرضُ رقمٍ لكيان غير موجود كذبٌ مرتّب، فحلّت محلّها «تحتاج قراراً» —
- * وهي السؤال الحقيقي الذي تجيب عنه المصفوفة.
+ * المرجع يسمّي الأولى «أهداف قيد التنفيذ»، ولا أهداف في هذا المنتج بعد،
+ * وعرضُ رقمٍ لكيان غير موجود كذبٌ مرتّب.
+ *
+ * وكانت «تحتاج قراراً» (بلا تصنيف وبلا موعد)، فقرأت صفراً على بيانات كلّها
+ * مصنَّفة وكلّها بلا موعد — رقمٌ صادق لا يصف شيئاً. والعنق الحقيقي هناك هو
+ * الجدولة، فصارت تعدّ ما لا موعد له. واللوحة تصف الحال لا تُثبت صحّتها.
  */
 export function countsOf(open: Task[], completed: Task[], now: Date = new Date()): BoardCounts {
   const stamp = now.getTime();
   const dayStart = startOfDay(now);
 
   return {
-    undecided: open.filter(t => !t.quadrant && !t.scheduledStart).length,
+    needsTime: open.filter(t => !t.scheduledStart).length,
     week: open.filter(t => t.scheduledStart && new Date(t.scheduledStart).getTime() < dayStart + 7 * DAY).length,
     today: open.filter(t => t.scheduledStart && new Date(t.scheduledStart).getTime() < dayStart + DAY).length,
     late: open.filter(t => t.scheduledEnd && new Date(t.scheduledEnd).getTime() < stamp).length,

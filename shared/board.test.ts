@@ -79,14 +79,14 @@ describe("أرقام اللوحة", () => {
       [],
       NOW,
     );
-    expect(counts.undecided).toBe(1);
+    expect(counts.needsTime).toBe(2);
     expect(counts.today).toBe(2);
     expect(counts.week).toBe(3);
     expect(counts.late).toBe(2);
   });
 
   it("تقرأ أصفاراً بلا انهيار", () => {
-    expect(countsOf([], [], NOW)).toEqual({ undecided: 0, week: 0, today: 0, late: 0 });
+    expect(countsOf([], [], NOW)).toEqual({ needsTime: 0, week: 0, today: 0, late: 0 });
   });
 });
 
