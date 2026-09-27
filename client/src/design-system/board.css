@@ -410,3 +410,52 @@
   .bd-row-go { transition: none; }
   .bd-card:hover { transform: none; }
 }
+
+/* ---- بطاقات المشاريع ---- */
+
+.bd-projects { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-4); }
+.bd-project {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(90px, 140px) auto;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-default);
+  background: var(--surface-sunken);
+}
+.bd-project-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 42px;
+  block-size: 42px;
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.bd-project-body { min-inline-size: 0; display: grid; gap: 2px; }
+.bd-project-name {
+  font: var(--fw-medium) var(--fs-14) / 1.4 var(--font-sans);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bd-project-sub { font: var(--fs-12) / 1.4 var(--font-sans); color: var(--text-disabled); }
+.bd-project-track { block-size: 6px; border-radius: 999px; background: var(--alpha-fill); overflow: hidden; }
+.bd-project-fill { display: block; block-size: 100%; border-radius: 999px; background: currentColor; }
+.bd-project-percent {
+  font: var(--fw-medium) var(--fs-14) / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.bd-project[data-tone="accent"] { color: var(--accent); }
+.bd-project[data-tone="go"]     { color: var(--tp-go); }
+.bd-project[data-tone="warn"]   { color: var(--tp-warn); }
+.bd-project[data-tone="purple"] { color: var(--tp-purple); }
+.bd-project[data-tone="danger"] { color: var(--tp-danger); }
+
+@media (max-width: 560px) {
+  .bd-project { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .bd-project-track { grid-column: 1 / -1; }
+}

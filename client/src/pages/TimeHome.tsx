@@ -8,6 +8,7 @@ import { ADD_TASK_ROUTE } from "@shared/routes";
 import { lastWeekStart } from "@shared/statistics";
 import FilterBar from "@/components/board/FilterBar";
 import Hero from "@/components/board/Hero";
+import ProjectList from "@/components/board/ProjectList";
 import QuadrantPanel from "@/components/board/QuadrantPanel";
 import SummaryCards from "@/components/board/SummaryCards";
 import TaskList from "@/components/board/TaskList";
@@ -32,6 +33,7 @@ export default function TimeHome() {
   const enabled = status.data?.configured === true;
 
   const open = trpc.tasks.listOpen.useQuery(undefined, { enabled });
+  const projects = trpc.projects.list.useQuery(undefined, { enabled });
   const week = trpc.tasks.listCompleted.useQuery({ since: lastWeekStart() }, { enabled });
 
   const complete = trpc.tasks.complete.useMutation({
@@ -102,7 +104,17 @@ export default function TimeHome() {
           }
         />
 
-        <QuadrantPanel tasks={tasks} />
+        {/*
+          المشاريع إن وُجدت، وإلا فتوزيع الأرباع.
+          
+          لا بطاقات فارغة بأسماء مخترعة: من لم ينشئ مشروعاً يرى شيئاً حقيقياً
+          عن مهامه بدل هيكلٍ ينتظر أن يُملأ.
+        */}
+        {(projects.data?.length ?? 0) > 0 ? (
+          <ProjectList projects={projects.data ?? []} tasks={everything} />
+        ) : (
+          <QuadrantPanel tasks={tasks} />
+        )}
       </div>
     </TimeLayout>
   );

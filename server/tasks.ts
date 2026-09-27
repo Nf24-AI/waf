@@ -110,6 +110,7 @@ interface Row {
   completed_at: string | null;
   repeat_rule: RepeatRule | null;
   reminder_minutes: number | null;
+  project_id: string | null;
   is_done: boolean;
   created_at: string;
 }
@@ -140,6 +141,7 @@ function toTask(row: Row, sessions = 0): Task {
     estimatedMinutes: row.estimated_minutes ?? undefined,
     repeatRule: row.repeat_rule ?? undefined,
     reminderMinutes: row.reminder_minutes ?? undefined,
+    projectId: row.project_id ?? undefined,
     completedSessions: sessions,
     createdAt: row.created_at,
     completedAt: completedAt ?? undefined,
@@ -149,7 +151,7 @@ function toTask(row: Row, sessions = 0): Task {
 }
 
 /** الأعمدة التي قد لا تكون رُحِّلت بعد. تُحذف من الطلب حين يقول الخادم إنها غائبة. */
-const OPTIONAL_COLUMNS = ["repeat_rule", "reminder_minutes"] as const;
+const OPTIONAL_COLUMNS = ["repeat_rule", "reminder_minutes", "project_id"] as const;
 type OptionalColumn = (typeof OPTIONAL_COLUMNS)[number];
 
 const BASE_COLUMNS =
@@ -264,6 +266,7 @@ export async function createTask(who: Identity, input: {
   estimatedMinutes?: number;
   repeatRule?: RepeatRule;
   reminderMinutes?: number;
+  projectId?: string;
 }): Promise<Task> {
   const split = input.quadrant ? splitQuadrant(input.quadrant) : null;
 
@@ -284,7 +287,11 @@ export async function createTask(who: Identity, input: {
         scheduled_start: input.scheduledStart ?? null,
         scheduled_end: input.scheduledEnd ?? null,
         estimated_minutes: input.estimatedMinutes ?? null,
-        ...optional({ repeat_rule: input.repeatRule ?? null, reminder_minutes: input.reminderMinutes ?? null }),
+        ...optional({
+        repeat_rule: input.repeatRule ?? null,
+        reminder_minutes: input.reminderMinutes ?? null,
+        project_id: input.projectId ?? null,
+      }),
       }),
     }),
   );

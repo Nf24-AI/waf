@@ -1,4 +1,5 @@
 import { authedProcedure } from "./auth";
+import { createProject, listProjects } from "./projects";
 import { workspaceAccess, workspaceProcedure } from "./workspace";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -123,6 +124,22 @@ export const appRouter = router({
    * قاعدة Notion واحدة مشتركة لا صفوفاً مملوكة. ومفتاح
    * Supabase ورمز المالك لا يغادران الخادم.
    */
+  /**
+   * المشاريع — حاويات للمهام، وتقدّمها محسوب من مهامها لا مخزّناً.
+   */
+  projects: router({
+    list: authedProcedure.query(({ ctx }) => listProjects(ctx.identity)),
+
+    create: authedProcedure
+      .input(
+        z.object({
+          name: z.string().trim().min(1, "المشروع يحتاج اسماً").max(80),
+          color: z.enum(["accent", "go", "warn", "purple", "danger"]).optional(),
+        }),
+      )
+      .mutation(({ ctx, input }) => createProject(ctx.identity, input)),
+  }),
+
   tasks: router({
     /**
      * `status` وحده عامّ: الصفحات تسأله قبل أن تعرف إن كان هناك مستخدم،
@@ -151,6 +168,7 @@ export const appRouter = router({
           estimatedMinutes: z.number().int().positive().optional(),
           repeatRule: z.enum(["daily", "weekly"]).optional(),
           reminderMinutes: z.number().int().min(0).max(1440).optional(),
+          projectId: z.string().uuid().optional(),
         }),
       )
       .mutation(({ ctx, input }) =>
