@@ -138,7 +138,12 @@ export default function AddTaskModal({
   }
 
   return (
-    <div className="ntk-scrim" role="presentation" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div
+      className="ntk-scrim"
+      data-waf-theme="navy"
+      role="presentation"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
       <div className="ntk" role="dialog" aria-modal="true" aria-labelledby="ntk-title" dir="rtl">
         <header className="ntk-head">
           <img src={mountains} alt="" aria-hidden="true" />
@@ -211,12 +216,12 @@ export default function AddTaskModal({
                     // بعد أن يُجرَّب أحدها، وإلا صار أوّل ضغط قراراً لا رجعة فيه.
                     onClick={() => setQuadrant(picked ? "" : item.id)}
                   >
-                    <span className="ntk-radio" aria-hidden="true" />
+                    <Icon size={19} aria-hidden="true" />
                     <span className="ntk-quad-text">
                       <b>{item.title}</b>
                       <i>{item.verb}</i>
                     </span>
-                    <Icon size={19} aria-hidden="true" />
+                    <span className="ntk-radio" aria-hidden="true" />
                   </button>
                 );
               })}
@@ -275,19 +280,20 @@ export default function AddTaskModal({
           )}
 
           <footer className="ntk-foot">
-            <p className="ntk-hint">
-              <Sparkles size={15} aria-hidden="true" />
-              يمكنك تعديل كل هذه الخيارات لاحقاً.
-            </p>
             <div className="ntk-acts">
-              <button type="button" className="tp-btn" onClick={onClose}>
-                إلغاء
-              </button>
               <button type="submit" className="tp-btn tp-btn-primary" disabled={pending || !title.trim()}>
                 {pending ? <Loader2 size={16} className="tm-spin" aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
                 إضافة المهمة
               </button>
+              <button type="button" className="tp-btn" onClick={onClose}>
+                إلغاء
+              </button>
             </div>
+
+            <p className="ntk-hint">
+              <Sparkles size={15} aria-hidden="true" />
+              يمكنك تعديل كل هذه الخيارات لاحقاً.
+            </p>
           </footer>
         </form>
       </div>

@@ -8,7 +8,13 @@
  * والطبقة مُحاطة بـ.tp-frame فلا تتسرّب: بقيّة المنصّة على ألوانها.
  */
 
-.tp-frame {
+/*
+ * النافذة تُرسم خارج `.tp-frame` (فوق الصفحة كلّها)، فلا ترث رموزه. وبلا
+ * هذا السطر تسقط إلى سمة الجذر السماوية — وهو ما ظهر: زرّ أخضر مزرقّ في
+ * منتج أزرق.
+ */
+.tp-frame,
+.ntk-scrim {
   --azure-200: #B9CEFF;
   --azure-300: #8FB2FF;
   --azure-400: #4C82F7;
@@ -1121,14 +1127,16 @@
   inline-size: 100%;
   block-size: 100%;
   object-fit: cover;
-  opacity: .55;
+  /* كانت تحت حجابٍ ثقيل فبدت سوداء؛ المرجع يُظهر القمم بوضوح. */
+  opacity: .95;
+  object-position: 50% 28%;
 }
 .ntk-head::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(to top, var(--surface-card) 4%, rgba(12, 26, 46, .55) 100%);
+  background: linear-gradient(to top, var(--surface-card) 2%, rgba(12, 26, 46, .78) 45%, rgba(12, 26, 46, .30) 100%);
 }
 .ntk-head-text h2 {
   margin: 0;
@@ -1250,13 +1258,36 @@
 }
 .ntk-quad.is-picked .ntk-radio { border-color: currentColor; box-shadow: inset 0 0 0 4px currentColor; }
 
-.ntk-quad[data-q="important_urgent"]         { color: var(--tp-danger); }
-.ntk-quad[data-q="important_not_urgent"]     { color: var(--tp-go); }
-.ntk-quad[data-q="not_important_urgent"]     { color: var(--tp-warn); }
-.ntk-quad[data-q="not_important_not_urgent"] { color: var(--azure-300); }
+/*
+ * اللون قائم قبل الاختيار لا بعده.
+ *
+ * كانت البطاقات رمادية حتى تُضغط، فيقرأ المستخدم أربعة عناوين متشابهة
+ * ليقرّر. وفي المرجع يُرى الربع بلونه قبل أن يُقرأ اسمه — وهذا نصف فائدة
+ * المصفوفة.
+ */
+.ntk-quad[data-q="important_urgent"] {
+  color: var(--tp-danger);
+  border-color: color-mix(in srgb, var(--tp-danger) 42%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tp-danger) 20%, var(--surface-sunken)), var(--surface-sunken));
+}
+.ntk-quad[data-q="important_not_urgent"] {
+  color: var(--azure-300);
+  border-color: color-mix(in srgb, var(--accent) 46%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, var(--surface-sunken)), var(--surface-sunken));
+}
+.ntk-quad[data-q="not_important_urgent"] {
+  color: var(--tp-warn);
+  border-color: color-mix(in srgb, var(--tp-warn) 42%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tp-warn) 20%, var(--surface-sunken)), var(--surface-sunken));
+}
+.ntk-quad[data-q="not_important_not_urgent"] {
+  color: var(--mist-200, #CCD8EA);
+  border-color: var(--border-default);
+  background: var(--surface-sunken);
+}
 .ntk-quad.is-picked {
   border-color: currentColor;
-  background: color-mix(in srgb, currentColor 12%, var(--surface-sunken));
+  box-shadow: 0 0 0 1px currentColor inset;
 }
 .ntk-quad:hover { border-color: currentColor; }
 
@@ -1297,7 +1328,9 @@
   color: var(--text-tertiary);
 }
 .ntk-hint svg { color: var(--accent); }
-.ntk-acts { display: flex; gap: var(--space-4); margin-inline-start: auto; }
+/* الأزرار عند بداية السطر والتلميح يُدفع إلى آخره، كما في المرجع. */
+.ntk-acts { display: flex; gap: var(--space-4); }
+.ntk-foot .ntk-hint { margin-inline-start: auto; }
 
 @media (prefers-reduced-motion: reduce) {
   .ntk-quad, .ntk-input, .ntk-close, .ntk-radio { transition: none; }
