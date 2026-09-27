@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuthSession } from "@/contexts/AuthContext";
+import { trpc } from "@/lib/trpc";
 import {
   ARCHIVE_ROUTE,
   MEETING_ROUTES,
@@ -46,6 +47,17 @@ export const PRIMARY_NAV: NavItem[] = [
   { href: TIME_MANAGEMENT_ROUTE, label: "إدارة الوقت", icon: Clock },
   { href: MEETING_ROUTES.prepare, label: "الاجتماعات", icon: CalendarDays },
 ];
+
+/**
+ * الاجتماعات مساحة واحدة لا بيانات لكل حساب.
+ *
+ * فمن لا يملكها لا يُعرض له بندها: عرضُ باب لا يُفتح أسوأ من غيابه — يُضغط
+ * فيُقرأ عطلاً، ويُترك المنتج بسببه.
+ */
+export function visibleNav(items: NavItem[], ownsWorkspace: boolean): NavItem[] {
+  if (ownsWorkspace) return items;
+  return items.filter(item => item.href !== MEETING_ROUTES.prepare);
+}
 
 export const RECORD_NAV: NavItem[] = [
   { href: STATISTICS_ROUTE, label: "الإحصائيات", icon: BarChart3 },
@@ -128,12 +140,14 @@ function NavFoot({ onPick }: { onPick?: () => void }) {
 }
 
 export function Sidebar() {
+  const access = trpc.meetings.access.useQuery();
+
   return (
     <nav className="tp-side" aria-label="أقسام واف">
       <Link className="tp-brand" href={TIME_HOME_ROUTE}>
         واف
       </Link>
-      <NavList items={PRIMARY_NAV} />
+      <NavList items={visibleNav(PRIMARY_NAV, access.data?.owner === true)} />
       <NavList items={RECORD_NAV} />
       <NavFoot />
     </nav>
@@ -149,10 +163,11 @@ export function Sidebar() {
  */
 export function BottomNav({ onMore }: { onMore: () => void }) {
   const [location] = useLocation();
+  const bottomAccess = trpc.meetings.access.useQuery();
 
   return (
     <nav className="tp-bottom" aria-label="أقسام واف">
-      {PRIMARY_NAV.map(item => {
+      {visibleNav(PRIMARY_NAV, bottomAccess.data?.owner === true).map(item => {
         const Icon = item.icon;
         const current = isCurrent(location, item.href);
         return (
@@ -182,6 +197,8 @@ export function BottomNav({ onMore }: { onMore: () => void }) {
  * يُغلق بالخلفية وبمفتاح الهروب وبأي بند يُختار، فلا يُحبس أحد فيه.
  */
 export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const workspace = trpc.meetings.access.useQuery();
+
   React.useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -205,7 +222,7 @@ export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => voi
             <X size={17} aria-hidden="true" />
           </button>
         </div>
-        <NavList items={PRIMARY_NAV} onPick={onClose} />
+        <NavList items={visibleNav(PRIMARY_NAV, workspace.data?.owner === true)} onPick={onClose} />
         <NavList items={RECORD_NAV} onPick={onClose} />
         <NavFoot onPick={onClose} />
       </nav>

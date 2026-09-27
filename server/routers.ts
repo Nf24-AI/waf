@@ -1,4 +1,5 @@
 import { authedProcedure } from "./auth";
+import { workspaceAccess, workspaceProcedure } from "./workspace";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
@@ -69,8 +70,16 @@ export const appRouter = router({
    * الألسنة، ولا كعكة من عندنا تُمحى.
    */
   meetings: router({
+    /**
+     * هل يملك هذا الحساب مساحة الاجتماعات؟
+     *
+     * سؤالٌ يُطرح قبل العرض: الشريط يُخفي البند لمن لا يملكها، والصفحة تشرح
+     * بدل أن تسقط بخطأ. ولا يكشف شيئاً — جوابه نعم أو لا عن السائل نفسه.
+     */
+    access: workspaceAccess,
+
     /** Lets the workspace explain *why* Notion is unavailable instead of failing blankly. */
-    status: authedProcedure.query(async () => {
+    status: workspaceProcedure.query(async () => {
       if (!isNotionConfigured()) {
         const missing = [
           !ENV.notionApiToken && "NOTION_API_TOKEN",
@@ -88,19 +97,19 @@ export const appRouter = router({
       }
     }),
 
-    list: authedProcedure.query(async () => ({
+    list: workspaceProcedure.query(async () => ({
       source: "notion" as const,
       meetings: await listNotionMeetings(),
     })),
 
-    create: authedProcedure.input(meetingInput).mutation(({ input }) => createNotionMeeting(input)),
+    create: workspaceProcedure.input(meetingInput).mutation(({ input }) => createNotionMeeting(input)),
 
-    update: authedProcedure.input(meetingWithId).mutation(async ({ input }) => {
+    update: workspaceProcedure.input(meetingWithId).mutation(async ({ input }) => {
       await updateNotionMeeting(input);
       return { success: true as const };
     }),
 
-    remove: authedProcedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+    remove: workspaceProcedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
       await deleteNotionMeeting(input.id);
       return { success: true as const };
     }),
@@ -109,7 +118,9 @@ export const appRouter = router({
   /**
    * المهام — مصدر واحد تقرأ منه الطرق الثلاث وتكتب فيه.
    *
-   * كلها authedProcedure: المهام خلف بوّابة كلمة المرور مثل الاجتماعات، ومفتاح
+   * كلها authedProcedure لا workspaceProcedure: المهام ملكُ كل حساب على حدة،
+   * تحرسها RLS على auth.uid(). والاجتماعات وحدها مقيّدة بمالك المساحة لأنها
+   * قاعدة Notion واحدة مشتركة لا صفوفاً مملوكة. ومفتاح
    * Supabase ورمز المالك لا يغادران الخادم.
    */
   tasks: router({
