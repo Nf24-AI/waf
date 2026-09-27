@@ -117,17 +117,24 @@ export default function AddTaskModal({
   const [addingProject, setAddingProject] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
+  // onClose يصل دالّةً جديدة مع كل رسم للأب، فلو كان التأثير يعتمد عليه
+  // لأُعيد التركيز على العنوان كلما تحدّث ما خلف النافذة — فيُنتزع المؤشر
+  // من أيّ خانة يكتب فيها المستخدم. التركيز مرّة عند الفتح، والإغلاق يُقرأ
+  // من مرجع يبقى على آخر نسخة.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     const id = window.setTimeout(() => titleRef.current?.focus(), 40);
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
     return () => {
       window.clearTimeout(id);
       document.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, []);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
