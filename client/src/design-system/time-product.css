@@ -74,8 +74,8 @@
     inline-size: var(--tp-side);
     display: flex;
     flex-direction: column;
-    gap: var(--space-8);
-    padding: var(--space-9) var(--space-6) var(--space-7);
+    gap: var(--space-9);
+    padding: var(--space-10) var(--space-6) var(--space-8);
     background: var(--surface-sunken);
     border-inline-end: var(--border-w) solid var(--border-hairline);
     overflow-y: auto;
@@ -84,14 +84,14 @@
 
 .tp-brand {
   display: block;
-  padding-inline: var(--space-5);
+  padding-inline: var(--space-6);
   border-block-end: 0;
   font: var(--fw-medium) var(--fs-32)/1 var(--font-serif-display);
   letter-spacing: var(--ls-tight);
   color: var(--text-primary);
 }
 
-.tp-nav { display: flex; flex-direction: column; gap: var(--space-2); }
+.tp-nav { display: flex; flex-direction: column; gap: var(--space-3); }
 .tp-nav + .tp-nav {
   margin-block-start: var(--space-5);
   padding-block-start: var(--space-6);
@@ -102,8 +102,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-5);
-  min-height: 42px;
-  padding-inline: var(--space-5);
+  /* المرجع يعطي البند مساحةً واضحة: ٤٨ بكسل لا ٤٢، والفرق يُرى في العمود كلّه. */
+  min-height: 48px;
+  padding-inline: var(--space-6);
   border-radius: var(--radius-control);
   border-block-end: 0;
   font: var(--text-body-md);
@@ -1342,8 +1343,16 @@
  * ولا backdrop-filter هنا: جرّبناه في هذا المشروع فأوقف الرسم. والحجاب
  * أعلاه يؤدّي الغرض بلا تلك الكلفة.
  */
-.tp-frame > * { position: relative; z-index: 1; }
-.tp-side { background: var(--surface-sunken); }
+/*
+ * الغلاف وحده يُرفع فوق الحجاب — لا كل أبناء الإطار.
+ *
+ * كانت `.tp-frame > *` تطال الشريط الجانبي أيضاً، وهي بنفس أولوية قاعدته
+ * وبعدها في الملف، فتسلبه `position: fixed` ويسقط في مجرى الصفحة أعلى
+ * اليمين بينما يبقى المحتوى يفسح له عرضه. قاعدةٌ عامّة كُتبت لطبقةٍ واحدة
+ * فأصابت ما لم يُقصد.
+ */
+.tp-body { position: relative; z-index: 1; }
+.tp-side { background: var(--surface-sunken); z-index: 30; }
 .tp-top { background: color-mix(in srgb, var(--canvas) 88%, transparent); }
 
 /* والبطاقات شبه شفّافة ليُحسّ الجبل خلفها، كما في المرجع. */
