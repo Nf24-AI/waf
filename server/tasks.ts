@@ -93,8 +93,10 @@ async function rest<T>(who: Identity, path: string, init: RequestInit = {}): Pro
     throw new SupabaseError(response.status, detail);
   }
 
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  // POST بلا «Prefer: return=representation» يردّ 201 بجسم فارغ، لا 204:
+  // فالحكم للجسم لا للرمز، وإلا انكسر json() على لا شيء.
+  const body = await response.text();
+  return (body ? JSON.parse(body) : undefined) as T;
 }
 /** الصفّ كما يخزّنه Supabase. الأعمدة بأسماء التطبيق السابق، فلا تُكسر بياناته. */
 interface Row {

@@ -1406,7 +1406,8 @@
  */
 .tp-body { position: relative; z-index: 1; }
 .tp-side { background: var(--surface-sunken); z-index: 30; }
-.tp-top { background: color-mix(in srgb, var(--canvas) 88%, transparent); }
+/* مصمت: بلا ضبابية خلفه، فأي شفافية تُظهر عناوين المهام من تحته حين تُمرَّر. */
+.tp-top { background: var(--canvas); }
 
 /* والبطاقات شبه شفّافة ليُحسّ الجبل خلفها، كما في المرجع. */
 .tp-frame .tp-card,

@@ -45,8 +45,10 @@ async function rest<T>(who: Identity, path: string, init: RequestInit = {}): Pro
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذّر تنفيذ العملية. حاول مرة أخرى." });
   }
 
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  // POST بلا «Prefer: return=representation» يردّ 201 بجسم فارغ، لا 204:
+  // فالحكم للجسم لا للرمز، وإلا انكسر json() على لا شيء.
+  const body = await response.text();
+  return (body ? JSON.parse(body) : undefined) as T;
 }
 
 interface Row {
