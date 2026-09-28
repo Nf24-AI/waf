@@ -22,7 +22,7 @@ export interface Service {
   status: ServiceStatus;
   /** الوجهة عند الضغط. الخدمات القادمة بلا وجهة. */
   href?: string;
-  /** خدمة تعيش خارج واف: تُفتح في لسان جديد ويُعلَّم ذلك في الواجهة. */
+  /** خدمة تعيش خارج واف، على أصل آخر وبحساباتها هي. يُعلَّم ذلك في الواجهة. */
   external?: boolean;
   /**
    * مُعرّف الخدمة التي تُشتقّ منها هذه.
@@ -75,6 +75,16 @@ export const SERVICES: readonly Service[] = [
     partOf: "meetings",
   },
   {
+    id: "directory",
+    name: "أي خدمة",
+    eyebrow: "SERVICE DIRECTORY",
+    summary: "دليل موحّد لمزوّدي الخدمة والشركاء: من تتواصل معه، وبأي قسم، وكيف. يعمل بحسابه الخاص.",
+    status: "live",
+    // تطبيق مستقلّ بقاعدته ودخوله؛ يُنتقل إليه في اللسان نفسه، والدخول فيه منفصل عن واف إلى أن يُوحَّد.
+    href: "https://projec3-nf.vercel.app",
+    external: true,
+  },
+  {
     id: "risks",
     name: "سجلّ المخاطر",
     eyebrow: "RISK REGISTER",
@@ -113,7 +123,8 @@ export const upcomingServices = () => SERVICES.filter((service) => service.statu
  * هذا هو العدد الذي يُعلَن على الباب. الوجه العام يشتقّه من هنا ولا يكتبه
  * بيده، فخدمة تُضاف إلى الكتالوج لا تختفي منه بصمت.
  */
-export const rootServices = () => SERVICES.filter((service) => service.status === "live" && !service.partOf);
+export const rootServices = () =>
+  SERVICES.filter((service) => service.status === "live" && !service.partOf);
 
 /** ما تُنتجه خدمة بعينها من صفحات تُقرأ داخل المنصّة. */
 export const derivedServices = (id: string) => SERVICES.filter((service) => service.partOf === id);

@@ -43,12 +43,30 @@ describe("platform front door", () => {
     expect(screen.getByText("منصّة أدوات مدير المشروع ومالك المنتج")).toBeInTheDocument();
   });
 
-  it("shows every service in the catalogue", () => {
+  it("gives a card to every service that stands alone", () => {
     renderPlatform();
-    for (const service of SERVICES) {
+    for (const service of SERVICES.filter((entry) => !entry.partOf)) {
       expect(screen.getByRole("heading", { name: service.name })).toBeInTheDocument();
       expect(screen.getByText(service.eyebrow)).toBeInTheDocument();
     }
+  });
+
+  it("keeps a derived page one click away under its service, not as a card", () => {
+    renderPlatform();
+    // بلا بطاقة لا طريق آخر إليه من داخل واف؛ فيُحرس الرابط لا الغياب وحده.
+    for (const part of SERVICES.filter((entry) => entry.partOf)) {
+      expect(screen.queryByRole("heading", { name: part.name })).toBeNull();
+      const parent = SERVICES.find((entry) => entry.id === part.partOf)!;
+      const strip = screen.getByRole("navigation", { name: `ما يتبع ${parent.name}` });
+      expect(within(strip).getByRole("link", { name: part.name })).toHaveAttribute("href", part.href);
+    }
+  });
+
+  it("counts only the services that stand alone", () => {
+    renderPlatform();
+    const standalone = SERVICES.filter((entry) => entry.status === "live" && !entry.partOf);
+    expect(standalone).toHaveLength(3);
+    expect(screen.getByText("ثلاث خدمات")).toBeInTheDocument();
   });
 
   it("sends the meetings card to the meetings route, not to the root", () => {
@@ -59,19 +77,18 @@ describe("platform front door", () => {
     expect(card).not.toHaveAttribute("href", PLATFORM_ROUTE);
   });
 
-  it("opens an off-origin service isolated, and an in-app one in this tab", () => {
+  it("moves to an off-origin service in this tab, without handing it our referrer", () => {
     renderPlatform();
-    // القاعدة تُحرس من الجهتين: خدمة خارج الأصل تُعزل، وخدمة داخل واف لا
-    // تُقذف في لسان جديد بلا سبب. إدارة الوقت صارت داخلية.
-    for (const service of SERVICES.filter(item => item.status === "live")) {
+    // كل خدمة تُفتح في اللسان نفسه: المطلوب انتقال فوري لا لسان ثانٍ. ما خرج
+    // عن الأصل يُعلَّم بنصّه ولا يأخذ مرجعنا.
+    for (const service of SERVICES.filter(item => item.status === "live" && !item.partOf)) {
       const card = screen.getByRole("heading", { name: service.name }).closest("a");
       expect(card).not.toBeNull();
       if (service.external) {
-        expect(card).toHaveAttribute("target", "_blank");
-        // بدونها يحصل الأصل الآخر على window.opener ومرجعنا.
-        expect(card?.getAttribute("rel")).toContain("noopener");
+        expect(card).not.toHaveAttribute("target");
+        expect(card).toHaveAttribute("href", service.href);
         expect(card?.getAttribute("rel")).toContain("noreferrer");
-        expect(within(card as HTMLElement).getByText("افتح في لسان جديد")).toBeInTheDocument();
+        expect(within(card as HTMLElement).getByText("انتقل إلى الخدمة")).toBeInTheDocument();
       } else {
         expect(card).not.toHaveAttribute("target");
         expect(within(card as HTMLElement).getByText("ادخل الخدمة")).toBeInTheDocument();

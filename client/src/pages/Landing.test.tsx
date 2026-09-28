@@ -92,10 +92,10 @@ describe("landing page", () => {
     expect(screen.getByText("TANOMAH")).toBeInTheDocument();
   });
 
-  it("shows exactly the two services it claims, and invents none", () => {
+  it("shows exactly the three services it claims, and invents none", () => {
     renderLanding();
     const titles = screen.getAllByRole("heading", { level: 3 }).map(node => node.textContent);
-    expect(titles).toEqual(["خدمة الاجتماعات", "إدارة الوقت"]);
+    expect(titles).toEqual(["خدمة الاجتماعات", "إدارة الوقت", "أي خدمة"]);
     expect(screen.queryByText("قريباً")).not.toBeInTheDocument();
   });
 
@@ -117,24 +117,32 @@ describe("landing page", () => {
     expect(screen.queryByRole("link", { name: "الرئيسية" })).not.toBeInTheDocument();
   });
 
-  it("isolates any off-origin service, and keeps the rest in this tab", () => {
+  it("moves to every service in this tab, and hands an off-origin one no referrer", () => {
     renderLanding();
-    // القاعدة لا الحالة: كل خدمة على أصل آخر تُفتح معزولة، وما عاد داخل واف
-    // يبقى في اللسان نفسه. إدارة الوقت انتقلت إلى الداخل، فتُحرس بالقاعدة
-    // نفسها من الجهة الأخرى.
+    // الانتقال فوري في اللسان نفسه، داخل واف وخارجه. ما خرج عن الأصل يذهب
+    // إلى رابطه مباشرة، بلا بابنا وبلا مرجعنا.
     for (const service of SERVICES.filter(item => item.status === "live")) {
       const card = screen.queryByRole("heading", { name: new RegExp(service.name.replace("خدمة ", "")) });
       if (!card) continue;
       const link = card.closest("a");
       if (!link) continue;
       if (service.external) {
-        expect(link).toHaveAttribute("target", "_blank");
+        expect(link).not.toHaveAttribute("target");
+        expect(link).toHaveAttribute("href", service.href);
         expect(link.getAttribute("rel")).toContain("noreferrer");
       } else {
         expect(link).not.toHaveAttribute("target");
         expect(link.getAttribute("href")?.startsWith("/")).toBe(true);
       }
     }
+  });
+
+  it("announces three services, the third a separate app", () => {
+    renderLanding();
+    expect(screen.getByText("ثلاث خدمات، والبداية من هنا.")).toBeInTheDocument();
+    const enter = screen.getByRole("link", { name: "ادخل أي خدمة" });
+    expect(enter).toHaveAttribute("href", SERVICES.find(service => service.id === "directory")!.href);
+    expect(screen.getByText("تطبيق مستقلّ بدخوله الخاص")).toBeInTheDocument();
   });
 
   it("offers no vague way in, only the services themselves", () => {

@@ -3,7 +3,7 @@
 import React from "react";
 import { ArrowLeft, ArrowUpLeft, CalendarClock, LayoutGrid, Lock } from "lucide-react";
 import { Link } from "wouter";
-import { SERVICES, type Service } from "@shared/services";
+import { SERVICES, derivedServices, type Service } from "@shared/services";
 import mountains from "@/assets/night-mountains.jpg";
 
 /**
@@ -39,7 +39,7 @@ function ServiceCard({ service }: { service: Service }) {
       {service.status === "live" && (
         <span className="service-go">
           {service.external ? <ArrowUpLeft size={15} aria-hidden="true" /> : <ArrowLeft size={15} aria-hidden="true" />}
-          {service.external ? "افتح في لسان جديد" : "ادخل الخدمة"}
+          {service.external ? "انتقل إلى الخدمة" : "ادخل الخدمة"}
         </span>
       )}
     </>
@@ -55,9 +55,9 @@ function ServiceCard({ service }: { service: Service }) {
   }
 
   if (service.external) {
-    // noreferrer مع الهدف الجديد: الخدمة تعيش على أصل آخر ولا تحتاج مرجعنا.
+    // تنقل في اللسان نفسه، فلا opener يُسرَّب؛ ويبقى noreferrer لأن الأصل الآخر لا يحتاج مرجعنا.
     return (
-      <a className="service-card" href={service.href} target="_blank" rel="noopener noreferrer">
+      <a className="service-card" href={service.href} rel="noreferrer">
         {body}
       </a>
     );
@@ -70,8 +70,35 @@ function ServiceCard({ service }: { service: Service }) {
   );
 }
 
+/**
+ * بطاقة الخدمة ومعها ما تُنتجه من صفحات.
+ *
+ * سجلّ القرارات وتقرير الحالة ليسا خدمتين: يُقرآن من الاجتماعات. فلا يأخذان
+ * بطاقة ولا يُحسبان في العدد، لكنهما يبقيان على بُعد ضغطة تحت خدمتهما — فلا
+ * طريق آخر إليهما من داخل واف.
+ */
+function ServiceSlot({ service }: { service: Service }) {
+  const parts = derivedServices(service.id);
+  if (parts.length === 0) return <ServiceCard service={service} />;
+
+  return (
+    <div className="service-slot has-parts">
+      <ServiceCard service={service} />
+      <nav className="service-parts" aria-label={`ما يتبع ${service.name}`}>
+        <span className="service-parts-label">يشمل</span>
+        {parts.map((part) => (
+          <Link key={part.id} className="service-part" href={part.href!}>
+            {part.name}
+          </Link>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
 export default function Platform() {
-  const live = SERVICES.filter((service) => service.status === "live");
+  // العدد عدد ما يقوم وحده: ما يُشتقّ من خدمة يُعرض تحتها لا بجانبها.
+  const live = SERVICES.filter((service) => service.status === "live" && !service.partOf);
   const soon = SERVICES.filter((service) => service.status === "soon");
 
   return (
@@ -104,7 +131,7 @@ export default function Platform() {
           </div>
           <div className="service-grid">
             {live.map((service) => (
-              <ServiceCard key={service.id} service={service} />
+              <ServiceSlot key={service.id} service={service} />
             ))}
           </div>
         </section>

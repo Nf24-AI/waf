@@ -8,7 +8,7 @@ import { SERVICES, derivedServices, liveServices, rootServices } from "./service
  */
 describe("services catalogue", () => {
   it("counts only what stands on its own as a service", () => {
-    expect(rootServices().map(service => service.id)).toEqual(["meetings", "time"]);
+    expect(rootServices().map(service => service.id)).toEqual(["meetings", "time", "directory"]);
   });
 
   it("keeps the decision log and the status report as outputs of meetings", () => {

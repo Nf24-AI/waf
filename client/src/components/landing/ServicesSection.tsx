@@ -10,7 +10,7 @@ import Reveal from "./Reveal";
 /**
  * قسم الخدمات في الوجه العام.
  *
- * خدمتان، وهذا مقصود لا نقص. البطاقتان كبيرتان والفراغ حولهما متروك على
+ * ثلاث خدمات، وهذا مقصود لا نقص. البطاقات كبيرة والفراغ حولها متروك على
  * حاله بدل حشوه ببطاقات «قريباً» — الخانة المحجوزة إعلان نيّة يخصّ من دخل
  * المنصّة، لا من يقف على بابها.
  *
@@ -26,8 +26,8 @@ interface LandingService {
   description: string;
   href: string;
   external?: boolean;
-  icon: "people" | "calendar";
-  visual: "meetings" | "time";
+  icon: "people" | "calendar" | "directory";
+  visual: "meetings" | "time" | "directory";
 }
 
 /**
@@ -57,12 +57,22 @@ const LANDING_COPY: Record<
     icon: "calendar",
     visual: "time",
   },
+  directory: {
+    number: "03",
+    title: "أي خدمة",
+    description:
+      "دليل موحّد لمزوّدي الخدمة والشركاء: تعرف من تتواصل معه، وبأي قسم، وكيف، خلال ثوانٍ.",
+    icon: "directory",
+    visual: "directory",
+  },
 };
 
+const COUNT_AR: Record<number, string> = { 1: "خدمة واحدة", 2: "خدمتان", 3: "ثلاث خدمات", 4: "أربع خدمات", 5: "خمس خدمات" };
+
 /**
- * البطاقتان مشتقّتان من الكتالوج لا مكتوبتين هنا.
+ * البطاقات مشتقّة من الكتالوج لا مكتوبة هنا.
  *
- * «خدمتان» في العنوان ليست ادّعاءً: هي عدد ما يقوم وحده في shared/services.ts.
+ * العدد في العنوان ليس ادّعاءً: هو عدد ما يقوم وحده في shared/services.ts.
  * وخدمة مستقلّة تُضاف بلا نصّ تعريف توقف البناء بدل أن تغيب عن الباب بصمت.
  *
  * الترتيب ترتيب الكتالوج، وهو ترتيب القراءة: في RTL تُقرأ اليمنى أولاً،
@@ -87,7 +97,7 @@ const LANDING_SERVICES: LandingService[] = rootServices().map(service => {
 });
 
 /**
- * رمزا الخدمتين، مرسومان هنا لا مستورَدان من مجموعة أيقونات.
+ * رموز الخدمات، مرسومة هنا لا مستورَدة من مجموعة أيقونات.
  *
  * المشروع لا يحمل أي أصل رسوميّ — لا svg ولا png في client كلّه — وبقية
  * الصفحات تأخذ أيقوناتها من lucide. هنا يُرسم الرمزان بالضبط كما في المرجع
@@ -104,6 +114,16 @@ function ServiceGlyph({ kind }: { kind: LandingService["icon"] }) {
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
+
+  if (kind === "directory") {
+    return (
+      <svg {...common}>
+        <rect x="4.2" y="3.2" width="15.6" height="17.6" rx="2.4" />
+        <circle cx="12" cy="9.4" r="2.6" />
+        <path d="M7.8 16.4c.6-2 2.3-3.1 4.2-3.1s3.6 1.1 4.2 3.1" />
+      </svg>
+    );
+  }
 
   if (kind === "calendar") {
     return (
@@ -155,6 +175,27 @@ function MicGlyph() {
 
 /** رسم داخل البطاقة، لا أيقونة: يلمّح إلى شكل الخدمة ولا يشرحها. */
 function ServiceVisual({ kind }: { kind: LandingService["visual"] }) {
+  if (kind === "directory") {
+    // دليل: بحث في الأعلى وصفوف جهات تحته، وفي كل صفّ وسم القسم.
+    return (
+      <div className="svc-visual svc-visual-dir" aria-hidden="true">
+        <span className="svc-chip svc-chip-search">
+          <i className="svc-dot" />
+          <i className="svc-line" />
+        </span>
+        <div className="svc-sheet svc-dir">
+          {[0, 1, 2].map(row => (
+            <span key={row} className={row === 0 ? "svc-dir-row is-now" : "svc-dir-row"}>
+              <i className="svc-dir-face" />
+              <i className="svc-line" />
+              <i className="svc-dir-tag" />
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (kind === "time") {
     return (
       <div className="svc-visual svc-visual-time" aria-hidden="true">
@@ -254,8 +295,8 @@ function ServiceCard({ service }: { service: LandingService }) {
 
       <footer className="svc-cta">
         {service.external ? (
-          // خدمة على أصل آخر: الرابط الوحيد يفتح لساناً جديداً، ولا يحتاج مرجعنا.
-          <a className="svc-enter" href={service.href} target="_blank" rel="noopener noreferrer" aria-label={enterLabel}>
+          // خدمة على أصل آخر: يُنتقل إليها في اللسان نفسه، ولا تحتاج مرجعنا ولا بابنا.
+          <a className="svc-enter" href={service.href} rel="noreferrer" aria-label={enterLabel}>
             ادخل الخدمة
             <span className="svc-arrow" aria-hidden="true">
               <ArrowLeft size={17} />
@@ -271,16 +312,11 @@ function ServiceCard({ service }: { service: LandingService }) {
         )}
 
         {service.external && (
-          <a
-            className="svc-aside"
-            href={service.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`افتح ${service.title} في لسان جديد`}
-          >
+          // تطبيق مستقلّ بحساباته: يُقال قبل الضغط أن الدخول هناك غير الدخول هنا.
+          <span className="svc-aside">
             <ExternalLink size={13} aria-hidden="true" />
-            افتح في لسان جديد
-          </a>
+            تطبيق مستقلّ بدخوله الخاص
+          </span>
         )}
       </footer>
     </article>
@@ -321,11 +357,11 @@ export default function ServicesSection() {
           <div className="svc-lead">
             <p className="svc-eyebrow">خدمات واف، كما هي اليوم.</p>
             <h2 id="svc-heading">نبدأ بما نحتاجه.</h2>
-            <p className="svc-sub">خدمتان، والبداية من هنا.</p>
+            <p className="svc-sub">{COUNT_AR[LANDING_SERVICES.length] ?? `${LANDING_SERVICES.length} خدمات`}، والبداية من هنا.</p>
           </div>
         </Reveal>
 
-        {/* البطاقتان بعد الترويسة بقليل: العنوان يُقرأ أولاً ثم يُكشف ما تحته. */}
+        {/* البطاقات بعد الترويسة بقليل: العنوان يُقرأ أولاً ثم يُكشف ما تحته. */}
         <Reveal className="svc-cards" delay={0.12}>
           {LANDING_SERVICES.map(service => (
             <ServiceCard key={service.id} service={service} />

@@ -1952,6 +1952,44 @@ a.service-card:hover .service-go {
   color: var(--accent-hover);
 }
 
+/* A service with pages of its own: the card, then a strip naming them, one surface. */
+.service-slot {
+  display: flex;
+  flex-direction: column;
+  animation: platform-rise .5s var(--ease-standard) both;
+}
+.service-slot > .service-card {
+  flex: 1;
+  animation: none;
+}
+.service-slot.has-parts > .service-card {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+.service-parts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-5) var(--space-8);
+  background: color-mix(in srgb, var(--surface-card) 70%, transparent);
+  border: 1px solid var(--border-hairline);
+  border-top: none;
+  border-end-start-radius: var(--radius-panel);
+  border-end-end-radius: var(--radius-panel);
+}
+.service-parts-label {
+  font: var(--text-caption);
+  color: var(--text-tertiary);
+}
+.service-part {
+  font: var(--text-label);
+  color: var(--text-secondary);
+  border-bottom: none;
+}
+.service-part:hover { color: var(--accent-hover); }
+.service-part:focus-visible { box-shadow: var(--focus-ring); border-radius: var(--radius-control); }
+
 .platform-foot {
   display: flex;
   align-items: center;
@@ -1971,7 +2009,7 @@ a.service-card:hover .service-go {
 @media (prefers-reduced-motion: reduce) {
   .service-card { transition: none; }
   a.service-card:hover, a.service-card:active { transform: none; }
-  .service-card, .platform-head { animation: none; }
+  .service-card, .service-slot, .platform-head { animation: none; }
 }
 
 /* The lockup became the way back to the platform; it must not read as a link. */
@@ -2714,7 +2752,13 @@ a.service-card:hover .service-go {
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(16px, 2vw, 28px);
 }
-@media (min-width: 900px) { .svc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) {
+  .svc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* بطاقة وحيدة في صفّها تأخذ العرض كلّه بدل أن تترك نصفه فارغاً. */
+  .svc-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* والنصّ فيها يبقى تحت عنوانه: العرض الزائد فراغ، لا مسافة بين العنوان ووصفه. */
+  .svc-card:last-child:nth-child(odd) .svc-content p { margin-inline-start: 0; }
+}
 
 .svc-card {
   display: flex;
@@ -2906,6 +2950,33 @@ a.service-card:hover .service-go {
 .svc-agenda-row .svc-dot { width: 6px; height: 6px; }
 .svc-agenda-row.is-now .svc-dot { background: var(--accent); border-color: var(--accent); }
 .svc-agenda-row .svc-line { height: 4px; }
+
+/* الدليل: شريط بحث فوق لوح فيه ثلاث جهات، لكلٍّ وجه وسطر ووسم قسم. */
+.svc-visual-dir .svc-chip-search {
+  inset-block-start: 6px;
+  inset-inline-end: 0;
+  width: 150px;
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  z-index: 1;
+}
+.svc-visual-dir .svc-dir {
+  inset-block-start: 40px;
+  inset-inline-start: 10px;
+  width: 190px;
+  height: 124px;
+  padding: var(--space-6) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.svc-dir-row { display: flex; align-items: center; gap: var(--space-4); }
+.svc-dir-face { width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--alpha-fill-strong); display: block; flex: none; }
+.svc-dir-tag { width: 30px; height: 12px; border-radius: var(--radius-pill); border: var(--border-w) solid var(--alpha-line-strong); display: block; flex: none; }
+.svc-dir-row.is-now .svc-dir-tag { background: var(--accent); border-color: var(--accent); }
+.svc-card:hover .svc-chip-search { transform: translateY(-4px); }
 
 .svc-card:hover .svc-sheet { transform: translateY(-3px); }
 .svc-card:hover .svc-chip-today { transform: translateY(-5px); }
