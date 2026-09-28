@@ -1762,9 +1762,37 @@ input, textarea, select { outline: none; }
  * ─────────────────────────────────────────────────────────────── */
 
 .platform-shell {
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
   background: var(--canvas);
   padding: var(--space-12) var(--gutter-inline) var(--space-11);
+}
+/*
+ * The night sky the time product stands on (.tp-frame): fixed, faint, and a
+ * scrim that thickens downward so the peaks show top-right and the cards
+ * below read on plain navy. No backdrop-filter; it stalled rendering before.
+ */
+.platform-sky {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0;
+  opacity: .34;
+  pointer-events: none;
+}
+.platform-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(8, 17, 31, .5) 0%, rgba(8, 17, 31, .9) 60%, var(--canvas) 100%),
+    linear-gradient(to left, rgba(8, 17, 31, 0) 0%, rgba(8, 17, 31, .7) 70%);
 }
 .platform-inner {
   max-width: var(--content-max);
@@ -1819,11 +1847,22 @@ input, textarea, select { outline: none; }
 .service-card {
   display: block;
   padding: var(--space-8);
-  background: var(--surface-card);
+  background: color-mix(in srgb, var(--surface-card) 82%, transparent);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-panel);
   color: inherit;
   transition: var(--transition-control), transform var(--dur-fast) var(--ease-standard);
+  animation: platform-rise .5s var(--ease-standard) both;
+}
+/* Soft fades only, one card after another, as the references call for. */
+.service-grid > :nth-child(2) { animation-delay: 60ms; }
+.service-grid > :nth-child(3) { animation-delay: 120ms; }
+.service-grid > :nth-child(4) { animation-delay: 180ms; }
+.service-grid > :nth-child(n+5) { animation-delay: 240ms; }
+.platform-head { animation: platform-rise .5s var(--ease-standard) both; }
+@keyframes platform-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
 /* The base stylesheet underlines every <a>; a card is a surface, not a word. */
 a.service-card {
@@ -1932,6 +1971,7 @@ a.service-card:hover .service-go {
 @media (prefers-reduced-motion: reduce) {
   .service-card { transition: none; }
   a.service-card:hover, a.service-card:active { transform: none; }
+  .service-card, .platform-head { animation: none; }
 }
 
 /* The lockup became the way back to the platform; it must not read as a link. */

@@ -4,6 +4,7 @@ import React from "react";
 import { ArrowLeft, ArrowUpLeft, CalendarClock, LayoutGrid, Lock } from "lucide-react";
 import { Link } from "wouter";
 import { SERVICES, type Service } from "@shared/services";
+import mountains from "@/assets/night-mountains.jpg";
 
 /**
  * باب واف. من يدخل يرى الخدمات المتاحة ويختار واحدة — لا يهبط داخل
@@ -74,7 +75,10 @@ export default function Platform() {
   const soon = SERVICES.filter((service) => service.status === "soon");
 
   return (
-    <main className="platform-shell waf-dots" dir="rtl">
+    // سماء المنتج نفسها التي خلف لوحة الوقت وصفحات الدخول: هذه الصفحة هي
+    // أول ما يُرى بعد الدخول، فلا يصحّ أن تبدو من نسخة أقدم من المنتج.
+    <main className="platform-shell" data-waf-theme="navy" dir="rtl">
+      <img className="platform-sky" src={mountains} alt="" aria-hidden="true" />
       <div className="platform-inner">
         <header className="platform-head">
           <div className="brand-lockup platform-lockup">
