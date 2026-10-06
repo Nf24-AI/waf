@@ -399,6 +399,24 @@ export default function Focus() {
     setPanel(panel === which ? null : which);
   }
 
+  // Escape يغلق ما انفتح، والضغط خارج القائمة المنسدلة يغلقها — لا تبقى معلّقة فوق الأزرار.
+  useEffect(() => {
+    if (!panel) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPanel(null);
+    };
+    const onDown = (event: MouseEvent) => {
+      if (panel === "settings" || panel === "music") return;
+      if (!(event.target as Element).closest?.(".ft-anchor, .ft-corner")) setPanel(null);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [panel]);
+
   function playStream() {
     const url = embedUrl(streamDraft);
     if (!url) return;
