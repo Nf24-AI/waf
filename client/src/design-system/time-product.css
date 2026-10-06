@@ -1391,8 +1391,19 @@ a.ft-btn, a.ft-chip { text-decoration: none; }
   color: var(--text-tertiary);
 }
 .ft-volume span { writing-mode: vertical-rl; font: var(--fw-medium) 9px/1 var(--font-sans); letter-spacing: .15em; }
-/* منزلق قائم: الأعلى أعلى صوتاً. */
-.ft-volume input { writing-mode: vertical-lr; direction: rtl; inline-size: 16px; block-size: 72px; accent-color: var(--accent); }
+/*
+ * منزلق قائم: الأعلى أعلى صوتاً. المقاس بالعرض والارتفاع لا بالمنطقيّ: وضع
+ * الكتابة القائم يقلب inline وblock، فيخرج المنزلق مضغوطاً لا يُسحب.
+ */
+.ft-volume input {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 20px;
+  height: 84px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
 
 .ft-check {
   max-inline-size: 440px;
