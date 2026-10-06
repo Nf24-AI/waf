@@ -1,310 +1,1193 @@
 // مستورَد صراحةً كما في بقية الصفحات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, Settings, SkipForward, Square } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  ArrowRight,
+  AudioLines,
+  AudioWaveform,
+  Bird,
+  Brain,
+  Check,
+  ChevronDown,
+  Clock,
+  CloudLightning,
+  CloudRain,
+  Coffee,
+  Fan,
+  Flame,
+  Keyboard,
+  ListTodo,
+  Maximize,
+  Minimize,
+  Music,
+  Pause,
+  PictureInPicture2,
+  Play,
+  Plus,
+  Radio,
+  RotateCcw,
+  Settings,
+  Tag,
+  Target,
+  Timer,
+  TreePine,
+  Volume1,
+  Volume2,
+  VolumeX,
+  Watch,
+  Waves,
+  X,
+} from "lucide-react";
 import { Link } from "wouter";
 import { type Task } from "@shared/tasks";
-import { SETTINGS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
-import FlowSteps from "@/components/time/FlowSteps";
-import TimeLayout from "@/components/time/TimeLayout";
-import mountains from "@/assets/night-mountains.jpg";
-import { clock } from "@/lib/clock";
-import { readFocusMinutes } from "@/lib/preferences";
+import { TIME_METHOD_ROUTES } from "@shared/routes";
+import FocusBar from "@/components/focus/FocusBar";
+import {
+  AMBIENCE,
+  type AmbienceId,
+  playingAmbience,
+  setAmbienceVolume,
+  stopAmbience,
+  toggleAmbience,
+} from "@/lib/ambience";
+import { chime } from "@/lib/chime";
+import {
+  addToday,
+  breakAfter,
+  CHECK_EVERY_SECONDS,
+  countdownLeft,
+  DAILY_GOAL_SECONDS,
+  type FocusState,
+  hoursMinutes,
+  idleRun,
+  type Mode,
+  pauseCountdown,
+  pauseStopwatch,
+  type Phase,
+  phaseSeconds,
+  type PomodoroSettings,
+  readFocusState,
+  readPomodoro,
+  readSound,
+  readToday,
+  type Run,
+  type RunMode,
+  spokenDuration,
+  startCountdown,
+  startStopwatch,
+  stopwatchElapsed,
+  timeGroups,
+  writeFocusState,
+  writePomodoro,
+  writeSound,
+} from "@/lib/focus-timer";
+import { useStudyingNow } from "@/lib/presence";
+import { embedUrl } from "@/lib/stream";
 import { useTaskParam } from "@/lib/task-param";
-import { prefersReducedMotion } from "@/lib/motion";
 import { trpc } from "@/lib/trpc";
 
 /**
- * جلسة التركيز — أهدأ ما في إدارة الوقت.
+ * التركيز — أربعة مؤقّتات على مسرح واحد: مؤقّت، ساعة، بومودورو، ساعة إيقاف.
  *
- * لا إحصاء ولا قوائم ولا شيء يُقرأ أثناء الجلسة: المهمة واسمها ووقتها. وما
- * عداه يصرف عن الشيء الذي جاء المستخدم ليحميه.
+ * الصفحة بالإنجليزية ومن اليسار، على خلاف بقيّة واف: طُلبت مطابِقةً لمرجعها
+ * حرفاً بحرف، والمرجع إنجليزي. فالنصوص هنا مجموعة في هذا الملفّ وحده، وما
+ * خارجه على عربيّته.
+ *
+ * الرقم أكبر ما في الشاشة ويُقرأ من آخر الغرفة، وما عداه يبهت حوله. والمهمة
+ * اختيارية: المؤقّت يعمل بلا مهمة، ومع مهمة تُسجَّل الجلسة في الإحصاء.
  *
  * وحين ينتهي الوقت لا تُعدّ المهمة منجَزة: يُسأل صاحبها. الوقت انقضى، وهذا
  * كل ما يعرفه المؤقّت — أمّا الإنجاز فيعرفه هو وحده.
  */
 
-const DURATIONS = [25, 50] as const;
+const MODES: { id: Mode; label: string; icon: typeof Timer }[] = [
+  { id: "timer", label: "Timer", icon: Timer },
+  { id: "clock", label: "Clock", icon: Clock },
+  { id: "pomodoro", label: "Pomodoro", icon: Timer },
+  { id: "stopwatch", label: "Stopwatch", icon: Watch },
+];
+
+const PHASE_LABELS: Record<Phase, string> = {
+  work: "Focus Time",
+  short: "Short Break",
+  long: "Long Break",
+};
+
+const PRESETS = [
+  { label: "15m", seconds: 15 * 60 },
+  { label: "25m", seconds: 25 * 60 },
+  { label: "45m", seconds: 45 * 60 },
+  { label: "1h", seconds: 60 * 60 },
+  { label: "2h", seconds: 120 * 60 },
+];
+
+/** سطر هادئ تحت المؤقّت والساعة؛ يتبدّل بتبدّل اليوم لا بكل تحميل. */
+const QUOTES = [
+  ["Well begun is half done.", "Aristotle"],
+  ["Little by little, a little becomes a lot.", "Proverb"],
+  ["Time is what we want most, but what we use worst.", "William Penn"],
+  ["Lost time is never found again.", "Benjamin Franklin"],
+  ["Never leave till tomorrow what you can do today.", "Proverb"],
+];
+
+const AMBIENCE_ICONS: Record<AmbienceId, typeof Timer> = {
+  fireplace: Flame,
+  nature: Bird,
+  ocean: Waves,
+  rain: CloudRain,
+  cafe: Coffee,
+  forest: TreePine,
+  brown: AudioLines,
+  white: AudioWaveform,
+  thunder: CloudLightning,
+  keyboard: Keyboard,
+  fan: Fan,
+  theta: Brain,
+};
+
+type Panel = "settings" | "label" | "seconds" | "sounds" | "music" | null;
+
+/** نافذة صغيرة فوق كل النوافذ — في المتصفّحات التي تدعمها وحدها. */
+const pictureInPicture = () =>
+  (window as unknown as {
+    documentPictureInPicture?: { requestWindow(options: { width: number; height: number }): Promise<Window> };
+  }).documentPictureInPicture;
+
+/** سقف الخادم لدقائق الجلسة الواحدة. */
+const MAX_SESSION_MINUTES = 240;
+
+const STREAM_KEY = "waf:focus-stream";
+
+function storedStream(): string {
+  try {
+    return localStorage.getItem(STREAM_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 export default function Focus() {
   const preselected = useTaskParam();
-  const reduced = prefersReducedMotion();
 
   const utils = trpc.useUtils();
   const status = trpc.tasks.status.useQuery();
   const open = trpc.tasks.listOpen.useQuery(undefined, { enabled: status.data?.configured === true });
 
-  const [taskId, setTaskId] = useState<string | null>(preselected);
-  const [minutes, setMinutes] = useState<number>(() => readFocusMinutes());
-  const [custom, setCustom] = useState("");
-  const [left, setLeft] = useState(() => readFocusMinutes() * 60);
-  const [running, setRunning] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [asking, setAsking] = useState(false);
-
-  /**
-   * الموعد لا العدّ.
-   *
-   * المتصفّح يخنق المؤقّتات في التبويب الخفي، وجلسة خمس وعشرين دقيقة تُعدّ
-   * ثانيةً ثانية تنتهي متأخّرة دقائق. فنخزّن لحظة الانتهاء ونطرح منها الآن.
-   */
-  const deadline = useRef<number | null>(null);
-
-  const tasks = open.data ?? [];
-  const task: Task | null = useMemo(() => tasks.find(item => item.id === taskId) ?? null, [tasks, taskId]);
-
-  const startSession = trpc.tasks.startFocus.useMutation({
-    onSuccess: ({ sessionId: id }) => {
-      setSessionId(id);
-      // من لحظة وصول الردّ لا من لحظة الضغط: زمن الشبكة لا يُقتطع من الجلسة.
-      deadline.current = Date.now() + minutes * 60_000;
-      setLeft(minutes * 60);
-      setRunning(true);
-    },
+  const [settings, setSettings] = useState<PomodoroSettings>(() => readPomodoro());
+  const [state, setState] = useState<FocusState>(() => {
+    const stored = readFocusState(readPomodoro());
+    // من جاء من بطاقة مهمة يبدأ بها، ما لم تكن جلسة مهمةٍ أخرى مفتوحة.
+    const busy = Object.values(stored.sessions).some(Boolean);
+    return preselected && !busy ? { ...stored, taskId: preselected } : stored;
   });
+  const [now, setNow] = useState(() => Date.now());
+  const [today, setToday] = useState(() => readToday());
+  const [sound, setSound] = useState(() => readSound());
+  const [panel, setPanel] = useState<Panel>(null);
+  // الدرج حالٌ وحده: يبقى مفتوحاً وأنت تفتح الأصوات أو الإعدادات، كما في المرجع.
+  const [todoOpen, setTodoOpen] = useState(false);
+  const [quiet, setQuiet] = useState(false);
+  const [askingId, setAskingId] = useState<string | null>(null);
+  const [fields, setFields] = useState({ h: "", m: "", s: "" });
+  const [showSeconds, setShowSeconds] = useState(true);
+  const [hours24, setHours24] = useState(false);
+  const [mini, setMini] = useState<Window | null>(null);
+  const [ambience, setAmbience] = useState<AmbienceId[]>(() => playingAmbience());
+  const [volume, setVolume] = useState(50);
+  const [streamDraft, setStreamDraft] = useState(() => storedStream());
+  const [stream, setStream] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [newTask, setNewTask] = useState("");
+  const [doneCount, setDoneCount] = useState(0);
+  const [online, setOnline] = useState(() => navigator.onLine);
+
+  const { mode, phase, rounds, runs, sessions } = state;
+  const tasks = open.data ?? [];
+  const task: Task | null = useMemo(
+    () => tasks.find(item => item.id === state.taskId) ?? null,
+    [tasks, state.taskId],
+  );
+  const asked = tasks.find(item => item.id === askingId) ?? null;
+
+  const startSession = trpc.tasks.startFocus.useMutation();
   const endSession = trpc.tasks.endFocus.useMutation();
   const complete = trpc.tasks.complete.useMutation({
-    onSuccess: () => utils.tasks.listOpen.invalidate(),
+    onSuccess: () => {
+      setDoneCount(count => count + 1);
+      void utils.tasks.listOpen.invalidate();
+    },
+  });
+  const create = trpc.tasks.create.useMutation({
+    onSuccess: () => {
+      setNewTask("");
+      void utils.tasks.listOpen.invalidate();
+    },
   });
 
-  /** تُغلق الجلسة ويُسأل صاحبها — سواء انقضى الوقت أو قُطع. */
-  function finish(ranOut: boolean) {
-    setRunning(false);
-    deadline.current = null;
-    // الجلسة تُسجَّل ولو قُطعت: الوقت أُنفق، والإحصاء يقيس الوقت لا النجاح.
-    if (sessionId) endSession.mutate({ sessionId, completed: ranOut });
-    setSessionId(null);
-    setAsking(true);
+  const anyRunning = Object.values(runs).some(run => run.status === "running");
+  const sessionOpen = Object.values(sessions).some(Boolean);
+  const isWork = (which: RunMode) => which !== "pomodoro" || phase === "work";
+  const studying = (["timer", "pomodoro", "stopwatch"] as const).some(
+    which => runs[which].status === "running" && isWork(which),
+  );
+  const studyingNow = useStudyingNow(studying);
+
+  // النبض للعرض وحده: الحساب من الموعد، فتأخّر النبضة لا يؤخّر الوقت.
+  useEffect(() => {
+    if (!anyRunning && mode !== "clock") return;
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, [anyRunning, mode]);
+
+  useEffect(() => writeFocusState(state), [state]);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+
+  // الأصوات تُطفأ مع مغادرة الصفحة: مطرٌ يهطل في صفحة المهام عطلٌ لا ميزة.
+  useEffect(() => () => stopAmbience(), []);
+
+  /** ما قُضي منذ آخر بدء، يُضاف إلى مجموع اليوم — للعمل لا للاستراحة. */
+  function credit(which: RunMode, at: number) {
+    const run = runs[which];
+    if (run.status !== "running" || !isWork(which)) return;
+    const spent = which === "stopwatch" ? stopwatchElapsed(run, at) - run.value : run.value - countdownLeft(run, at);
+    if (spent > 0) setToday(addToday(spent));
+  }
+
+  function setRun(which: RunMode, run: Run, extra: Partial<FocusState> = {}) {
+    setState(previous => ({ ...previous, ...extra, runs: { ...previous.runs, [which]: run } }));
+  }
+
+  /** تُغلق الجلسة في الخادم ولو قُطعت: الوقت أُنفق، والإحصاء يقيس الوقت لا النجاح. */
+  function closeSession(which: RunMode, ranOut: boolean) {
+    const sessionId = sessions[which];
+    if (!sessionId) return;
+    endSession.mutate({ sessionId, completed: ranOut });
+    setState(previous => ({ ...previous, sessions: { ...previous.sessions, [which]: null } }));
+    if (state.taskId) setAskingId(state.taskId);
+  }
+
+  async function start(which: RunMode, from: Run = runs[which]) {
+    if (which !== "stopwatch" && from.value <= 0) return;
+    setAskingId(null);
+
+    if (task && isWork(which) && !sessions[which]) {
+      const minutes =
+        which === "stopwatch"
+          ? MAX_SESSION_MINUTES
+          : Math.min(MAX_SESSION_MINUTES, Math.max(1, Math.round(from.total / 60)));
+      try {
+        const { sessionId } = await startSession.mutateAsync({ taskId: task.id, minutes });
+        setState(previous => ({ ...previous, sessions: { ...previous.sessions, [which]: sessionId } }));
+      } catch {
+        // الخطأ يُعرض تحت الأزرار؛ الجلسة لا تبدأ نصفَ مسجَّلة.
+        return;
+      }
+    }
+
+    // من لحظة وصول الردّ لا من لحظة الضغط: زمن الشبكة لا يُقتطع من الجلسة.
+    const at = Date.now();
+    setNow(at);
+    setRun(which, which === "stopwatch" ? startStopwatch(from, at) : startCountdown(from, at));
+  }
+
+  function pause(which: RunMode) {
+    const at = Date.now();
+    credit(which, at);
+    setRun(which, which === "stopwatch" ? pauseStopwatch(runs[which], at) : pauseCountdown(runs[which], at));
+  }
+
+  function reset(which: RunMode) {
+    credit(which, Date.now());
+    closeSession(which, false);
+    if (which === "stopwatch") {
+      checkpoint.current = 0;
+      setChecking(false);
+    }
+    setRun(which, idleRun(which === "pomodoro" ? phaseSeconds(phase, settings) : 0));
+  }
+
+  /** ينقل البومودورو إلى طوره التالي، ويبدأ الاستراحة وحدها إن طُلب ذلك. */
+  function advance(countRound: boolean) {
+    const at = Date.now();
+    if (phase === "work") {
+      const done = countRound ? rounds + 1 : rounds;
+      const next = breakAfter(done, settings.every);
+      const run = idleRun(phaseSeconds(next, settings));
+      setRun("pomodoro", countRound && settings.autoBreaks ? startCountdown(run, at) : run, {
+        phase: next,
+        rounds: done,
+      });
+    } else {
+      setRun("pomodoro", idleRun(phaseSeconds("work", settings)), { phase: "work" });
+    }
+  }
+
+  function finish(which: "timer" | "pomodoro") {
+    credit(which, Date.now());
+    if (sound) chime();
+    if (which === "timer") {
+      closeSession("timer", true);
+      setRun("timer", idleRun(0));
+      return;
+    }
+    if (phase === "work") closeSession("pomodoro", true);
+    advance(true);
+  }
+
+  /*
+   * «تخطّي» ينهي الطور ولا يعدّه: من تخطّى لم يُتمّ، وعدّه إنجازاً يُفسد كل
+   * رقم في الإحصاء بعد ذلك.
+   */
+  function skip() {
+    credit("pomodoro", Date.now());
+    if (phase === "work") closeSession("pomodoro", false);
+    advance(false);
   }
 
   useEffect(() => {
-    if (!running) return;
-    const settle = () => {
-      const remaining = Math.max(0, Math.round(((deadline.current ?? 0) - Date.now()) / 1000));
-      setLeft(remaining);
-      if (remaining === 0) finish(true);
+    (["timer", "pomodoro"] as const).forEach(which => {
+      const run = runs[which];
+      if (run.status === "running" && countdownLeft(run, now) === 0) finish(which);
+    });
+  }, [now, runs]);
+
+  /*
+   * فحص الحضور: كلّما أتمّت ساعة الإيقاف ساعتين وقفت وسألت. ساعةٌ تُركت
+   * تعمل ليلةً كاملة ليست ليلةَ تركيز، ورقمها يُفسد مجموع اليوم.
+   */
+  const elapsed = stopwatchElapsed(runs.stopwatch, now);
+  const checkpoint = useRef(Math.floor(elapsed / CHECK_EVERY_SECONDS));
+  useEffect(() => {
+    const reached = Math.floor(elapsed / CHECK_EVERY_SECONDS);
+    if (reached <= checkpoint.current) return;
+    checkpoint.current = reached;
+    if (runs.stopwatch.status !== "running") return;
+    pause("stopwatch");
+    setChecking(true);
+    if (sound) chime();
+  }, [elapsed]);
+
+  function startTimer(total: number) {
+    if (total <= 0) return;
+    void start("timer", idleRun(total));
+  }
+
+  function applySettings(next: PomodoroSettings) {
+    writePomodoro(next);
+    setSettings(next);
+    // طور لم يبدأ بعد يأخذ مدّته الجديدة؛ الجاري يُكمل على ما بدأ عليه.
+    if (runs.pomodoro.status === "idle") setRun("pomodoro", idleRun(phaseSeconds(phase, next)));
+    setPanel(null);
+  }
+
+  function toggleSound() {
+    writeSound(!sound);
+    setSound(!sound);
+  }
+
+  function toggle(which: Exclude<Panel, null>) {
+    setPanel(panel === which ? null : which);
+  }
+
+  function playStream() {
+    const url = embedUrl(streamDraft);
+    if (!url) return;
+    try {
+      localStorage.setItem(STREAM_KEY, streamDraft.trim());
+    } catch {
+      /* لا حفظ: الرابط يُلصق من جديد في المرّة القادمة. */
+    }
+    setStream(url);
+    setPanel(null);
+  }
+
+  /* ---- وضع التركيز: ملء الشاشة وإسقاط التنقّل ---- */
+
+  function toggleQuiet() {
+    if (quiet) {
+      if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+      setQuiet(false);
+      return;
+    }
+    setQuiet(true);
+    // ملء الشاشة قد يُرفض؛ الوضع الهادئ يعمل بدونه.
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+
+  /* ---- المصغَّر: الرقم وحده في نافذة تطفو فوق عملك ---- */
+
+  async function toggleMini() {
+    if (mini) {
+      mini.close();
+      return;
+    }
+    try {
+      const opened = await pictureInPicture()!.requestWindow({ width: 320, height: 170 });
+      opened.document.body.style.cssText =
+        "margin:0;height:100vh;display:grid;place-items:center;background:#000;color:#fff;" +
+        "font:500 64px 'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif;" +
+        "font-variant-numeric:tabular-nums;letter-spacing:-.035em";
+      opened.addEventListener("pagehide", () => setMini(null));
+      setMini(opened);
+    } catch {
+      /* رُفضت النافذة أو أُغلقت قبل أن تُفتح: المؤقّت في مكانه. */
+    }
+  }
+
+  useEffect(() => () => mini?.close(), [mini]);
+
+  useEffect(() => {
+    const onChange = () => {
+      if (!document.fullscreenElement) setQuiet(false);
     };
-    settle();
-    const id = window.setInterval(settle, 500);
-    return () => window.clearInterval(id);
-  }, [running, sessionId]);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
 
-  const total = minutes * 60;
-  const progress = total > 0 ? 1 - left / total : 0;
-  const circumference = 2 * Math.PI * 86;
+  /* ---- ما يُعرض ---- */
 
-  // جلسة مفتوحة والعدّاد واقف: موقوفة مؤقتاً، لا منتهية ولا جديدة.
-  const paused = sessionId !== null && !running;
-  const idle = !running && !paused && !asking;
+  const run = mode === "clock" ? null : runs[mode];
+  const left = mode === "timer" || mode === "pomodoro" ? countdownLeft(runs[mode], now) : 0;
 
-  function pick(value: number) {
-    setMinutes(value);
-    setLeft(value * 60);
-  }
+  // الجاري الآن يُحسب مع مجموع اليوم قبل أن يُحفظ، فلا يقفز الرقم عند الإيقاف.
+  const live = (["timer", "pomodoro", "stopwatch"] as const).reduce((sum, which) => {
+    const current = runs[which];
+    if (current.status !== "running" || !isWork(which)) return sum;
+    return sum + (which === "stopwatch"
+      ? stopwatchElapsed(current, now) - current.value
+      : current.value - countdownLeft(current, now));
+  }, 0);
+  const todayTotal = today + Math.max(0, live);
+  const sinceCheck = elapsed % CHECK_EVERY_SECONDS;
 
-  function begin() {
-    if (!task) return;
-    startSession.mutate({ taskId: task.id, minutes });
-  }
+  const clockDate = new Date(now);
+  const clockHour = hours24 ? clockDate.getHours() : clockDate.getHours() % 12 || 12;
 
-  function resume() {
-    deadline.current = Date.now() + left * 1000;
-    setRunning(true);
-  }
+  const groups =
+    mode === "clock"
+      ? [String(clockHour).padStart(2, "0"), String(clockDate.getMinutes()).padStart(2, "0")]
+      : mode === "stopwatch"
+        ? timeGroups(elapsed, { hours: true, seconds: showSeconds })
+        : timeGroups(left);
+
+  // ما يعمل الآن — يُعرض في الشريط العلوي وفي عنوان التبويب، ولو كنت في تبويب غيره.
+  const liveMode =
+    run?.status === "running"
+      ? (mode as RunMode)
+      : (["pomodoro", "timer", "stopwatch"] as const).find(which => runs[which].status === "running");
+  const liveTime = !liveMode
+    ? null
+    : (liveMode === "stopwatch"
+        ? timeGroups(elapsed, { hours: elapsed >= 3600 })
+        : timeGroups(countdownLeft(runs[liveMode], now))
+      ).join(":");
+  useEffect(() => {
+    if (!liveTime) return;
+    const original = document.title;
+    document.title = `⏱️ ${liveTime} · واف`;
+    return () => {
+      document.title = original;
+    };
+  }, [liveTime]);
+
+  const settingUp = mode === "timer" && runs.timer.status === "idle";
+  const fieldTotal =
+    (Number(fields.h) || 0) * 3600 + (Number(fields.m) || 0) * 60 + (Number(fields.s) || 0);
+  const quote = QUOTES[clockDate.getDate() % QUOTES.length];
+  const streamValid = embedUrl(streamDraft) !== null;
 
   return (
-    <TimeLayout quiet={running || paused}>
-      <div className="fc-inner">
-        <FlowSteps current="focus" />
+    <div className="tp-frame ft-frame" data-waf-theme="navy" dir="ltr" lang="en">
+      {!quiet && <FocusBar liveTime={liveTime} />}
 
+      <main className={quiet ? "ft is-quiet" : "ft"}>
         {/* كل صفحة تحتاج عنواناً واحداً: قارئ الشاشة يبدأ منه، والصفحة بلا h1 تبدأ من لا شيء. */}
-        <h1 className="sr-only">جلسة التركيز</h1>
+        <h1 className="sr-only">Focus</h1>
 
-        {status.data?.configured === false && (
-          <p className="tm-empty">
-            المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> ثم أعد النشر.
-          </p>
-        )}
-
-        {open.isSuccess && tasks.length === 0 && (
-          <div className="tm-empty-state">
-            <p>لا مهام تركّز عليها.</p>
-            <p className="tm-empty-hint">أضف مهمة من إدارة الوقت لتبدأ بها.</p>
+        <div className="ft-modes">
+          <div className="ft-tabs" role="tablist" aria-label="Timer type">
+            {MODES.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={mode === id}
+                className={mode === id ? "ft-tab is-current" : "ft-tab"}
+                onClick={() => {
+                  setPanel(null);
+                  setState(previous => ({ ...previous, mode: id }));
+                }}
+              >
+                <Icon size={18} aria-hidden="true" />
+                {label}
+                {id !== "clock" && id !== mode && runs[id].status === "running" && (
+                  <span className="ft-tab-live" aria-label="running" />
+                )}
+              </button>
+            ))}
           </div>
-        )}
+          <button type="button" className="ft-tab ft-tab-solo" onClick={toggleQuiet} aria-pressed={quiet}>
+            {quiet ? <Minimize size={16} aria-hidden="true" /> : <Maximize size={16} aria-hidden="true" />}
+            {quiet ? "Exit" : "Focus"}
+          </button>
+          {pictureInPicture() && (
+            <button type="button" className="ft-tab ft-tab-solo" onClick={() => void toggleMini()} aria-pressed={mini !== null}>
+              <PictureInPicture2 size={16} aria-hidden="true" />
+              Mini
+            </button>
+          )}
+        </div>
 
-        {/* اختيار المهمة يختفي مع بدء الجلسة: لا شيء يُقرأ وأنت تركّز. */}
-        {tasks.length > 0 && idle && (
-          <section className="fc-pick">
-            <h2>على أي مهمة تركّز؟</h2>
-            <div className="ei-chips">
-              {tasks.map(item => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={item.id === taskId ? "ei-chip is-current" : "ei-chip"}
-                  onClick={() => setTaskId(item.id)}
-                  aria-pressed={item.id === taskId}
-                >
-                  {item.title}
-                </button>
-              ))}
+        <section className="ft-stage" data-mode={mode}>
+          {mode === "pomodoro" && (
+            <div className="ft-phase">
+              <span className="ft-pill" data-phase={phase}>
+                <Timer size={16} aria-hidden="true" />
+                {PHASE_LABELS[phase]}
+              </span>
+              <span className="ft-muted">Session {rounds + 1}</span>
+              <button
+                type="button"
+                className="ft-icon ft-icon-sm"
+                aria-label="Pomodoro settings"
+                aria-expanded={panel === "settings"}
+                onClick={() => toggle("settings")}
+              >
+                <Settings size={16} aria-hidden="true" />
+              </button>
             </div>
-          </section>
-        )}
+          )}
 
-        {task && !asking && (
-          <section className="tp-focus">
-            <img src={mountains} alt="" aria-hidden="true" />
-            <p className="tp-focus-task">{task.title}</p>
+          {mode === "stopwatch" && (
+            <div className="ft-corner">
+              <button
+                type="button"
+                className="ft-icon ft-icon-sm"
+                aria-label="Stopwatch settings"
+                aria-expanded={panel === "seconds"}
+                onClick={() => toggle("seconds")}
+              >
+                <Settings size={16} aria-hidden="true" />
+              </button>
+              {panel === "seconds" && (
+                <div className="ft-pop">
+                  <label className="ft-toggle">
+                    <span>
+                      Show seconds
+                      <small>Hide the ticking seconds</small>
+                    </span>
+                    <input type="checkbox" checked={showSeconds} onChange={event => setShowSeconds(event.target.checked)} />
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
 
-            <div className="tp-dial">
-              <svg viewBox="0 0 200 200" aria-hidden="true">
-                <circle className="tp-dial-track" cx="100" cy="100" r="86" />
-                <circle
-                  className="tp-dial-arc"
-                  cx="100"
-                  cy="100"
-                  r="86"
-                  style={{
-                    strokeDasharray: circumference,
-                    strokeDashoffset: circumference * (1 - progress),
-                    transition: reduced ? "none" : "stroke-dashoffset .5s linear",
-                  }}
-                />
-              </svg>
-              {/* لا يُعلَن كل ثانية: قارئ الشاشة لا يقاطع التركيز ستّين مرة في الدقيقة. */}
-              <p className="tp-dial-num" role="timer" aria-live="off">
-                {clock(left)}
-                <span className="tp-dial-caption">جلسة تركيز</span>
+          {mode === "pomodoro" && panel === "settings" ? (
+            <PomodoroPanel settings={settings} onApply={applySettings} />
+          ) : settingUp ? (
+            <div className="ft-setup">
+              <p className="ft-eyebrow">
+                <Clock size={14} aria-hidden="true" />
+                SET DURATION
               </p>
-            </div>
-
-            {idle && (
-              <div className="fc-durations">
-                {DURATIONS.map(option => (
+              <div className="ft-fields">
+                {(
+                  [
+                    ["h", "HOURS", 23],
+                    ["m", "MINUTES", 59],
+                    ["s", "SECONDS", 59],
+                  ] as const
+                ).map(([key, label, max], index) => (
+                  <React.Fragment key={key}>
+                    {index > 0 && <Colon />}
+                    <label className="ft-field">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={max}
+                        placeholder="0"
+                        value={fields[key]}
+                        onChange={event => {
+                          const value = event.target.value;
+                          if (value === "" || (/^\d{1,2}$/.test(value) && Number(value) <= max)) {
+                            setFields({ ...fields, [key]: value });
+                          }
+                        }}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  </React.Fragment>
+                ))}
+              </div>
+              <div className="ft-presets">
+                {PRESETS.map(preset => (
                   <button
-                    key={option}
+                    key={preset.label}
                     type="button"
-                    className={minutes === option ? "tb-duration is-current" : "tb-duration"}
-                    onClick={() => pick(option)}
-                    aria-pressed={minutes === option}
+                    className={fieldTotal === preset.seconds ? "ft-chip is-current" : "ft-chip"}
+                    onClick={() =>
+                      setFields({
+                        h: preset.seconds >= 3600 ? String(Math.floor(preset.seconds / 3600)) : "",
+                        m: preset.seconds % 3600 ? String((preset.seconds % 3600) / 60) : "",
+                        s: "",
+                      })
+                    }
                   >
-                    {option} دقيقة
+                    {preset.label}
                   </button>
                 ))}
-                <label className="fc-custom">
-                  <span className="sr-only">مدة مخصّصة بالدقائق</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={240}
-                    value={custom}
-                    placeholder="مخصّصة"
-                    onChange={event => {
-                      setCustom(event.target.value);
-                      const value = Number(event.target.value);
-                      if (Number.isInteger(value) && value >= 1 && value <= 240) pick(value);
-                    }}
-                  />
-                </label>
               </div>
-            )}
+            </div>
+          ) : (
+            <>
+              {/* لا يُعلَن كل ثانية: قارئ الشاشة لا يقاطع التركيز ستّين مرة في الدقيقة. */}
+              <p className="ft-digits" role="timer" aria-live="off">
+                {groups.map((group, index) => (
+                  <React.Fragment key={index}>
+                    {index > 0 && <Colon />}
+                    <span>{group}</span>
+                  </React.Fragment>
+                ))}
+              </p>
 
-            <div className="fc-actions">
-              {idle && (
+              {mode === "clock" && (
+                <>
+                  {!hours24 && <p className="ft-ampm">{clockDate.getHours() < 12 ? "AM" : "PM"}</p>}
+                  <div className="ft-phase">
+                    <span className="ft-pill">
+                      {clockDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                    </span>
+                    <div className="ft-switch" role="group" aria-label="Time format">
+                      <button type="button" aria-pressed={!hours24} onClick={() => setHours24(false)}>12h</button>
+                      <button type="button" aria-pressed={hours24} onClick={() => setHours24(true)}>24h</button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {mode === "stopwatch" && (
+                <div className="ft-goal">
+                  <div className="ft-goal-labels">
+                    <span>{hoursMinutes(elapsed, true)} elapsed</span>
+                    <span>{hoursMinutes(Math.max(0, DAILY_GOAL_SECONDS - elapsed))} remaining</span>
+                  </div>
+                  <div
+                    className="ft-bar"
+                    role="progressbar"
+                    aria-label="Session progress toward the daily goal"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.min(100, Math.round((elapsed / DAILY_GOAL_SECONDS) * 100))}
+                  >
+                    <span style={{ inlineSize: `${Math.min(100, (elapsed / DAILY_GOAL_SECONDS) * 100)}%` }} />
+                  </div>
+                  <div
+                    className="ft-bar"
+                    data-tone="go"
+                    role="progressbar"
+                    aria-label="Time until the next check-in"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round((sinceCheck / CHECK_EVERY_SECONDS) * 100)}
+                  >
+                    <span style={{ inlineSize: `${(sinceCheck / CHECK_EVERY_SECONDS) * 100}%` }} />
+                  </div>
+                  <p className="ft-goal-note">{Math.ceil((CHECK_EVERY_SECONDS - sinceCheck) / 60)}m to check</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {run && !(mode === "pomodoro" && panel === "settings") && (
+            <div className="ft-actions">
+              {settingUp ? (
                 <button
                   type="button"
-                  className="tp-go"
-                  onClick={begin}
-                  disabled={startSession.isPending}
-                  aria-label="ابدأ الجلسة"
+                  className="ft-btn ft-btn-primary ft-btn-wide"
+                  disabled={fieldTotal <= 0 || startSession.isPending}
+                  onClick={() => startTimer(fieldTotal)}
                 >
-                  <Play size={26} aria-hidden="true" />
+                  <Play size={18} aria-hidden="true" />
+                  Start Timer
                 </button>
-              )}
-              {running && (
-                <button type="button" className="tp-btn" onClick={() => setRunning(false)}>
+              ) : run.status === "running" ? (
+                <button type="button" className="ft-btn ft-btn-primary" onClick={() => pause(mode as RunMode)}>
                   <Pause size={16} aria-hidden="true" />
-                  إيقاف مؤقت
+                  Pause
                 </button>
-              )}
-              {paused && (
-                <button type="button" className="tp-btn tp-btn-primary" onClick={resume}>
+              ) : (
+                <button
+                  type="button"
+                  className="ft-btn ft-btn-primary"
+                  disabled={startSession.isPending}
+                  onClick={() => {
+                    setChecking(false);
+                    void start(mode as RunMode);
+                  }}
+                >
                   <Play size={16} aria-hidden="true" />
-                  استئناف
+                  {run.status === "paused" ? "Resume" : "Start"}
                 </button>
               )}
-              {(running || paused) && (
-                <button type="button" className="tp-btn" onClick={() => finish(false)}>
-                  <Square size={16} aria-hidden="true" />
-                  إنهاء الجلسة
+              {!settingUp && (mode === "pomodoro" || run.status !== "idle") && (
+                <button type="button" className="ft-btn" onClick={() => reset(mode as RunMode)}>
+                  <RotateCcw size={16} aria-hidden="true" />
+                  Reset
                 </button>
               )}
-            </div>
-
-            {/*
-              «تخطّي» ينهي الجلسة ولا ينجز المهمة: من تخطّى لم يُتمّ، وعدّه
-              إنجازاً يُفسد كل رقم في الإحصاء بعد ذلك.
-            */}
-            <div className="tp-focus-foot">
-              <Link className="tp-ghost-btn" href={SETTINGS_ROUTE}>
-                <Settings size={17} aria-hidden="true" />
-                إعدادات
-              </Link>
-              {(running || paused) && (
-                <button type="button" className="tp-ghost-btn" onClick={() => finish(false)}>
-                  <SkipForward size={17} aria-hidden="true" />
-                  تخطّي
+              {mode === "pomodoro" && (
+                <button type="button" className="ft-btn" onClick={skip}>
+                  Skip
                 </button>
               )}
             </div>
+          )}
 
-            {startSession.error && (
-              <p className="tm-form-error" role="alert">
-                {startSession.error.message}
-              </p>
-            )}
-          </section>
-        )}
+          {mode === "stopwatch" && checking && (
+            <p className="ft-check" role="alert">
+              Still studying? The stopwatch paused for a check-in — press Resume to carry on.
+            </p>
+          )}
+
+          {run?.status === "running" && mode !== "pomodoro" && (
+            <p className="ft-live" role="status">
+              <span aria-hidden="true" />
+              Studying...
+            </p>
+          )}
+
+          {/* الشارة تحت الأزرار: المهمة التي يُسجَّل الوقت باسمها، أو لا شيء. */}
+          {mode === "pomodoro" && panel !== "settings" && (
+            <div className="ft-anchor ft-label">
+              <button
+                type="button"
+                className="ft-chip ft-chip-lg"
+                aria-expanded={panel === "label"}
+                onClick={() => toggle("label")}
+              >
+                <Tag size={16} aria-hidden="true" />
+                {task ? task.title : "Select Label"}
+                <ChevronDown size={16} aria-hidden="true" />
+              </button>
+              {panel === "label" && (
+                <div className="ft-pop ft-pop-list" role="listbox" aria-label="Label">
+                  {tasks.length === 0 && <p className="ft-muted">No open tasks yet. Add one from Tasks.</p>}
+                  {tasks.map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="option"
+                      aria-selected={item.id === state.taskId}
+                      // جلسة مسجَّلة باسم مهمة لا تُنقل إلى غيرها في منتصفها.
+                      disabled={sessionOpen}
+                      dir="auto"
+                      onClick={() => {
+                        setState(previous => ({
+                          ...previous,
+                          taskId: previous.taskId === item.id ? null : item.id,
+                        }));
+                        setPanel(null);
+                      }}
+                    >
+                      {item.title}
+                      {item.id === state.taskId && <Check size={14} aria-hidden="true" />}
+                    </button>
+                  ))}
+                  {sessionOpen && <p className="ft-muted">Finish the running session to change the label.</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {mode === "pomodoro" && panel !== "settings" && (
+            <p className="ft-muted ft-summary">
+              Total work time today: {spokenDuration(todayTotal)}
+              <br />
+              Next: {phase === "work" ? "Break" : "Focus"}
+            </p>
+          )}
+
+          {startSession.error && (
+            <p className="tm-form-error" role="alert" dir="auto">
+              {startSession.error.message}
+            </p>
+          )}
+
+          <div className="ft-tools">
+            <button type="button" className="ft-chip ft-chip-lg" aria-expanded={todoOpen} onClick={() => setTodoOpen(!todoOpen)}>
+              <ListTodo size={16} aria-hidden="true" />
+              Tasks
+            </button>
+            <button
+              type="button"
+              className="ft-icon"
+              onClick={toggleSound}
+              aria-pressed={sound}
+              aria-label={sound ? "Sound enabled" : "Sound muted"}
+              title={sound ? "Sound enabled" : "Sound muted"}
+            >
+              {sound ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
+            </button>
+            <div className="ft-anchor">
+              <button
+                type="button"
+                className={ambience.length > 0 ? "ft-icon is-on" : "ft-icon"}
+                aria-label="Relaxation sounds"
+                title="Relaxation sounds"
+                aria-expanded={panel === "sounds"}
+                onClick={() => toggle("sounds")}
+              >
+                <Music size={16} aria-hidden="true" />
+              </button>
+              {panel === "sounds" && (
+                <div className="ft-pop ft-sounds">
+                  <div className="ft-sound-grid">
+                    {AMBIENCE.map(({ id, label }) => {
+                      const Icon = AMBIENCE_ICONS[id];
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          className={ambience.includes(id) ? "ft-sound is-on" : "ft-sound"}
+                          aria-pressed={ambience.includes(id)}
+                          onClick={() => {
+                            toggleAmbience(id);
+                            setAmbienceVolume(volume / 100);
+                            setAmbience(playingAmbience());
+                          }}
+                        >
+                          <Icon size={20} aria-hidden="true" />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <label className="ft-volume">
+                    <Volume2 size={12} aria-hidden="true" />
+                    <span>VOLUME</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={volume}
+                      aria-label="Volume"
+                      onChange={event => {
+                        const next = Number(event.target.value);
+                        setVolume(next);
+                        setAmbienceVolume(next / 100);
+                      }}
+                    />
+                    <Volume1 size={12} aria-hidden="true" />
+                  </label>
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              className={stream ? "ft-icon is-on" : "ft-icon"}
+              aria-label="Stream music"
+              title="Stream music"
+              aria-expanded={panel === "music"}
+              onClick={() => toggle("music")}
+            >
+              <Radio size={16} aria-hidden="true" />
+            </button>
+          </div>
+
+          {(mode === "clock" || settingUp) && (
+            <p className="ft-quote">
+              &ldquo;{quote[0]}&rdquo;
+              <br />— {quote[1]}
+            </p>
+          )}
+        </section>
 
         {/* انتهى الوقت — ولا يعرف إن أُنجزت إلا صاحبها. */}
-        {asking && task && (
-          <section className="fc-ask" role="status">
-            <h2>انتهى الوقت.</h2>
-            <p>هل أنجزت المهمة؟</p>
-            <div className="fc-ask-actions">
+        {asked && (
+          <section className="ft-panel ft-ask" role="status">
+            <h2>
+              Session finished.
+              <small dir="auto">Did you finish &ldquo;{asked.title}&rdquo;?</small>
+            </h2>
+            <div className="ft-actions">
               <button
                 type="button"
-                className="tp-btn tp-btn-primary"
+                className="ft-btn ft-btn-primary"
                 disabled={complete.isPending}
                 onClick={() => {
-                  complete.mutate({ id: task.id });
-                  setAsking(false);
-                  setTaskId(null);
-                  setLeft(minutes * 60);
+                  complete.mutate({ id: asked.id });
+                  setAskingId(null);
+                  setState(previous => ({ ...previous, taskId: null }));
                 }}
               >
-                نعم، أنجزتها
+                <Check size={16} aria-hidden="true" />
+                Yes, it's done
               </button>
-              <button
-                type="button"
-                className="tp-btn"
-                onClick={() => {
-                  setAsking(false);
-                  setLeft(minutes * 60);
-                }}
-              >
-                أحتاج وقتاً أكثر
+              <button type="button" className="ft-btn" onClick={() => setAskingId(null)}>
+                I need more time
               </button>
               {/* «لاحقاً» يعني وقتاً آخر، فتُعاد إلى حجز الوقت لا إلى القائمة. */}
-              <Link className="tp-btn" href={`${TIME_METHOD_ROUTES.timeBlocking}?task=${task.id}`}>
-                جدولها لاحقاً
+              <Link className="ft-btn" href={`${TIME_METHOD_ROUTES.timeBlocking}?task=${asked.id}`}>
+                Schedule it later
               </Link>
             </div>
           </section>
         )}
+      </main>
+
+      {/* ---- درج المهام: قائمة واف المفتوحة، تُضاف إليها وتُنجَز منها ---- */}
+      {todoOpen && !quiet && (
+        <aside className="ft-drawer" aria-label="Todo list">
+          <button type="button" className="ft-drawer-fold" aria-label="Close todo list" onClick={() => setTodoOpen(false)}>
+            <ArrowRight size={14} aria-hidden="true" />
+          </button>
+          <header className="ft-drawer-head">
+            <h2>Todo List</h2>
+            <button type="button" className="ft-icon ft-icon-sm" aria-label="Close" onClick={() => setTodoOpen(false)}>
+              <X size={16} aria-hidden="true" />
+            </button>
+          </header>
+          <div className="ft-drawer-progress">
+            <div className="ft-bar" data-tone="go">
+              <span style={{ inlineSize: `${doneCount + tasks.length ? (doneCount / (doneCount + tasks.length)) * 100 : 0}%` }} />
+            </div>
+            <span>
+              {doneCount} of {doneCount + tasks.length}
+            </span>
+          </div>
+          <form
+            className="ft-drawer-add"
+            onSubmit={event => {
+              event.preventDefault();
+              const title = newTask.trim();
+              if (title && !create.isPending) create.mutate({ title });
+            }}
+          >
+            <Plus size={16} aria-hidden="true" />
+            <input
+              type="text"
+              dir="auto"
+              value={newTask}
+              maxLength={200}
+              placeholder="Add a task"
+              aria-label="Add a task"
+              onChange={event => setNewTask(event.target.value)}
+            />
+          </form>
+          {create.error && (
+            <p className="tm-form-error" role="alert" dir="auto">
+              {create.error.message}
+            </p>
+          )}
+          {status.data?.configured === false && (
+            <p className="ft-muted ft-drawer-note">Tasks are not connected on this deployment yet.</p>
+          )}
+
+          {tasks.length === 0 ? (
+            <div className="ft-drawer-empty">
+              <span className="ft-icon" aria-hidden="true">
+                <Target size={18} />
+              </span>
+              <strong>Nothing on the list</strong>
+              <p>Add a task above to get started.</p>
+            </div>
+          ) : (
+            <ul className="ft-drawer-list">
+              {tasks.map(item => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className="ft-todo-check"
+                    aria-label={`Complete ${item.title}`}
+                    disabled={complete.isPending}
+                    onClick={() => {
+                      // مهمة جلستها مفتوحة تُغلق جلستها أولاً، فلا تبقى جلسةٌ بلا مهمة.
+                      if (item.id === state.taskId) {
+                        (["timer", "pomodoro", "stopwatch"] as const).forEach(which => {
+                          const sessionId = sessions[which];
+                          if (sessionId) endSession.mutate({ sessionId, completed: false });
+                        });
+                        setState(previous => ({
+                          ...previous,
+                          taskId: null,
+                          sessions: { timer: null, pomodoro: null, stopwatch: null },
+                        }));
+                      }
+                      complete.mutate({ id: item.id });
+                    }}
+                  />
+                  <span dir="auto">{item.title}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      )}
+
+      {/* ---- بثّ الموسيقى ---- */}
+      {panel === "music" && (
+        <div className="ft-scrim" onClick={() => setPanel(null)}>
+          <form
+            className="ft-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ft-stream-title"
+            onClick={event => event.stopPropagation()}
+            onSubmit={event => {
+              event.preventDefault();
+              playStream();
+            }}
+          >
+            <span className="ft-dialog-mark" aria-hidden="true">
+              <Radio size={20} />
+            </span>
+            <h2 id="ft-stream-title">Stream Music</h2>
+            <p>Paste a Spotify or YouTube link to play while studying</p>
+            <input
+              type="url"
+              autoFocus
+              value={streamDraft}
+              placeholder="https://open.spotify.com/playlist/... or youtube.com/watch?"
+              aria-label="Spotify or YouTube link"
+              onChange={event => setStreamDraft(event.target.value)}
+            />
+            <ul>
+              <li data-tone="spotify">Songs, albums, playlists, podcasts</li>
+              <li data-tone="youtube">Videos, playlists, livestreams, YouTube Music</li>
+            </ul>
+            <div className="ft-dialog-actions">
+              <button type="button" className="ft-btn" onClick={() => setPanel(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="ft-btn ft-btn-primary" disabled={!streamValid}>
+                Play
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {stream && (
+        <div className="ft-player">
+          <button type="button" className="ft-icon ft-icon-sm" aria-label="Stop music" onClick={() => setStream(null)}>
+            <X size={14} aria-hidden="true" />
+          </button>
+          <iframe
+            src={stream}
+            title="Music player"
+            loading="lazy"
+            allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+      )}
+
+      {!quiet && (
+        <>
+          <p className="ft-status" data-ok={online}>
+            <span aria-hidden="true" />
+            {online ? "All operations normal" : "You are offline"}
+          </p>
+          <p className="ft-now">
+            <span aria-hidden="true" />
+            {studyingNow} studying now
+          </p>
+        </>
+      )}
+
+      {mini && createPortal(<span>{groups.join(":")}</span>, mini.document.body)}
+    </div>
+  );
+}
+
+/** النقطتان دائرتان مرسومتان لا حرفاً: تبقيان في منتصف الرقم مهما كبر. */
+function Colon() {
+  return (
+    <span className="ft-colon" aria-hidden="true">
+      <i />
+      <i />
+    </span>
+  );
+}
+
+function PomodoroPanel({
+  settings,
+  onApply,
+}: {
+  settings: PomodoroSettings;
+  onApply: (next: PomodoroSettings) => void;
+}) {
+  const [draft, setDraft] = useState({
+    work: String(settings.work),
+    short: String(settings.short),
+    long: String(settings.long),
+    every: String(settings.every),
+  });
+  const [autoBreaks, setAutoBreaks] = useState(settings.autoBreaks);
+
+  const FIELDS = [
+    ["work", "Work Duration (min)", 240],
+    ["short", "Short Break (min)", 120],
+    ["long", "Long Break (min)", 120],
+    ["every", "Long Break Every", 12],
+  ] as const;
+
+  return (
+    <form
+      className="ft-panel ft-settings"
+      onSubmit={event => {
+        event.preventDefault();
+        const next = { ...settings, autoBreaks };
+        // خانة فارغة أو خارج الحدّ تبقى على قيمتها السابقة لا على الافتراض.
+        for (const [key, , max] of FIELDS) {
+          const value = Number(draft[key]);
+          if (draft[key] !== "" && Number.isInteger(value) && value >= 1 && value <= max) next[key] = value;
+        }
+        onApply(next);
+      }}
+    >
+      <h2>
+        Pomodoro Settings
+        <small>Adjust your timer durations below</small>
+      </h2>
+      <div className="ft-settings-grid">
+        {FIELDS.map(([key, label, max]) => (
+          <label key={key} className="ft-setting">
+            <span>{label}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={max}
+              value={draft[key]}
+              onChange={event => setDraft({ ...draft, [key]: event.target.value })}
+            />
+          </label>
+        ))}
       </div>
-    </TimeLayout>
+      <label className="ft-toggle">
+        <span>
+          Auto-start Breaks
+          <small>Automatically start break timer after work session completes</small>
+        </span>
+        <input type="checkbox" checked={autoBreaks} onChange={event => setAutoBreaks(event.target.checked)} />
+      </label>
+      <button type="submit" className="ft-btn ft-btn-accent">
+        <Check size={16} aria-hidden="true" />
+        Apply Settings &amp; Close
+      </button>
+    </form>
   );
 }
