@@ -25,6 +25,15 @@ export type AmbienceId = (typeof AMBIENCE)[number]["id"];
 
 let context: AudioContext | null = null;
 let master: GainNode | null = null;
+let volume = 0.5;
+
+/**
+ * رفعٌ ثابت لكل الأصوات.
+ *
+ * الضجيج المرشَّح يفقد أغلب طاقته في المرشّح، فيخرج همساً لا يُسمع إلا
+ * والسمّاعة على آخرها. فيُرفع هنا مرّة واحدة بدل تضخيم كل وصفة على حدة.
+ */
+const MAKEUP = 3;
 const playing = new Map<AmbienceId, () => void>();
 const buffers = new Map<string, AudioBuffer>();
 
@@ -33,8 +42,15 @@ function audio(): { ctx: AudioContext; out: GainNode } {
     const Context = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     context = new Context();
     master = context.createGain();
-    master.gain.value = 0.5;
-    master.connect(context.destination);
+    master.gain.value = volume;
+    // محدِّد قبل المخرج: الأصوات مرفوعة لتُسمع، وهذا ما يمنعها أن تتشوّه عند أعلى المنزلق.
+    const limiter = context.createDynamicsCompressor();
+    limiter.threshold.value = -6;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.005;
+    limiter.release.value = 0.2;
+    master.connect(limiter).connect(context.destination);
   }
   // المتصفّح يعلّق السياق حتى أول لمسة؛ النداء يأتي من ضغطة فيُستأنف.
   if (context.state === "suspended") void context.resume();
@@ -75,8 +91,9 @@ interface Voice {
 function build(ctx: AudioContext, out: AudioNode, id: AmbienceId): Voice {
   const voice: Voice = { nodes: [], timers: [], alive: true };
   const bus = ctx.createGain();
-  bus.gain.value = 0;
-  bus.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.6);
+  // نقطة بدء صريحة: منحدرٌ بلا نقطة قبله يتصرّف بحسب المتصفّح.
+  bus.gain.setValueAtTime(0.0001, ctx.currentTime);
+  bus.gain.linearRampToValueAtTime(MAKEUP, ctx.currentTime + 0.4);
   bus.connect(out);
   voice.nodes.push(bus);
 
@@ -181,7 +198,7 @@ function build(ctx: AudioContext, out: AudioNode, id: AmbienceId): Voice {
       every(7000, 22000, () => burst("brown", "lowpass", 140, 0.9, 3 + Math.random() * 2.5));
       break;
     case "ocean":
-      bed("brown", 0.55, { type: "lowpass", frequency: 650 }, { rate: 0.09, depth: 0.75 });
+      bed("brown", 0.42, { type: "lowpass", frequency: 650 }, { rate: 0.09, depth: 0.75 });
       bed("white", 0.04, { type: "highpass", frequency: 2500 }, { rate: 0.09, depth: 0.9 });
       break;
     case "forest":
@@ -205,7 +222,7 @@ function build(ctx: AudioContext, out: AudioNode, id: AmbienceId): Voice {
       every(2500, 9000, () => chirp(2100 + Math.random() * 700, 1900, 0.025, 0.25));
       break;
     case "keyboard":
-      every(70, 320, () => burst("white", "bandpass", 1600 + Math.random() * 1400, 0.1 + Math.random() * 0.08, 0.035));
+      every(70, 320, () => burst("white", "bandpass", 1600 + Math.random() * 1400, 0.25 + Math.random() * 0.15, 0.035));
       break;
     case "theta": {
       // 200 و206 هرتز، كلٌّ في أذن: الفرق ستّة — وهو ما تسمعه نبضاً.
@@ -226,13 +243,19 @@ function build(ctx: AudioContext, out: AudioNode, id: AmbienceId): Voice {
   return voice;
 }
 
-/** يشغّل الصوت أو يوقفه؛ يعود بحاله بعد الضغطة. */
+/**
+ * يشغّل الصوت أو يوقفه؛ يعود بحاله بعد الضغطة.
+ *
+ * صوتٌ واحد في المرّة: اختيار صوتٍ يُطفئ ما قبله. اثنا عشر صوتاً معاً ضجيجٌ
+ * لا خلفيّة.
+ */
 export function toggleAmbience(id: AmbienceId): boolean {
   const stop = playing.get(id);
   if (stop) {
     stop();
     return false;
   }
+  stopAmbience();
   try {
     const { ctx, out } = audio();
     const voice = build(ctx, out, id);
@@ -263,7 +286,8 @@ export function stopAmbience(): void {
   Array.from(playing.values()).forEach(stop => stop());
 }
 
-/** من صفر إلى واحد. */
-export function setAmbienceVolume(volume: number): void {
-  if (master && context) master.gain.setTargetAtTime(Math.min(1, Math.max(0, volume)), context.currentTime, 0.05);
+/** من صفر إلى واحد؛ يُحفظ ولو لم يبدأ صوتٌ بعد، فيبدأ عليه. */
+export function setAmbienceVolume(next: number): void {
+  volume = Math.min(1, Math.max(0, next));
+  if (master && context) master.gain.setTargetAtTime(volume, context.currentTime, 0.05);
 }
