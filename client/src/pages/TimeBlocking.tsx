@@ -556,7 +556,9 @@ export default function TimeBlocking() {
           <div className="tbk-greeting">
             <h1>
               {greeting(now.getHours())}
-              {name && <>، <span>{name}</span></>} 👋
+              {name && <>، <span>{name}</span></>}
+              {/* مع ما قبلها في سطر واحد: يدٌ تلوّح وحدها في سطرٍ تبدو خطأ. */}
+              &nbsp;👋
             </h1>
             <p className="tbk-sub">خطّط وقتك، وركّز على ما يهمّ.</p>
           </div>
@@ -601,7 +603,8 @@ export default function TimeBlocking() {
               {status.data?.configured === false && (
                 <p className="tbk-empty">المهام غير موصولة بعد. اضبط SUPABASE_URL و SUPABASE_ANON_KEY ثم أعد النشر.</p>
               )}
-              {open.isLoading && <p className="tbk-empty">تُحمَّل مهامك…</p>}
+              {/* سؤال الإعداد يسبق سؤال المهام؛ وبينهما لا يصحّ أن تبدو القائمة فارغة. */}
+              {(status.isLoading || open.isLoading) && <p className="tbk-empty">تُحمَّل مهامك…</p>}
               {open.isError && <p className="tbk-empty">تعذّر تحميل المهام. حدّث الصفحة.</p>}
               {open.isSuccess && visible.length === 0 && finished.length === 0 && (
                 <p className="tbk-empty">{tasks.length ? "لا مهام في هذا العرض." : "لا مهام بعد. أضف أول مهمة."}</p>

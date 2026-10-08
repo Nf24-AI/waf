@@ -824,6 +824,8 @@
   .tbk-pop { inset-inline-start: auto; inset-inline-end: 0; translate: 0 0; }
   .tbk-hero { display: block; margin: 0 2px 16px; }
   .tbk-greeting h1 { font-size: 29px; margin-block-end: 5px; }
+  /* لا لوحة مفاتيح على الجوّال: اختصارٌ لا يُضغط لا يُعرض. */
+  .tbk-addtask kbd { display: none; }
   .tbk-sub { font-size: 14px; }
   .tbk-stats { display: flex; overflow-x: auto; gap: 8px; padding: 2px 1px 6px; margin-block-start: 14px; scrollbar-width: none; }
   .tbk-stats::-webkit-scrollbar { display: none; }
