@@ -11,6 +11,7 @@ import {
   Coffee,
   Flag,
   GripVertical,
+  Trash2,
   Heart,
   Layers,
   Moon,
@@ -737,6 +738,16 @@ export default function TimeBlocking() {
                         )}
                       </div>
                     </div>
+                    {/* الحذف من الصفّ نفسه: مهمة بلا وقت لا نافذة حجز لها تُحذف منها. */}
+                    <button
+                      type="button"
+                      className="tbk-drag tbk-del"
+                      aria-label={t(`حذف «${task.title}»`, `Delete “${task.title}”`)}
+                      title={t("حذف المهمة", "Delete task")}
+                      onClick={() => void remove(task)}
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
                     <button
                       type="button"
                       className="tbk-drag"
