@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuthSession } from "@/contexts/AuthContext";
 import { loginHref } from "@/lib/auth-routes";
+import { dir, t } from "@/lib/i18n";
 
 /**
  * حارس الصفحات الخاصّة.
@@ -26,11 +27,11 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
 
   if (!configured) {
     return (
-      <div className="au-screen" data-waf-theme="navy" dir="rtl">
+      <div className="au-screen" data-waf-theme="navy" dir={dir()}>
         <main className="au-card">
-          <h1 className="au-title">المصادقة غير مضبوطة.</h1>
+          <h1 className="au-title">{t("المصادقة غير مضبوطة.", "Authentication is not configured.")}</h1>
           <p className="au-lede">
-            اضبط <code>VITE_SUPABASE_URL</code> و<code>VITE_SUPABASE_ANON_KEY</code> ثم أعد النشر.
+            {t("اضبط", "Set")} <code>VITE_SUPABASE_URL</code> {t("و", "and ")}<code>VITE_SUPABASE_ANON_KEY</code> {t("ثم أعد النشر.", "then redeploy.")}
           </p>
         </main>
       </div>
@@ -39,10 +40,10 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
 
   if (loading) {
     return (
-      <div className="au-screen" data-waf-theme="navy" dir="rtl">
+      <div className="au-screen" data-waf-theme="navy" dir={dir()}>
         <main className="au-card au-loading">
           <div className="loading-orb" />
-          <p className="au-lede">جارٍ تحميل بياناتك…</p>
+          <p className="au-lede">{t("جارٍ تحميل بياناتك…", "Loading your data…")}</p>
         </main>
       </div>
     );

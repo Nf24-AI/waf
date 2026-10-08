@@ -8,6 +8,7 @@ import {
   toggleAmbience,
   type AmbienceId,
 } from "@/lib/ambience";
+import { pair, pick, t, type Pair } from "@/lib/i18n";
 
 /**
  * موسيقى التركيز.
@@ -17,13 +18,13 @@ import {
  * مطراً. والملف باقٍ لمن يريد موسيقاه.
  */
 
-const SOUNDS: { id: AmbienceId; label: string }[] = [
-  { id: "rain", label: "مطر" },
-  { id: "ocean", label: "بحر" },
-  { id: "forest", label: "غابة" },
-  { id: "cafe", label: "مقهى" },
-  { id: "fireplace", label: "موقد" },
-  { id: "brown", label: "ضجيج بنّي" },
+const SOUNDS: { id: AmbienceId; label: Pair }[] = [
+  { id: "rain", label: pair("مطر", "Rain") },
+  { id: "ocean", label: pair("بحر", "Ocean") },
+  { id: "forest", label: pair("غابة", "Forest") },
+  { id: "cafe", label: pair("مقهى", "Café") },
+  { id: "fireplace", label: pair("موقد", "Fireplace") },
+  { id: "brown", label: pair("ضجيج بنّي", "Brown noise") },
 ];
 
 export default function MusicButton() {
@@ -102,7 +103,8 @@ export default function MusicButton() {
   }
 
   const on = Boolean(sound) || filePlaying;
-  const label = sound ? SOUNDS.find(item => item.id === sound)?.label ?? AMBIENCE.find(item => item.id === sound)?.label : filePlaying ? file : null;
+  const known = SOUNDS.find(item => item.id === sound);
+  const label = sound ? (known ? pick(known.label) : AMBIENCE.find(item => item.id === sound)?.label) : filePlaying ? file : null;
 
   return (
     <div className="tbk-music-wrap" ref={wrapRef}>
@@ -111,26 +113,26 @@ export default function MusicButton() {
         className="tbk-music"
         data-on={on}
         aria-expanded={open}
-        aria-label="موسيقى التركيز"
+        aria-label={t("موسيقى التركيز", "Focus music")}
         onClick={() => setOpen(current => !current)}
       >
         <Music size={16} aria-hidden="true" />
-        <span>{label ?? "موسيقى التركيز"}</span>
+        <span>{label ?? t("موسيقى التركيز", "Focus music")}</span>
       </button>
       <input ref={inputRef} type="file" accept="audio/*" hidden onChange={pickFile} />
 
       {open && (
-        <div className="tbk-pop" role="dialog" aria-label="موسيقى التركيز">
-          <h3>أصوات للتركيز</h3>
+        <div className="tbk-pop" role="dialog" aria-label={t("موسيقى التركيز", "Focus music")}>
+          <h3>{t("أصوات للتركيز", "Sounds for focus")}</h3>
           <div className="tbk-sounds">
             {SOUNDS.map(item => (
               <button key={item.id} type="button" aria-pressed={sound === item.id} onClick={() => pickSound(item.id)}>
-                {item.label}
+                {pick(item.label)}
               </button>
             ))}
           </div>
           <label className="tbk-pop-row">
-            مستوى الصوت
+            {t("مستوى الصوت", "Volume")}
             <input
               type="range"
               min={0}
@@ -148,7 +150,7 @@ export default function MusicButton() {
           )}
           <button type="button" className="tbk-pop-file" onClick={() => inputRef.current?.click()}>
             <Upload size={14} aria-hidden="true" />
-            ملف من جهازك
+            {t("ملف من جهازك", "File from your device")}
           </button>
         </div>
       )}

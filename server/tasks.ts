@@ -11,6 +11,7 @@ import {
   type Importance,
   type RepeatRule,
   type TaskCategory,
+  type TaskOrigin,
   type TaskPriority,
   type Urgency,
 } from "@shared/tasks";
@@ -119,6 +120,7 @@ interface Row {
   priority: TaskPriority | null;
   due_date: string | null;
   repeat_days: number[] | null;
+  origin: TaskOrigin | null;
   is_done: boolean;
   created_at: string;
 }
@@ -154,6 +156,7 @@ function toTask(row: Row, sessions = 0): Task {
     priority: row.priority ?? undefined,
     dueDate: row.due_date ?? undefined,
     repeatDays: row.repeat_days ?? undefined,
+    origin: row.origin ?? undefined,
     completedSessions: sessions,
     createdAt: row.created_at,
     completedAt: completedAt ?? undefined,
@@ -171,6 +174,7 @@ const OPTIONAL_COLUMNS = [
   "priority",
   "due_date",
   "repeat_days",
+  "origin",
 ] as const;
 type OptionalColumn = (typeof OPTIONAL_COLUMNS)[number];
 
@@ -265,12 +269,26 @@ async function withSessions(who: Identity, row: Row): Promise<Task> {
   return toTask(row, counts.get(row.id) ?? 0);
 }
 
+/**
+ * مرشِّح الإطار في الاستعلام.
+ *
+ * يُبنى داخل المحاولة لا قبلها: إن كان العمود لم يُرحَّل بعد أسقطته المظلّة
+ * وأعادت، والمرشِّح يجب أن يسقط معه — وإلا عاد الطلب يشتكي من العمود نفسه.
+ * وقبل الترحيل تُرى المهام كلّها في كل إطار، وهو أهون من ألّا يُرى شيء.
+ *
+ * والمصفوفة ترى ما بلا إطار أيضاً: انظر TASK_ORIGINS.
+ */
+function scope(origin?: TaskOrigin): string {
+  if (!origin || missing.has("origin")) return "";
+  return origin === "eisenhower" ? "&or=(origin.eq.eisenhower,origin.is.null)" : `&origin=eq.${origin}`;
+}
+
 /** المهام المفتوحة: ما لم يُنجَز ولم يُؤرشَف. هي ما تعرضه الواجهات كلها. */
-export async function listOpenTasks(who: Identity): Promise<Task[]> {
+export async function listOpenTasks(who: Identity, origin?: TaskOrigin): Promise<Task[]> {
   const rows = await withSchemaFallback(() =>
     rest<Row[]>(
       who,
-      `${TABLE}?select=${columns()}&completed_at=is.null&is_done=eq.false&is_archived=eq.false&order=created_at.desc`,
+      `${TABLE}?select=${columns()}&completed_at=is.null&is_done=eq.false&is_archived=eq.false${scope(origin)}&order=created_at.desc`,
     ),
   );
   const counts = await sessionCounts(who, rows.map(row => row.id));
@@ -299,11 +317,12 @@ export async function createTask(who: Identity, input: {
   priority?: TaskPriority;
   dueDate?: string;
   repeatDays?: number[];
+  origin?: TaskOrigin;
 }, guard = false): Promise<Task> {
   // الحارس لما يطلبه المستخدم بيده. النسخة التالية من مهمة متكرّرة تُنشأ بلا
   // حارس: تعارضٌ في الغد لا يصحّ أن يُفشل إنجازَ اليوم.
   if (guard && input.scheduledStart && input.scheduledEnd) {
-    await assertFree(who, input.scheduledStart, input.scheduledEnd);
+    await assertFree(who, input.scheduledStart, input.scheduledEnd, undefined, input.origin);
   }
 
   const split = input.quadrant ? splitQuadrant(input.quadrant) : null;
@@ -333,6 +352,7 @@ export async function createTask(who: Identity, input: {
         priority: input.priority ?? null,
         due_date: input.dueDate ?? null,
         repeat_days: input.repeatDays?.length ? input.repeatDays : null,
+        origin: input.origin ?? null,
       }),
       }),
     }),
@@ -368,7 +388,7 @@ export async function scheduleTask(
   repeatRule?: RepeatRule | null,
   repeatDays?: number[] | null,
 ): Promise<Task> {
-  await assertFree(who, startIso, endIso, id);
+  await assertFree(who, startIso, endIso, id, await originOf(who, id));
 
   const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
       method: "PATCH",
@@ -386,13 +406,32 @@ export async function scheduleTask(
   return withSessions(who, row);
 }
 
+/** إطار مهمةٍ قائمة؛ `undefined` لما سبق الفصل أو قبل ترحيل العمود. */
+async function originOf(who: Identity, id: string): Promise<TaskOrigin | undefined> {
+  if (missing.has("origin")) return undefined;
+  try {
+    const [row] = await rest<{ origin: TaskOrigin | null }[]>(who, `${TABLE}?select=origin&id=eq.${id}`);
+    return row?.origin ?? undefined;
+  } catch (error) {
+    if (absentColumn(error) !== "origin") throw error;
+    missing.add("origin");
+    return undefined;
+  }
+}
+
 /**
  * يرفض موعداً يتداخل مع موعدٍ قائم.
  *
  * موعدان يتداخلان إن بدأ كلٌّ قبل نهاية الآخر. و`except` المهمة نفسها، كي
  * تُعاد جدولتها على وقتها دون أن تصطدم بنفسها.
  */
-async function assertFree(who: Identity, startIso: string, endIso: string, except?: string): Promise<void> {
+async function assertFree(
+  who: Identity,
+  startIso: string,
+  endIso: string,
+  except?: string,
+  origin?: TaskOrigin,
+): Promise<void> {
   if (new Date(endIso) <= new Date(startIso)) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "وقت الانتهاء يجب أن يلي وقت البداية" });
   }
@@ -401,7 +440,12 @@ async function assertFree(who: Identity, startIso: string, endIso: string, excep
     `scheduled_start=lt.${encodeURIComponent(endIso)}` +
     `&scheduled_end=gt.${encodeURIComponent(startIso)}`;
   const self = except ? `&id=neq.${except}` : "";
-  const clashes = await rest<{ id: string; name: string }[]>(who, `${TABLE}?select=id,name&completed_at=is.null&is_archived=eq.false&${window}${self}`,
+  // التعارض داخل الإطار وحده: موعدٌ قديم لا يراه صاحب الجدول لا يصحّ أن يحجب ساعته.
+  const clashes = await withSchemaFallback(() =>
+    rest<{ id: string; name: string }[]>(
+      who,
+      `${TABLE}?select=id,name&completed_at=is.null&is_archived=eq.false&${window}${self}${scope(origin)}`,
+    ),
   );
   if (clashes.length) {
     throw new TRPCError({
@@ -428,7 +472,9 @@ export async function updateTask(who: Identity, id: string, patch: {
   repeatDays?: number[] | null;
   schedule?: { start: string; end: string } | null;
 }): Promise<Task> {
-  if (patch.schedule) await assertFree(who, patch.schedule.start, patch.schedule.end, id);
+  if (patch.schedule) {
+    await assertFree(who, patch.schedule.start, patch.schedule.end, id, await originOf(who, id));
+  }
 
   const body: Record<string, unknown> = {};
   if (patch.title !== undefined) body.name = patch.title.trim();
@@ -518,6 +564,7 @@ export async function completeTask(who: Identity, id: string): Promise<Task> {
       scheduledEnd: when.end,
       estimatedMinutes: row.estimated_minutes ?? undefined,
       repeatRule: row.repeat_rule,
+      origin: row.origin ?? undefined,
       repeatDays: row.repeat_days ?? undefined,
       category: row.category ?? undefined,
       priority: row.priority ?? undefined,

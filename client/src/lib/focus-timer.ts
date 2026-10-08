@@ -130,18 +130,20 @@ export function timeGroups(seconds: number, options: { hours?: boolean; seconds?
 }
 
 /** «1h 5m» أو «4m 30s» — للسطور الصغيرة تحت العدّاد. */
-export function spokenDuration(seconds: number): string {
+export function spokenDuration(seconds: number, lang: "ar" | "en" = "en"): string {
   const safe = Math.max(0, Math.round(seconds));
   const h = Math.floor(safe / 3600);
   const m = Math.floor((safe % 3600) / 60);
+  if (lang === "ar") return h > 0 ? `${h}س ${m}د` : `${m}د ${safe % 60}ث`;
   return h > 0 ? `${h}h ${m}m` : `${m}m ${safe % 60}s`;
 }
 
 /** «00h 18m» — ساعات ودقائق دائماً، لطرفَي شريط ساعة الإيقاف. */
-export function hoursMinutes(seconds: number, pad = false): string {
+export function hoursMinutes(seconds: number, pad = false, lang: "ar" | "en" = "en"): string {
   const safe = Math.max(0, Math.round(seconds));
   const h = String(Math.floor(safe / 3600)).padStart(pad ? 2 : 1, "0");
-  return `${h}h ${String(Math.floor((safe % 3600) / 60)).padStart(pad ? 2 : 1, "0")}m`;
+  const m = String(Math.floor((safe % 3600) / 60)).padStart(pad ? 2 : 1, "0");
+  return lang === "ar" ? `${h}س ${m}د` : `${h}h ${m}m`;
 }
 
 /* ---- التخزين المحلّي ---- */

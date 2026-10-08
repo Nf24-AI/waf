@@ -13,7 +13,6 @@ import {
   GripVertical,
   Heart,
   Layers,
-  Menu,
   Moon,
   MoreHorizontal,
   MoreVertical,
@@ -28,9 +27,8 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { TASK_CATEGORIES, type Task, type TaskCategory, type TaskPriority } from "@shared/tasks";
-import { SETTINGS_ROUTE, STATISTICS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
-import FlowSteps from "@/components/time/FlowSteps";
-import TimeLayout from "@/components/time/TimeLayout";
+import { TIME_MANAGEMENT_ROUTE } from "@shared/routes";
+import LangToggle from "@/components/LangToggle";
 import BlockModal, { type BlockDraft } from "@/components/timeblock/BlockModal";
 import MusicButton from "@/components/timeblock/MusicButton";
 import TaskComposer, { type ComposerPrefill, type ComposerResult } from "@/components/timeblock/TaskComposer";
@@ -38,13 +36,12 @@ import { useAuthSession } from "@/contexts/AuthContext";
 import { useTouchDrag } from "@/hooks/useTouchDrag";
 import { LABEL_MAX, cleanLabels, loadAccountLabels, saveAccountLabels } from "@/lib/category-labels";
 import { toDateInput } from "@/lib/clock";
-import { flowHref, useInFlow } from "@/lib/flow";
+import { dir, locale, pair, pick, t, type Pair } from "@/lib/i18n";
 import { readName } from "@/lib/preferences";
-import { useTaskParam } from "@/lib/task-param";
+import { categoryLabel } from "@/lib/task-labels";
 import {
   DAY_END_MIN,
   SECTIONS,
-  WEEKDAY_SHORT,
   blocksOn,
   clashWith,
   dateOf,
@@ -58,6 +55,7 @@ import {
   shiftDay,
   sortTasks,
   weekOf,
+  weekdayShort,
   type Block,
   type TimeFormat,
 } from "@/lib/timeblock";
@@ -72,6 +70,9 @@ import { trpc } from "@/lib/trpc";
  * قائمتان تتباعدان — ما في الجدول وما في القائمة صفوفٌ واحدة تُقرأ مرّتين.
  */
 
+/** هذا الإطار يقرأ مهامه وحدها ويكتبها باسمه؛ انظر TASK_ORIGINS. */
+const ORIGIN = "timeblock" as const;
+
 const CATEGORY_ICON: Record<TaskCategory, typeof Brain> = {
   deep: Brain,
   meeting: Users,
@@ -81,27 +82,35 @@ const CATEGORY_ICON: Record<TaskCategory, typeof Brain> = {
 };
 
 const TONE = Object.fromEntries(TASK_CATEGORIES.map(item => [item.id, item.tone])) as Record<TaskCategory, string>;
-const DEFAULT_LABELS = Object.fromEntries(TASK_CATEGORIES.map(item => [item.id, item.label])) as Record<TaskCategory, string>;
+
+function defaultLabels(): Record<TaskCategory, string> {
+  return Object.fromEntries(TASK_CATEGORIES.map(item => [item.id, categoryLabel(item.id)])) as Record<TaskCategory, string>;
+}
 
 const FILTERS = [
-  { id: "all", label: "الكل" },
-  { id: "unscheduled", label: "بلا وقت" },
-  { id: "work", label: "العمل" },
-  { id: "personal", label: "شخصي" },
-  { id: "meeting", label: "اجتماعات" },
+  { id: "all", label: pair("الكل", "All") },
+  { id: "unscheduled", label: pair("بلا وقت", "Unscheduled") },
+  { id: "work", label: pair("العمل", "Work") },
+  { id: "personal", label: pair("شخصي", "Personal") },
+  { id: "meeting", label: pair("اجتماعات", "Meetings") },
 ] as const;
 type Filter = (typeof FILTERS)[number]["id"];
 
-const QUICK: { label: string; category: TaskCategory; tone: string; icon: typeof Brain; title?: string }[] = [
-  { label: "عمل عميق", category: "deep", tone: "purple", icon: Brain },
-  { label: "اجتماع", category: "meeting", tone: "blue", icon: Users },
-  { label: "شخصي", category: "personal", tone: "teal", icon: Heart },
-  { label: "غداء", category: "other", tone: "orange", icon: Utensils },
-  { label: "استراحة", category: "other", tone: "gray", icon: Coffee },
-  { label: "أخرى", category: "other", tone: "gray", icon: MoreHorizontal, title: "" },
+const QUICK: { label: Pair; category: TaskCategory; tone: string; icon: typeof Brain; title?: string }[] = [
+  { label: pair("عمل عميق", "Deep work"), category: "deep", tone: "purple", icon: Brain },
+  { label: pair("اجتماع", "Meeting"), category: "meeting", tone: "blue", icon: Users },
+  { label: pair("شخصي", "Personal"), category: "personal", tone: "teal", icon: Heart },
+  { label: pair("غداء", "Lunch"), category: "other", tone: "orange", icon: Utensils },
+  { label: pair("استراحة", "Break"), category: "other", tone: "gray", icon: Coffee },
+  { label: pair("أخرى", "Other"), category: "other", tone: "gray", icon: MoreHorizontal, title: "" },
 ];
 
-const REPEAT_LABEL = { daily: "كل يوم", weekdays: "أيام العمل", weekly: "كل أسبوع", custom: "مخصّص" } as const;
+const REPEAT_LABEL = {
+  daily: pair("كل يوم", "Every day"),
+  weekdays: pair("أيام العمل", "Workdays"),
+  weekly: pair("كل أسبوع", "Every week"),
+  custom: pair("مخصّص", "Custom"),
+} as const;
 
 /**
  * ما يُحفظ في المتصفّح: ذوق العرض، وفئةُ مهمةٍ لم يحفظها الخادم بعد.
@@ -148,7 +157,7 @@ interface Toast {
  * لا يفهمها أحد. فتؤخذ رسالة أول مشكلة، وما لا يُقرأ يُستبدل بجملة عامّة.
  */
 function readable(error: unknown): string {
-  const fallback = "تعذّر تنفيذ العملية. حاول مرة أخرى.";
+  const fallback = t("تعذّر تنفيذ العملية. حاول مرة أخرى.", "Could not complete that. Try again.");
   const message = (error as Error)?.message?.trim();
   if (!message) return fallback;
   if (!message.startsWith("[")) return message;
@@ -166,14 +175,12 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 export default function TimeBlocking() {
-  const preselected = useTaskParam();
-  // الرحلة تُغيّر الوجهة التالية وحدها، لا ما تفعله الصفحة.
-  const inFlow = useInFlow();
   const auth = useAuthSession();
+  const [account, setAccount] = useState(false);
 
   const utils = trpc.useUtils();
   const status = trpc.tasks.status.useQuery();
-  const open = trpc.tasks.listOpen.useQuery(undefined, { enabled: status.data?.configured === true });
+  const open = trpc.tasks.listOpen.useQuery({ origin: ORIGIN }, { enabled: status.data?.configured === true });
   const create = trpc.tasks.create.useMutation();
   const update = trpc.tasks.update.useMutation();
   const complete = trpc.tasks.complete.useMutation();
@@ -225,7 +232,7 @@ export default function TimeBlocking() {
   }, []);
 
   const tasks: Task[] = open.data ?? [];
-  const labels = useMemo(() => ({ ...DEFAULT_LABELS, ...prefs.labels }), [prefs.labels]);
+  const labels = useMemo(() => ({ ...defaultLabels(), ...prefs.labels }), [prefs.labels]);
   const format = prefs.format;
 
   const categoryOf = useCallback(
@@ -267,9 +274,6 @@ export default function TimeBlocking() {
     [today, nowMin],
   );
 
-  const focusHref = (id: string) =>
-    inFlow ? flowHref(TIME_METHOD_ROUTES.focus, id) : `${TIME_METHOD_ROUTES.focus}?task=${id}`;
-
   /**
    * كل كتابة تمرّ من هنا: تُنفَّذ، ثم تُحدَّث القائمة، والخطأ يُقال في إشعار.
    *
@@ -309,21 +313,26 @@ export default function TimeBlocking() {
 
     const exact = from + length <= DAY_END_MIN && !clashWith(taken, from, from + length, own);
     const slot = exact ? from : firstFreeSlot(taken, from, length, own);
-    if (slot === null) return say("لا فراغ يسع هذه المهمة في بقيّة اليوم.", { tone: "error" });
+    if (slot === null) {
+      return say(t("لا فراغ يسع هذه المهمة في بقيّة اليوم.", "No free slot fits this task in the rest of the day."), { tone: "error" });
+    }
 
     const saved = await act(() =>
       update.mutateAsync({ id: task.id, schedule: { start: isoAt(target, slot), end: isoAt(target, slot + length) } }),
     );
     if (!saved) return;
     say(
-      `حُجزت «${task.title}» ${formatTime(slot, format)}${exact ? "" : " — أول وقت فارغ"}`,
-      { action: { label: "ابدأ التركيز", href: focusHref(task.id) } },
+      t(
+        `حُجزت «${task.title}» ${formatTime(slot, format)}${exact ? "" : " — أول وقت فارغ"}`,
+        `Scheduled “${task.title}” at ${formatTime(slot, format)}${exact ? "" : " — first free slot"}`,
+      ),
     );
   }
 
   async function createTask(result: ComposerResult) {
     const saved = await act(() =>
       create.mutateAsync({
+        origin: ORIGIN,
         title: result.title,
         estimatedMinutes: result.minutes,
         category: result.category,
@@ -340,7 +349,7 @@ export default function TimeBlocking() {
     remember(saved as Task, result.category, result.priority);
     setComposer(null);
     if (result.schedule && result.day !== day) setDay(result.day);
-    say(result.schedule ? "حُجزت المهمة على الجدول" : "أُضيفت المهمة إلى القائمة");
+    say(result.schedule ? t("حُجزت المهمة على الجدول", "Task scheduled on the timeline") : t("أُضيفت المهمة إلى القائمة", "Task added to the list"));
   }
 
   async function saveBlock(draft: BlockDraft) {
@@ -356,6 +365,7 @@ export default function TimeBlocking() {
             schedule: when,
           })
         : create.mutateAsync({
+            origin: ORIGIN,
             title: draft.title,
             category: draft.category,
             estimatedMinutes: draft.end - draft.start,
@@ -366,7 +376,7 @@ export default function TimeBlocking() {
     if (!saved) return;
     remember(saved as Task, draft.category);
     setModal(null);
-    say(editing ? "حُفظ الحجز" : "أُضيف الحجز");
+    say(editing ? t("حُفظ الحجز", "Time block saved") : t("أُضيف الحجز", "Time block added"));
   }
 
   async function finish(task: Task) {
@@ -374,24 +384,27 @@ export default function TimeBlocking() {
     if (!saved) return;
     setModal(null);
     setFinished(current => [task, ...current.filter(item => item.id !== task.id)]);
-    say(`أُنجزت «${task.title}»`, { action: { label: "تراجع", run: () => void unfinish(task) } });
+    say(t(`أُنجزت «${task.title}»`, `Completed “${task.title}”`), {
+      action: { label: t("تراجع", "Undo"), run: () => void unfinish(task) },
+    });
   }
 
   async function unfinish(task: Task) {
     const saved = await act(() => reopen.mutateAsync({ id: task.id }));
     if (!saved) return;
     setFinished(current => current.filter(item => item.id !== task.id));
-    say("أُعيد فتح المهمة");
+    say(t("أُعيد فتح المهمة", "Task reopened"));
   }
 
   async function remove(task: Task) {
     const saved = await act(() => archive.mutateAsync({ id: task.id }));
     if (!saved) return;
     setModal(null);
-    say(`حُذفت «${task.title}»`, {
+    say(t(`حُذفت «${task.title}»`, `Deleted “${task.title}”`), {
       action: {
-        label: "تراجع",
-        run: () => void act(() => restore.mutateAsync({ id: task.id })).then(back => back && say("أُعيدت المهمة")),
+        label: t("تراجع", "Undo"),
+        run: () =>
+          void act(() => restore.mutateAsync({ id: task.id })).then(back => back && say(t("أُعيدت المهمة", "Task restored"))),
       },
     });
   }
@@ -407,7 +420,7 @@ export default function TimeBlocking() {
     );
     if (!saved) return;
     setModal(null);
-    say("أُلغي الحجز، والمهمة عادت إلى القائمة");
+    say(t("أُلغي الحجز، والمهمة عادت إلى القائمة", "Unscheduled. The task is back in the list"));
   }
 
   function openAdd(from?: number) {
@@ -417,7 +430,12 @@ export default function TimeBlocking() {
 
   function openEdit(block: Block) {
     if (block.ghost) {
-      return say("موعد متكرّر قادم. يظهر للتعديل حين تُنجَز المهمة التي قبله.");
+      return say(
+        t(
+          "موعد متكرّر قادم. يظهر للتعديل حين تُنجَز المهمة التي قبله.",
+          "Upcoming repeat. It becomes editable once the one before it is done.",
+        ),
+      );
     }
     setModal({
       task: block.task,
@@ -464,7 +482,7 @@ export default function TimeBlocking() {
     setPrefs(current => ({ ...current, labels: clean }));
     setEditLabels(false);
     try {
-      if (await saveAccountLabels(clean)) say("حُفظت أسماء الفئات في حسابك");
+      if (await saveAccountLabels(clean)) say(t("حُفظت أسماء الفئات في حسابك", "Category names saved to your account"));
     } catch (error) {
       say(readable(error), { tone: "error" });
     }
@@ -496,8 +514,9 @@ export default function TimeBlocking() {
       }
       if (composer || modal || isTyping(event.target) || event.metaKey || event.ctrlKey || event.altKey) return;
       // RTL: السهم الأيمن يعود يوماً، كما يعود الزرّ الذي على اليمين.
-      if (event.key === "ArrowRight") setDay(current => shiftDay(current, -1));
-      else if (event.key === "ArrowLeft") setDay(current => shiftDay(current, 1));
+      const [back, forward] = dir() === "rtl" ? ["ArrowRight", "ArrowLeft"] : ["ArrowLeft", "ArrowRight"];
+      if (event.key === back) setDay(current => shiftDay(current, -1));
+      else if (event.key === forward) setDay(current => shiftDay(current, 1));
       else if (event.code === "KeyT") setDay(toDateInput(new Date()));
       else if (event.code === "KeyN") {
         event.preventDefault();
@@ -525,31 +544,30 @@ export default function TimeBlocking() {
   }, [day, loaded]);
 
   const name = readName() || (auth.user?.user_metadata?.full_name as string | undefined) || auth.user?.email?.split("@")[0] || "";
-  const dayLabel = dateOf(day).toLocaleDateString("ar", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+  const dayLabel = dateOf(day).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "short", year: "numeric" });
   const realBlocks = blocks.filter(block => !block.ghost);
+  const [Previous, Next] = dir() === "rtl" ? [ChevronRight, ChevronLeft] : [ChevronLeft, ChevronRight];
 
-  const top = (onOpenNav: () => void) => (
+  const top = (
     <header className="tbk-top">
-      <button type="button" className="tbk-iconbtn tbk-burger" onClick={onOpenNav} aria-label="فتح القائمة">
-        <Menu size={18} aria-hidden="true" />
-      </button>
-      <div className="tbk-brand">
+      {/* العلامة هي المخرج الوحيد: إلى صفحة الإطارات، لا إلى إطارٍ آخر. */}
+      <Link className="tbk-brand" href={TIME_MANAGEMENT_ROUTE} aria-label={t("العودة إلى الإطارات", "Back to frameworks")}>
         <span className="tbk-brandmark" aria-hidden="true">
           <CalendarClock size={16} />
         </span>
-        <b>حجز الوقت</b>
-      </div>
+        <b>{t("حجز الوقت", "Time blocking")}</b>
+      </Link>
 
       <div className="tbk-navcenter">
         <div className="tbk-navpill">
-          <button type="button" onClick={() => goTo(shiftDay(day, -1))} aria-label="اليوم السابق">
-            <ChevronRight size={16} aria-hidden="true" />
+          <button type="button" onClick={() => goTo(shiftDay(day, -1))} aria-label={t("اليوم السابق", "Previous day")}>
+            <Previous size={16} aria-hidden="true" />
           </button>
-          <button type="button" className="tbk-today" onClick={() => { goTo(today); say("اليوم"); }}>
-            اليوم
+          <button type="button" className="tbk-today" onClick={() => { goTo(today); say(t("اليوم", "Today")); }}>
+            {t("اليوم", "Today")}
           </button>
-          <button type="button" onClick={() => goTo(shiftDay(day, 1))} aria-label="اليوم التالي">
-            <ChevronLeft size={16} aria-hidden="true" />
+          <button type="button" onClick={() => goTo(shiftDay(day, 1))} aria-label={t("اليوم التالي", "Next day")}>
+            <Next size={16} aria-hidden="true" />
           </button>
         </div>
         <time className="tbk-date" dateTime={day}>{dayLabel}</time>
@@ -561,7 +579,7 @@ export default function TimeBlocking() {
         <button
           type="button"
           className="tbk-iconbtn"
-          aria-label="بحث في المهام"
+          aria-label={t("بحث في المهام", "Search tasks")}
           aria-pressed={searching}
           onClick={() => {
             setSearching(true);
@@ -573,38 +591,59 @@ export default function TimeBlocking() {
         <button
           type="button"
           className="tbk-iconbtn"
-          aria-label={prefs.theme === "dark" ? "الوضع الفاتح" : "الوضع الداكن"}
+          aria-label={prefs.theme === "dark" ? t("الوضع الفاتح", "Light mode") : t("الوضع الداكن", "Dark mode")}
           onClick={() => setPrefs(current => ({ ...current, theme: current.theme === "dark" ? "light" : "dark" }))}
         >
           {prefs.theme === "dark" ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
         </button>
-        <Link className="tbk-profile" href={SETTINGS_ROUTE} aria-label="الإعدادات">
-          <span className="tbk-avatar">{(name || "و").slice(0, 1).toUpperCase()}</span>
-          <span>{name}</span>
-        </Link>
+        <LangToggle short className="tbk-iconbtn" />
+        <div className="tbk-music-wrap">
+          <button
+            type="button"
+            className="tbk-profile"
+            aria-label={t("الحساب", "Account")}
+            aria-expanded={account}
+            onClick={() => setAccount(current => !current)}
+          >
+            <span className="tbk-avatar">{(name || t("و", "W")).slice(0, 1).toUpperCase()}</span>
+            <span>{name}</span>
+          </button>
+          {account && (
+            <div className="tbk-pop tbk-pop-end" role="dialog" aria-label={t("الحساب", "Account")}>
+              {auth.user?.email && <h3 dir="ltr">{auth.user.email}</h3>}
+              <Link className="tbk-pop-file" href={TIME_MANAGEMENT_ROUTE}>
+                {t("كل الإطارات", "All frameworks")}
+              </Link>
+              <button type="button" className="tbk-pop-file" onClick={() => void auth.signOut()}>
+                {t("تسجيل الخروج", "Sign out")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
 
   return (
-    <TimeLayout top={top}>
+    <div className="tbk-frame" data-theme={prefs.theme} dir={dir()}>
+      {top}
+      <main className="tbk-main">
       <div className="tbk" data-theme={prefs.theme}>
-        <FlowSteps current="schedule" />
 
         <section className="tbk-hero">
           <div className="tbk-greeting">
             <h1>
               {greeting(now.getHours())}
-              {name && <>، <span>{name}</span></>}
+              {name && <>{t("،", ",")} <span>{name}</span></>}
               {/* مع ما قبلها في سطر واحد: يدٌ تلوّح وحدها في سطرٍ تبدو خطأ. */}
               &nbsp;👋
             </h1>
-            <p className="tbk-sub">خطّط وقتك، وركّز على ما يهمّ.</p>
+            <p className="tbk-sub">{t("خطّط وقتك، وركّز على ما يهمّ.", "Plan your time and focus on what matters.")}</p>
           </div>
           <div className="tbk-stats">
-            <Stat icon={<CalendarClock size={18} />} value={formatDuration(stats.planned)} label="محجوز" />
-            <Stat icon={<Target size={18} />} value={formatDuration(stats.focus)} label="وقت التركيز" color="#22d3b0" />
-            <Stat icon={<Zap size={18} />} value={formatDuration(stats.free)} label="وقت حرّ" color="#ffae28" />
+            <Stat icon={<CalendarClock size={18} />} value={formatDuration(stats.planned)} label={t("محجوز", "Planned")} />
+            <Stat icon={<Target size={18} />} value={formatDuration(stats.focus)} label={t("وقت التركيز", "Focus time")} color="#22d3b0" />
+            <Stat icon={<Zap size={18} />} value={formatDuration(stats.free)} label={t("وقت حرّ", "Free time")} color="#ffae28" />
           </div>
         </section>
 
@@ -612,41 +651,50 @@ export default function TimeBlocking() {
           <aside className="tbk-card tbk-tasks" aria-labelledby="tbk-tasks-title">
             <div className="tbk-taskhead">
               <h2 id="tbk-tasks-title">
-                المهام <span className="tbk-count">{tasks.length}</span>
+                {t("المهام", "Tasks")} <span className="tbk-count">{tasks.length}</span>
               </h2>
             </div>
             <button type="button" className="tbk-addtask" onClick={() => openComposer()}>
               <Plus size={16} aria-hidden="true" />
-              إضافة مهمة <kbd>Ctrl K</kbd>
+              {t("إضافة مهمة", "Add task")} <kbd>Ctrl K</kbd>
             </button>
             {searching && (
               <input
                 ref={searchRef}
                 className="tbk-search"
                 type="search"
-                placeholder="ابحث في مهامك…"
-                aria-label="بحث في المهام"
+                placeholder={t("ابحث في مهامك…", "Search your tasks…")}
+                aria-label={t("بحث في المهام", "Search tasks")}
                 value={query}
                 onChange={event => setQuery(event.target.value)}
               />
             )}
-            <div className="tbk-filters" role="group" aria-label="تصفية المهام">
+            <div className="tbk-filters" role="group" aria-label={t("تصفية المهام", "Filter tasks")}>
               {FILTERS.map(item => (
                 <button key={item.id} type="button" className="tbk-filter" aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>
-                  {item.label}
+                  {pick(item.label)}
                 </button>
               ))}
             </div>
 
             <div className="tbk-tasklist">
               {status.data?.configured === false && (
-                <p className="tbk-empty">المهام غير موصولة بعد. اضبط SUPABASE_URL و SUPABASE_ANON_KEY ثم أعد النشر.</p>
+                <p className="tbk-empty">
+                  {t(
+                    "المهام غير موصولة بعد. اضبط SUPABASE_URL و SUPABASE_ANON_KEY ثم أعد النشر.",
+                    "Tasks are not connected yet. Set SUPABASE_URL and SUPABASE_ANON_KEY, then redeploy.",
+                  )}
+                </p>
               )}
               {/* سؤال الإعداد يسبق سؤال المهام؛ وبينهما لا يصحّ أن تبدو القائمة فارغة. */}
-              {(status.isLoading || open.isLoading) && <p className="tbk-empty">تُحمَّل مهامك…</p>}
-              {open.isError && <p className="tbk-empty">تعذّر تحميل المهام. حدّث الصفحة.</p>}
+              {(status.isLoading || open.isLoading) && <p className="tbk-empty">{t("تُحمَّل مهامك…", "Loading your tasks…")}</p>}
+              {open.isError && <p className="tbk-empty">{t("تعذّر تحميل المهام. حدّث الصفحة.", "Could not load tasks. Refresh the page.")}</p>}
               {open.isSuccess && visible.length === 0 && finished.length === 0 && (
-                <p className="tbk-empty">{tasks.length ? "لا مهام في هذا العرض." : "لا مهام بعد. أضف أول مهمة."}</p>
+                <p className="tbk-empty">
+                  {tasks.length
+                    ? t("لا مهام في هذا العرض.", "No tasks in this view.")
+                    : t("لا مهام بعد. أضف أول مهمة.", "No tasks yet. Add your first task.")}
+                </p>
               )}
               {visible.map(task => {
                 const category = categoryOf(task);
@@ -660,7 +708,6 @@ export default function TimeBlocking() {
                     key={task.id}
                     className="tbk-task"
                     draggable
-                    data-current={task.id === preselected}
                     onDragStart={event => {
                       if (touch.busy()) return event.preventDefault();
                       event.dataTransfer.setData("text/plain", task.id);
@@ -669,21 +716,21 @@ export default function TimeBlocking() {
                     onTouchStart={event => touch.start(event, task.id, task.title, TONE[category])}
                     onDoubleClick={() => void schedule(task, day, defaultFrom(day))}
                   >
-                    <button type="button" className="tbk-check" aria-label={`إنجاز «${task.title}»`} onClick={() => void finish(task)} />
+                    <button type="button" className="tbk-check" aria-label={t(`إنجاز «${task.title}»`, `Complete “${task.title}”`)} onClick={() => void finish(task)} />
                     <div>
                       <div className="tbk-tasktitle">
                         <span className="tbk-dot" data-tone={TONE[category]} aria-hidden="true" />
                         {task.title}
-                        {priorityOf(task) === "high" && <Flag className="tbk-flag" size={12} aria-label="أولوية عالية" />}
+                        {priorityOf(task) === "high" && <Flag className="tbk-flag" size={12} aria-label={t("أولوية عالية", "High priority")} />}
                       </div>
                       <div className="tbk-taskmeta">
                         {labels[category]} · {formatDuration(minutes)}
-                        {task.repeatRule && ` · ${REPEAT_LABEL[task.repeatRule]}`}
+                        {task.repeatRule && ` · ${pick(REPEAT_LABEL[task.repeatRule])}`}
                         {at && (
                           <>
                             {" · "}
                             <b>
-                              {toDateInput(at) === day ? "" : `${WEEKDAY_SHORT[at.getDay()]} `}
+                              {toDateInput(at) === day ? "" : `${weekdayShort()[at.getDay()]} `}
                               {formatTime(at.getHours() * 60 + at.getMinutes(), format)}
                             </b>
                           </>
@@ -693,8 +740,11 @@ export default function TimeBlocking() {
                     <button
                       type="button"
                       className="tbk-drag"
-                      title="اسحبها إلى الجدول (باللمس: اضغط مطوّلاً ثم اسحب)، أو اضغط لحجز أول وقت فارغ"
-                      aria-label={`حجز أول وقت فارغ لـ«${task.title}»`}
+                      title={t(
+                        "اسحبها إلى الجدول (باللمس: اضغط مطوّلاً ثم اسحب)، أو اضغط لحجز أول وقت فارغ",
+                        "Drag it to the timeline (touch: press and hold, then drag), or click to book the first free slot",
+                      )}
+                      aria-label={t(`حجز أول وقت فارغ لـ«${task.title}»`, `Book the first free slot for “${task.title}”`)}
                       onClick={() => void schedule(task, day, defaultFrom(day))}
                     >
                       <GripVertical size={16} aria-hidden="true" />
@@ -704,12 +754,12 @@ export default function TimeBlocking() {
               })}
               {finished.map(task => (
                 <div key={task.id} className="tbk-task is-done">
-                  <button type="button" className="tbk-check" aria-label={`إعادة فتح «${task.title}»`} onClick={() => void unfinish(task)}>
+                  <button type="button" className="tbk-check" aria-label={t(`إعادة فتح «${task.title}»`, `Reopen “${task.title}”`)} onClick={() => void unfinish(task)}>
                     ✓
                   </button>
                   <div>
                     <div className="tbk-tasktitle">{task.title}</div>
-                    <div className="tbk-taskmeta">أُنجزت</div>
+                    <div className="tbk-taskmeta">{t("أُنجزت", "Done")}</div>
                   </div>
                   <span />
                 </div>
@@ -717,14 +767,16 @@ export default function TimeBlocking() {
             </div>
           </aside>
 
-          <section className="tbk-planner" aria-label="الجدول الزمني">
+          <section className="tbk-planner" aria-label={t("الجدول الزمني", "Timeline")}>
             <div className="tbk-section">
               <div className="tbk-sectionhead">
                 <Clock size={16} aria-hidden="true" />
                 <strong>{dayLabel}</strong>
-                <small>جدول اليوم المتّصل</small>
-                <span className="tbk-sectionmeta">{realBlocks.length} حجز</span>
-                <button type="button" className="tbk-plus" onClick={() => openAdd()} aria-label="إضافة حجز">
+                <small>{t("جدول اليوم المتّصل", "Continuous day timeline")}</small>
+                <span className="tbk-sectionmeta">
+                  {t(`${realBlocks.length} حجز`, realBlocks.length === 1 ? "1 block" : `${realBlocks.length} blocks`)}
+                </span>
+                <button type="button" className="tbk-plus" onClick={() => openAdd()} aria-label={t("إضافة حجز", "Add time block")}>
                   <Plus size={15} aria-hidden="true" />
                 </button>
               </div>
@@ -738,7 +790,7 @@ export default function TimeBlocking() {
                       {marker && (
                         <div className="tbk-daysection">
                           <span aria-hidden="true">{marker.icon}</span>
-                          <strong>{marker.label}</strong>
+                          <strong>{pick(marker.label)}</strong>
                           <small>
                             {formatTime(marker.from * 60, format)} – {formatTime(marker.to * 60, format)}
                           </small>
@@ -746,7 +798,7 @@ export default function TimeBlocking() {
                             type="button"
                             className="tbk-plus"
                             onClick={() => openAdd(marker.from * 60)}
-                            aria-label={`إضافة حجز في ${marker.label}`}
+                            aria-label={t(`إضافة حجز في ${marker.label.ar}`, `Add time block in the ${marker.label.en.toLowerCase()}`)}
                           >
                             <Plus size={15} aria-hidden="true" />
                           </button>
@@ -765,7 +817,7 @@ export default function TimeBlocking() {
                         <span className="tbk-time">{formatTime(hour * 60, format)}</span>
                         {day === today && now.getHours() === hour && (
                           <div className="tbk-nowline" style={{ insetBlockStart: `${(now.getMinutes() / 60) * 100}%` }}>
-                            <span>الآن {formatTime(nowMin, format)}</span>
+                            <span>{t(`الآن ${formatTime(nowMin, format)}`, `Now ${formatTime(nowMin, format)}`)}</span>
                           </div>
                         )}
                         {inHour.map(block => {
@@ -783,7 +835,11 @@ export default function TimeBlocking() {
                               data-tone={TONE[category]}
                               data-block={block.task.id}
                               draggable={!block.ghost}
-                              title={block.ghost ? "موعد متكرّر قادم" : "اضغط للتعديل، أو اسحب لتغيير الساعة"}
+                              title={
+                                block.ghost
+                                  ? t("موعد متكرّر قادم", "Upcoming repeat")
+                                  : t("اضغط للتعديل، أو اسحب لتغيير الساعة", "Click to edit, or drag to change the hour")
+                              }
                               onDragStart={event => {
                                 if (touch.busy()) return event.preventDefault();
                                 event.dataTransfer.setData("text/plain", block.task.id);
@@ -804,7 +860,7 @@ export default function TimeBlocking() {
                                 <span className="tbk-title">{block.task.title}</span>
                                 <span className="tbk-desc">
                                   {labels[category]} · {formatDuration(block.end - block.start)}
-                                  {block.task.repeatRule && ` · ${REPEAT_LABEL[block.task.repeatRule]}`}
+                                  {block.task.repeatRule && ` · ${pick(REPEAT_LABEL[block.task.repeatRule])}`}
                                 </span>
                               </span>
                               <span className="tbk-dots">
@@ -828,7 +884,10 @@ export default function TimeBlocking() {
                   onDragLeave={() => setOver(null)}
                   onDrop={event => drop(event, null)}
                 >
-                  أسقط مهمةً هنا لتُحجز في أول وقت فارغ، أو اضغط لإضافة حجز
+                  {t(
+                    "أسقط مهمةً هنا لتُحجز في أول وقت فارغ، أو اضغط لإضافة حجز",
+                    "Drop a task here to book the first free slot, or click to add a time block",
+                  )}
                 </button>
               </div>
             </div>
@@ -837,18 +896,18 @@ export default function TimeBlocking() {
           <aside className="tbk-rightcol">
             <div className="tbk-card">
               <div className="tbk-month">
-                <strong>{dateOf(day).toLocaleDateString("ar", { month: "long", year: "numeric" })}</strong>
+                <strong>{dateOf(day).toLocaleDateString(locale(), { month: "long", year: "numeric" })}</strong>
                 <span className="tbk-calnav">
-                  <button type="button" onClick={() => goTo(shiftDay(day, -7))} aria-label="الأسبوع السابق">
-                    <ChevronRight size={14} aria-hidden="true" />
+                  <button type="button" onClick={() => goTo(shiftDay(day, -7))} aria-label={t("الأسبوع السابق", "Previous week")}>
+                    <Previous size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => goTo(shiftDay(day, 7))} aria-label="الأسبوع التالي">
-                    <ChevronLeft size={14} aria-hidden="true" />
+                  <button type="button" onClick={() => goTo(shiftDay(day, 7))} aria-label={t("الأسبوع التالي", "Next week")}>
+                    <Next size={14} aria-hidden="true" />
                   </button>
                 </span>
               </div>
               <div className="tbk-week">
-                {WEEKDAY_SHORT.map(short => (
+                {weekdayShort().map(short => (
                   <span key={short}>{short}</span>
                 ))}
                 {week.map(date => (
@@ -857,7 +916,7 @@ export default function TimeBlocking() {
                     type="button"
                     className="tbk-day"
                     aria-pressed={date === day}
-                    aria-label={dateOf(date).toLocaleDateString("ar", { weekday: "long", day: "numeric", month: "long" })}
+                    aria-label={dateOf(date).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" })}
                     data-today={date === today}
                     data-busy={busyDays.has(date)}
                     onClick={() => goTo(date)}
@@ -871,42 +930,39 @@ export default function TimeBlocking() {
             <div className="tbk-card tbk-format">
               <h3>
                 <Clock size={15} aria-hidden="true" />
-                صيغة الوقت
+                {t("صيغة الوقت", "Time format")}
               </h3>
               <FormatSwitch format={format} onChange={next => setPrefs(current => ({ ...current, format: next }))} />
             </div>
 
             <div className="tbk-card">
               <h2>
-                التركيز
-                <Link className="tbk-link" href={STATISTICS_ROUTE}>
-                  عرض التفاصيل ←
-                </Link>
+                {t("التركيز", "Focus")}
               </h2>
               <div className="tbk-focusrow">
                 <div className="tbk-ring" style={{ "--p": stats.focusPercent } as React.CSSProperties}>
                   <span>
-                    {stats.focusPercent}%<small>تركيز</small>
+                    {stats.focusPercent}%<small>{t("تركيز", "Focus")}</small>
                   </span>
                 </div>
                 <div className="tbk-legend">
-                  <Legend tone="teal" label="تركيز" value={stats.focus} />
-                  <Legend tone="blue" label="اجتماعات" value={stats.meetings} />
-                  <Legend tone="purple" label="شخصي" value={stats.personal} />
-                  <Legend tone="gray" label="حرّ" value={stats.free} />
+                  <Legend tone="teal" label={t("تركيز", "Focus")} value={stats.focus} />
+                  <Legend tone="blue" label={t("اجتماعات", "Meetings")} value={stats.meetings} />
+                  <Legend tone="purple" label={t("شخصي", "Personal")} value={stats.personal} />
+                  <Legend tone="gray" label={t("حرّ", "Free")} value={stats.free} />
                 </div>
               </div>
             </div>
 
             <div className="tbk-card">
               <h2>
-                الفئات
+                {t("الفئات", "Categories")}
                 <button
                   type="button"
                   className="tbk-link"
                   onClick={() => (editLabels ? void finishLabels() : setEditLabels(true))}
                 >
-                  {editLabels ? "تم" : "تعديل"}
+                  {editLabels ? t("تم", "Done") : t("تعديل", "Edit")}
                 </button>
               </h2>
               {stats.byCategory
@@ -918,8 +974,8 @@ export default function TimeBlocking() {
                         <span>
                           <span className="tbk-dot" data-tone={TONE[item.id]} aria-hidden="true" />
                           <input
-                            aria-label={`اسم فئة ${DEFAULT_LABELS[item.id]}`}
-                            value={prefs.labels[item.id] ?? DEFAULT_LABELS[item.id]}
+                            aria-label={t(`اسم فئة ${categoryLabel(item.id)}`, `Name for the ${categoryLabel(item.id)} category`)}
+                            value={prefs.labels[item.id] ?? categoryLabel(item.id)}
                             maxLength={LABEL_MAX}
                             onChange={event =>
                               setPrefs(current => ({ ...current, labels: { ...current.labels, [item.id]: event.target.value } }))
@@ -943,13 +999,13 @@ export default function TimeBlocking() {
                       type="button"
                       className="tbk-cat"
                       aria-pressed={spot === item.id}
-                      title="اضغط لإبراز حجوزات هذه الفئة في الجدول"
+                      title={t("اضغط لإبراز حجوزات هذه الفئة في الجدول", "Click to highlight this category's blocks on the timeline")}
                       onClick={() => setSpot(current => (current === item.id ? null : item.id))}
                     >
                       <div className="tbk-cathead">
                         <span>
                           <span className="tbk-dot" data-tone={TONE[item.id]} aria-hidden="true" />
-                          {labels[item.id] || DEFAULT_LABELS[item.id]}
+                          {labels[item.id] || categoryLabel(item.id)}
                         </span>
                         <span>
                           {formatDuration(item.minutes)} · {item.percent}%
@@ -964,17 +1020,17 @@ export default function TimeBlocking() {
             </div>
 
             <div className="tbk-card">
-              <h2>إضافة سريعة</h2>
+              <h2>{t("إضافة سريعة", "Quick add")}</h2>
               <div className="tbk-quick">
                 {QUICK.map(item => (
                   <button
-                    key={item.label}
+                    key={item.label.ar}
                     type="button"
                     data-tone={item.tone}
-                    onClick={() => openComposer({ title: item.title ?? item.label, category: item.category })}
+                    onClick={() => openComposer({ title: item.title ?? pick(item.label), category: item.category })}
                   >
                     <item.icon size={18} aria-hidden="true" />
-                    {item.label}
+                    {pick(item.label)}
                   </button>
                 ))}
               </div>
@@ -982,9 +1038,10 @@ export default function TimeBlocking() {
           </aside>
         </section>
       </div>
+      </main>
 
       {createPortal(
-        <div className="tbk-portal" data-theme={prefs.theme} dir="rtl">
+        <div className="tbk-portal" data-theme={prefs.theme} dir={dir()}>
           {composer && (
             <TaskComposer
               key={composer.key}
@@ -1007,7 +1064,6 @@ export default function TimeBlocking() {
               format={format}
               labels={labels}
               pending={pending}
-              focusHref={modal.task ? focusHref(modal.task.id) : null}
               clashTitle={(start, end) =>
                 clashWith(blocks, start, end, block => block.task.id === modal.task?.id)?.task.title ?? null
               }
@@ -1042,7 +1098,7 @@ export default function TimeBlocking() {
         </div>,
         document.body,
       )}
-    </TimeLayout>
+    </div>
   );
 }
 
@@ -1074,12 +1130,12 @@ function Legend({ tone, label, value }: { tone: string; label: string; value: nu
 
 function FormatSwitch({ format, short = false, onChange }: { format: TimeFormat; short?: boolean; onChange: (next: TimeFormat) => void }) {
   return (
-    <div className="tbk-seg" role="group" aria-label="صيغة الوقت">
+    <div className="tbk-seg" role="group" aria-label={t("صيغة الوقت", "Time format")}>
       <button type="button" aria-pressed={format === 12} onClick={() => onChange(12)}>
-        {short ? "12س" : "12 ساعة (ص/م)"}
+        {short ? t("12س", "12h") : t("12 ساعة (ص/م)", "12-hour (AM/PM)")}
       </button>
       <button type="button" aria-pressed={format === 24} onClick={() => onChange(24)}>
-        {short ? "24س" : "24 ساعة"}
+        {short ? t("24س", "24h") : t("24 ساعة", "24-hour")}
       </button>
     </div>
   );

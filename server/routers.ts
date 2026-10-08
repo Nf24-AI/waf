@@ -28,13 +28,14 @@ import {
   tasksAreConfigured,
   updateTask,
 } from "./tasks";
-import { DAY_PATTERN, QUADRANTS, REPEAT_RULES, TASK_CATEGORIES, TASK_PRIORITIES } from "@shared/tasks";
+import { DAY_PATTERN, QUADRANTS, REPEAT_RULES, TASK_CATEGORIES, TASK_ORIGINS, TASK_PRIORITIES } from "@shared/tasks";
 
 const quadrantId = z.enum(QUADRANTS.map(q => q.id) as [string, ...string[]]);
 const repeatRule = z.enum(REPEAT_RULES);
 const repeatDays = z.array(z.number().int().min(0).max(6)).max(7);
 const taskCategory = z.enum(TASK_CATEGORIES.map(c => c.id) as [string, ...string[]]);
 const taskPriority = z.enum(TASK_PRIORITIES);
+const taskOrigin = z.enum(TASK_ORIGINS);
 const dayString = z.string().regex(DAY_PATTERN, "تاريخ غير صالح");
 
 const agendaItem = z.object({
@@ -155,7 +156,10 @@ export const appRouter = router({
      */
     status: publicProcedure.query(() => ({ configured: tasksAreConfigured() })),
 
-    listOpen: authedProcedure.query(({ ctx }) => listOpenTasks(ctx.identity)),
+    // كل إطار يسأل عن مهامه وحدها؛ انظر TASK_ORIGINS.
+    listOpen: authedProcedure
+      .input(z.object({ origin: taskOrigin }))
+      .query(({ ctx, input }) => listOpenTasks(ctx.identity, input.origin)),
 
     sessions: authedProcedure
       .input(z.object({ since: z.string().optional() }).optional())
@@ -181,6 +185,7 @@ export const appRouter = router({
           category: taskCategory.optional(),
           priority: taskPriority.optional(),
           dueDate: dayString.optional(),
+          origin: taskOrigin,
         }),
       )
       .mutation(({ ctx, input }) =>

@@ -7,6 +7,7 @@
  */
 import { repeatsOn, type Task, type TaskCategory, type TaskPriority } from "@shared/tasks";
 import { toDateInput } from "./clock";
+import { getLang, pair, type Pair } from "./i18n";
 
 export type TimeFormat = 12 | 24;
 
@@ -15,17 +16,29 @@ export const DAY_START_HOUR = 6;
 export const DAY_END_MIN = 24 * 60;
 
 export const SECTIONS = [
-  { id: "morning", label: "الصباح", icon: "☀️", from: 6, to: 12 },
-  { id: "afternoon", label: "الظهيرة", icon: "🌤️", from: 12, to: 18 },
-  { id: "evening", label: "المساء", icon: "🌇", from: 18, to: 22 },
-  { id: "night", label: "الليل", icon: "🌙", from: 22, to: 24 },
+  { id: "morning", label: pair("الصباح", "Morning"), icon: "☀️", from: 6, to: 12 },
+  { id: "afternoon", label: pair("الظهيرة", "Afternoon"), icon: "🌤️", from: 12, to: 18 },
+  { id: "evening", label: pair("المساء", "Evening"), icon: "🌇", from: 18, to: 22 },
+  { id: "night", label: pair("الليل", "Night"), icon: "🌙", from: 22, to: 24 },
 ] as const;
 
 export const DURATIONS = [30, 45, 60, 90, 120] as const;
 
-export const PRIORITY_LABEL: Record<TaskPriority, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية" };
+export const PRIORITY_LABEL: Record<TaskPriority, Pair> = {
+  low: pair("منخفضة", "Low"),
+  medium: pair("متوسطة", "Medium"),
+  high: pair("عالية", "High"),
+};
 
-export const WEEKDAY_SHORT = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"] as const;
+const WEEKDAY_SHORT = {
+  ar: ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"],
+  en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+} as const;
+
+/** أسماء الأيام القصيرة بلغة الواجهة، بترقيم Date.getDay(). */
+export function weekdayShort(): readonly string[] {
+  return WEEKDAY_SHORT[getLang()];
+}
 
 /** «09:30» ← 570 */
 export function minutesOf(time: string): number {
@@ -46,7 +59,8 @@ export function formatTime(time: string | number, format: TimeFormat): string {
   const m = total % 60;
   const mm = String(m).padStart(2, "0");
   if (format === 24) return `${String(h).padStart(2, "0")}:${mm}`;
-  return `${h % 12 || 12}:${mm} ${h >= 12 ? "م" : "ص"}`;
+  const [am, pm] = getLang() === "ar" ? ["ص", "م"] : ["AM", "PM"];
+  return `${h % 12 || 12}:${mm} ${h >= 12 ? pm : am}`;
 }
 
 /** «1س 30د» — قصير ليسع بطاقة المهمة. */
@@ -54,8 +68,9 @@ export function formatDuration(minutes: number): string {
   const safe = Math.max(0, Math.round(minutes));
   const h = Math.floor(safe / 60);
   const m = safe % 60;
-  if (!h) return `${m}د`;
-  return m ? `${h}س ${m}د` : `${h}س`;
+  const [hour, minute] = getLang() === "ar" ? ["س", "د"] : ["h", "m"];
+  if (!h) return `${m}${minute}`;
+  return m ? `${h}${hour} ${m}${minute}` : `${h}${hour}`;
 }
 
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
@@ -100,9 +115,10 @@ export function weekOf(day: string): string[] {
 }
 
 export function greeting(hour: number): string {
-  if (hour < 12) return "صباح الخير";
-  if (hour < 18) return "مساء الخير";
-  return "مساء النور";
+  const arabic = getLang() === "ar";
+  if (hour < 12) return arabic ? "صباح الخير" : "Good morning";
+  if (hour < 18) return arabic ? "مساء الخير" : "Good afternoon";
+  return arabic ? "مساء النور" : "Good evening";
 }
 
 export interface Block {

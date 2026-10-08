@@ -1,71 +1,43 @@
 import React from "react";
-import { Archive, BarChart3, CalendarDays, ClipboardList, Clock, Home, Settings, Timer } from "lucide-react";
+import { Timer } from "lucide-react";
 import { Link } from "wouter";
+import { TIME_MANAGEMENT_ROUTE } from "@shared/routes";
+import LangToggle from "@/components/LangToggle";
 import { useAuthSession } from "@/contexts/AuthContext";
-import { trpc } from "@/lib/trpc";
-import {
-  ARCHIVE_ROUTE,
-  MEETING_ROUTES,
-  PLATFORM_ROUTE,
-  SETTINGS_ROUTE,
-  STATISTICS_ROUTE,
-  TASKS_ROUTE,
-  TIME_HOME_ROUTE,
-  TIME_MANAGEMENT_ROUTE,
-} from "@shared/routes";
+import { t } from "@/lib/i18n";
 
 /**
- * شريط صفحة التركيز — علويّ لا جانبيّ، وبالإنجليزية كصفحته.
+ * شريط جلسة التركيز.
  *
- * الوجهات هي وجهات واف نفسها (الرئيسية، المهام، إدارة الوقت…): الشريط يغيّر
- * شكل التنقّل هنا لا خريطته. ومؤقّتٌ يعمل يظهر فيه أخضرَ، فيُرى وأنت تقرأ
- * غيره.
+ * الإطار قائم بذاته، فالشريط لا يقود إلى إطارٍ آخر ولا إلى صفحةٍ مشتركة: فيه
+ * مخرجٌ واحد إلى صفحة الإطارات، والمؤقّت الحيّ، واللغة، والخروج من الحساب.
  */
-
-const LINKS = [
-  { href: TIME_HOME_ROUTE, label: "Home", icon: Home },
-  { href: TASKS_ROUTE, label: "Tasks", icon: ClipboardList },
-  { href: TIME_MANAGEMENT_ROUTE, label: "Time Management", icon: Clock },
-  { href: MEETING_ROUTES.prepare, label: "Meetings", icon: CalendarDays },
-  { href: STATISTICS_ROUTE, label: "Statistics", icon: BarChart3 },
-  { href: ARCHIVE_ROUTE, label: "Archive", icon: Archive },
-  { href: SETTINGS_ROUTE, label: "Settings", icon: Settings },
-];
-
 export default function FocusBar({ liveTime }: { liveTime: string | null }) {
   const { user, signOut } = useAuthSession();
-  // الاجتماعات مساحة واحدة: من لا يملكها لا يُعرض له بابها.
-  const workspace = trpc.meetings.access.useQuery();
-  const links = LINKS.filter(link => link.href !== MEETING_ROUTES.prepare || workspace.data?.owner === true);
-  const name = (user?.user_metadata?.name as string | undefined)?.trim() || user?.email || "Account";
+  const name = (user?.user_metadata?.name as string | undefined)?.trim() || user?.email || t("الحساب", "Account");
 
   return (
     <header className="ft-nav">
       <div className="ft-nav-in">
-        <Link className="ft-brand" href={PLATFORM_ROUTE} lang="ar">
-          واف
+        <Link className="ft-brand" href={TIME_MANAGEMENT_ROUTE} aria-label={t("العودة إلى الإطارات", "Back to frameworks")}>
+          {t("واف", "Waf")}
         </Link>
 
-        <nav aria-label="Main">
+        <nav aria-label={t("جلسة التركيز", "Focus session")}>
           <span className="ft-nav-timer" data-live={liveTime !== null}>
             <Timer size={14} aria-hidden="true" />
-            {liveTime ?? "00:00"}
+            <span dir="ltr">{liveTime ?? "00:00"}</span>
             <i aria-hidden="true" />
           </span>
-          {links.map(({ href, label, icon: Icon }) => (
-            <Link key={href} className="ft-nav-link" href={href}>
-              <Icon size={16} aria-hidden="true" />
-              <span>{label}</span>
-            </Link>
-          ))}
         </nav>
 
         <div className="ft-nav-end">
-          <Link className="ft-nav-user" href={SETTINGS_ROUTE} dir="auto">
+          <LangToggle className="ft-nav-link" short />
+          <span className="ft-nav-user" dir="auto">
             {name}
-          </Link>
+          </span>
           <button type="button" className="ft-nav-cta" onClick={() => void signOut()}>
-            Sign Out
+            {t("تسجيل الخروج", "Sign Out")}
           </button>
         </div>
       </div>

@@ -1,11 +1,12 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import RedirectIfAuthed from "./components/RedirectIfAuthed";
 import RequireAuth from "./components/RequireAuth";
 import { useAuthSession } from "./contexts/AuthContext";
+import { getLang, useLang } from "./lib/i18n";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Login from "./pages/auth/Login";
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -21,22 +22,15 @@ import {
   SERVICES_ROUTE,
 } from "./lib/auth-routes";
 import IdleWarning from "./components/IdleWarning";
-import ScheduleReminder from "./components/time/ScheduleReminder";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Decisions from "./pages/Decisions";
 import Platform from "./pages/Platform";
-import Settings from "./pages/Settings";
-import Statistics from "./pages/Statistics";
-import TimeHome from "./pages/TimeHome";
 import StatusReport from "./pages/StatusReport";
-import AddTask from "./pages/AddTask";
-import Archive from "./pages/Archive";
 import Eisenhower from "./pages/Eisenhower";
 import Focus from "./pages/Focus";
 import TimeBlocking from "./pages/TimeBlocking";
-import Tasks from "./pages/Tasks";
 import TimeManagement from "./pages/TimeManagement";
 import { useIdleLock } from "./hooks/useIdleLock";
 import {
@@ -46,12 +40,7 @@ import {
   MEETING_ROUTES,
   PLATFORM_ROUTE,
   STATUS_REPORT_ROUTE,
-  ADD_TASK_ROUTE,
-  ARCHIVE_ROUTE,
-  SETTINGS_ROUTE,
-  TIME_HOME_ROUTE,
-  STATISTICS_ROUTE,
-  TASKS_ROUTE,
+  RETIRED_TIME_ROUTES,
   TIME_MANAGEMENT_ROUTE,
   TIME_METHOD_ROUTES,
 } from "@shared/routes";
@@ -62,13 +51,16 @@ function Router() {
       <Route path={PLATFORM_ROUTE} component={Platform} />
       <Route path={DECISIONS_ROUTE} component={Decisions} />
       <Route path={STATUS_REPORT_ROUTE} component={StatusReport} />
-      <Route path={TIME_HOME_ROUTE} component={TimeHome} />
-      <Route path={SETTINGS_ROUTE} component={Settings} />
       <Route path={TIME_MANAGEMENT_ROUTE} component={TimeManagement} />
-      <Route path={ADD_TASK_ROUTE} component={AddTask} />
-      <Route path={TASKS_ROUTE} component={Tasks} />
-      <Route path={STATISTICS_ROUTE} component={Statistics} />
-      <Route path={ARCHIVE_ROUTE} component={Archive} />
+      {/*
+        صفحات المنتج المشتركة ذهبت مع فصل الإطارات. ومن حفظ رابط إحداها يصل
+        إلى صفحة الإطارات، لا إلى «الصفحة غير موجودة».
+      */}
+      {RETIRED_TIME_ROUTES.map(path => (
+        <Route key={path} path={path}>
+          <Redirect to={TIME_MANAGEMENT_ROUTE} replace />
+        </Route>
+      ))}
       <Route path={TIME_METHOD_ROUTES.eisenhower} component={Eisenhower} />
       <Route path={TIME_METHOD_ROUTES.timeBlocking} component={TimeBlocking} />
       <Route path={TIME_METHOD_ROUTES.focus} component={Focus} />
@@ -98,13 +90,12 @@ function Gate() {
   return (
     <RequireAuth>
       <Router />
-      <ScheduleReminder />
       {idle.warning && (
         <IdleWarning
           secondsLeft={idle.secondsLeft}
           onStay={idle.stay}
           onLockNow={signOut}
-          language="ar"
+          language={getLang()}
         />
       )}
     </RequireAuth>
@@ -122,12 +113,16 @@ function Gate() {
  * يكشف شيئاً: الصفحة لا تطلب أي إجراء محميّ.
  */
 export default function App() {
+  // المفتاح يُعيد بناء الشجرة عند تبديل اللغة: كل نصٍّ يُقرأ من جديد، ولا يبقى
+  // مكوّنٌ على لغته القديمة لأنه لم يُعَد رسمه.
+  const lang = useLang();
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster position="bottom-left" />
-          <Switch>
+          <Switch key={lang}>
             <Route path={LANDING_ROUTE} component={Landing} />
             {/* من حفظ العنوان القديم يصل إلى الوجه نفسه، فلا ينكسر رابط. */}
             <Route path={LEGACY_LANDING_ROUTE} component={Landing} />

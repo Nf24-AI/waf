@@ -45,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { getLang, setLang } from "@/lib/i18n";
 import {
   formatAgendaIndex,
   getMeetingReadiness,
@@ -374,7 +375,7 @@ export default function Home() {
   const [saved, setSaved] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
-  const [language, setLanguage] = useState<"ar" | "en">("ar");
+  const [language, setLanguage] = useState<"ar" | "en">(getLang);
   const [uiSettings, setUiSettings] = useState<UiSettings>(readUiSettings);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [scope, setScope] = useState<"upcoming" | "past" | "all">("upcoming");
@@ -1019,7 +1020,11 @@ export default function Home() {
           <div className="intro-actions">
             <button
               className="language-toggle"
-              onClick={() => setLanguage(isArabic ? "en" : "ar")}
+              onClick={() => {
+                const next = isArabic ? "en" : "ar";
+                setLang(next);
+                setLanguage(next);
+              }}
             >
               {isArabic ? "EN" : "عربي"}
             </button>

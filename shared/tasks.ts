@@ -18,10 +18,10 @@
  * مرّتين. انظر quadrantOf و splitQuadrant.
  */
 export const QUADRANTS = [
-  { id: "important_urgent", importance: "important", urgency: "urgent", title: "مهم وعاجل", verb: "افعل الآن" },
-  { id: "important_not_urgent", importance: "important", urgency: "not-urgent", title: "مهم وغير عاجل", verb: "خطّط له" },
-  { id: "not_important_urgent", importance: "not-important", urgency: "urgent", title: "غير مهم وعاجل", verb: "فوّض" },
-  { id: "not_important_not_urgent", importance: "not-important", urgency: "not-urgent", title: "غير مهم وغير عاجل", verb: "احذف" },
+  { id: "important_urgent", importance: "important", urgency: "urgent", title: "مهم وعاجل", verb: "افعل الآن", titleEn: "Important & urgent", verbEn: "Do it now" },
+  { id: "important_not_urgent", importance: "important", urgency: "not-urgent", title: "مهم وغير عاجل", verb: "خطّط له", titleEn: "Important, not urgent", verbEn: "Plan it" },
+  { id: "not_important_urgent", importance: "not-important", urgency: "urgent", title: "غير مهم وعاجل", verb: "فوّض", titleEn: "Urgent, not important", verbEn: "Delegate" },
+  { id: "not_important_not_urgent", importance: "not-important", urgency: "not-urgent", title: "غير مهم وغير عاجل", verb: "احذف", titleEn: "Neither urgent nor important", verbEn: "Drop it" },
 ] as const;
 
 export type Quadrant = (typeof QUADRANTS)[number]["id"];
@@ -56,16 +56,29 @@ export const WORK_DAYS: readonly number[] = [0, 1, 2, 3, 4];
  * خامسه في شريط عرضه أربعة بكسلات.
  */
 export const TASK_CATEGORIES = [
-  { id: "deep", label: "عمل عميق", tone: "purple" },
-  { id: "meeting", label: "اجتماعات", tone: "blue" },
-  { id: "personal", label: "شخصي", tone: "teal" },
-  { id: "project", label: "عمل على مشروع", tone: "orange" },
-  { id: "other", label: "أخرى", tone: "gray" },
+  { id: "deep", label: "عمل عميق", labelEn: "Deep work", tone: "purple" },
+  { id: "meeting", label: "اجتماعات", labelEn: "Meetings", tone: "blue" },
+  { id: "personal", label: "شخصي", labelEn: "Personal", tone: "teal" },
+  { id: "project", label: "عمل على مشروع", labelEn: "Project work", tone: "orange" },
+  { id: "other", label: "أخرى", labelEn: "Other", tone: "gray" },
 ] as const;
 export type TaskCategory = (typeof TASK_CATEGORIES)[number]["id"];
 
 /** «2026-10-08» — يوم بلا ساعة، فلا منطقة زمنية تزيحه. */
 export const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * الإطار الذي وُلدت فيه المهمة.
+ *
+ * الإطارات الثلاثة تُستعمل منفصلةً: من يفتح حجز الوقت يرى ما حجزه فيه، لا
+ * ما صنّفه في المصفوفة ولا ما سمّاه في جلسة تركيز. فكل مهمة تحمل اسم إطارها،
+ * وكل إطار يقرأ مهامه وحدها.
+ *
+ * وما سبق هذا الفصل بلا إطار، فيُحسب على المصفوفة: فيها وُلد الجدول، ومهمةٌ
+ * تختفي من كل مكان أسوأ من مهمةٍ في مكانٍ قد لا تُطلب فيه.
+ */
+export const TASK_ORIGINS = ["eisenhower", "timeblock", "focus"] as const;
+export type TaskOrigin = (typeof TASK_ORIGINS)[number];
 
 export const TASK_PRIORITIES = ["low", "medium", "high"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
@@ -90,6 +103,8 @@ export interface Task {
   repeatDays?: number[];
   category?: TaskCategory;
   priority?: TaskPriority;
+  /** الإطار الذي تنتمي إليه. غيابه = مهمة سبقت فصل الإطارات. */
+  origin?: TaskOrigin;
   /** يوم الاستحقاق «2026-10-08» لمهمة لم تُحجز لها ساعة بعد. */
   dueDate?: string;
   /** دقائق قبل الموعد يُنبَّه فيها. صفر = عند الموعد، وغياب القيمة = بلا تذكير. */
@@ -141,10 +156,14 @@ export function stateOf(task: Omit<Task, "state">): TaskState {
 }
 
 /** ما الذي تحتاجه هذه المهمة الآن؟ يحدّد زرّ البطاقة. */
-export function nextActionOf(task: Task): { label: string; method: "eisenhower" | "time-blocking" | "focus" } {
-  if (!task.quadrant) return { label: "تصنيف المهمة", method: "eisenhower" };
-  if (!task.scheduledStart) return { label: "حجز وقت", method: "time-blocking" };
-  return { label: "ابدأ التركيز", method: "focus" };
+export function nextActionOf(
+  task: Task,
+  lang: "ar" | "en" = "ar",
+): { label: string; method: "eisenhower" | "time-blocking" | "focus" } {
+  const ar = lang === "ar";
+  if (!task.quadrant) return { label: ar ? "تصنيف المهمة" : "Classify task", method: "eisenhower" };
+  if (!task.scheduledStart) return { label: ar ? "حجز وقت" : "Block time", method: "time-blocking" };
+  return { label: ar ? "ابدأ التركيز" : "Start focus", method: "focus" };
 }
 
 export function isOpen(task: Task): boolean {
