@@ -3,6 +3,7 @@ import { CalendarClock, X } from "lucide-react";
 import { Link } from "wouter";
 import { TIME_METHOD_ROUTES } from "@shared/routes";
 import { type Task } from "@shared/tasks";
+import { dir, t } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -82,10 +83,10 @@ export default function ScheduleReminder() {
   }
 
   return (
-    <div className="rem-banner" dir="rtl" role="status">
+    <div className="rem-banner" dir={dir()} role="status">
       <CalendarClock size={18} aria-hidden="true" className="rem-icon" />
       <p className="rem-text">
-        حان وقت <strong>{task.title}</strong>.
+        {t("حان وقت", "Time for")} <strong>{task.title}</strong>.
       </p>
       <div className="rem-actions">
         <Link
@@ -93,9 +94,9 @@ export default function ScheduleReminder() {
           href={`${TIME_METHOD_ROUTES.focus}?task=${task.id}`}
           onClick={() => hide(task)}
         >
-          ابدأ التركيز
+          {t("ابدأ التركيز", "Start focus")}
         </Link>
-        <button type="button" className="rem-close" onClick={() => hide(task)} aria-label="إخفاء التنبيه">
+        <button type="button" className="rem-close" onClick={() => hide(task)} aria-label={t("إخفاء التنبيه", "Dismiss reminder")}>
           <X size={16} aria-hidden="true" />
         </button>
       </div>

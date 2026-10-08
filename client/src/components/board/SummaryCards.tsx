@@ -1,8 +1,9 @@
 import React from "react";
-import { ArrowLeft, CalendarDays, Hourglass, Sun, Target } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Hourglass, Sun, Target } from "lucide-react";
 import { Link } from "wouter";
 import { type BoardCounts } from "@shared/board";
 import { TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { dir, t } from "@/lib/i18n";
 
 /**
  * البطاقات الأربع — أرقامها محسوبة من المهام، لا مكتوبة.
@@ -19,35 +20,36 @@ export default function SummaryCards({ counts }: { counts: BoardCounts }) {
       tone: "purple",
       icon: Target,
       value: counts.needsTime,
-      title: "بلا وقت",
-      line: "احجز لها وقتاً",
+      title: t("بلا وقت", "Unscheduled"),
+      line: t("احجز لها وقتاً", "Block time for them"),
       href: TIME_METHOD_ROUTES.timeBlocking,
     },
     {
       tone: "go",
       icon: CalendarDays,
       value: counts.week,
-      title: "مهام هذا الأسبوع",
-      line: "على المسار الصحيح",
+      title: t("مهام هذا الأسبوع", "This week's tasks"),
+      line: t("على المسار الصحيح", "On track"),
       href: TASKS_ROUTE,
     },
     {
       tone: "accent",
       icon: Sun,
       value: counts.today,
-      title: "مهام اليوم",
-      line: "لنستمر بالإنجاز",
+      title: t("مهام اليوم", "Today's tasks"),
+      line: t("لنستمر بالإنجاز", "Keep the momentum going"),
       href: TASKS_ROUTE,
     },
     {
       tone: "warn",
       icon: Hourglass,
       value: counts.late,
-      title: "مهام متأخّرة",
-      line: "حان وقت إتمامها",
+      title: t("مهام متأخّرة", "Overdue tasks"),
+      line: t("حان وقت إتمامها", "Time to finish them"),
       href: TASKS_ROUTE,
     },
   ] as const;
+  const Go = dir() === "rtl" ? ArrowLeft : ArrowRight;
 
   return (
     <div className="bd-cards">
@@ -62,7 +64,7 @@ export default function SummaryCards({ counts }: { counts: BoardCounts }) {
             <span className="bd-card-title">{card.title}</span>
             <span className="bd-card-line">{card.line}</span>
             <span className="bd-card-go" aria-hidden="true">
-              <ArrowLeft size={16} />
+              <Go size={16} />
             </span>
           </Link>
         );

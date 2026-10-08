@@ -1,5 +1,6 @@
 import React from "react";
 import { FLOW_STEPS, type FlowStepId, stepIndex, useInFlow } from "@/lib/flow";
+import { t } from "@/lib/i18n";
 
 /**
  * نقاط التقدّم — تظهر في الرحلة وحدها.
@@ -25,12 +26,12 @@ export default function FlowSteps({ current }: { current: FlowStepId }) {
             }
           >
             {/* الاسم للقارئ الآلي: النقطة وحدها لا تقول شيئاً بصوت. */}
-            <span className="sr-only">{step.label}</span>
+            <span className="sr-only">{t(step.label, step.labelEn)}</span>
           </li>
         ))}
       </ol>
       <p className="tp-steps-label">
-        {FLOW_STEPS[index].label} — {index + 1} من {FLOW_STEPS.length}
+        {t(FLOW_STEPS[index].label, FLOW_STEPS[index].labelEn)} — {index + 1} {t("من", "of")} {FLOW_STEPS.length}
       </p>
     </div>
   );

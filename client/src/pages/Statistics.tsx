@@ -5,6 +5,8 @@ import { Link } from "wouter";
 import { ARCHIVE_ROUTE } from "@shared/routes";
 import { formatMinutes, summarize } from "@shared/statistics";
 import TimeLayout from "@/components/time/TimeLayout";
+import { getLang, pair, pick, t } from "@/lib/i18n";
+import { quadrantLabel } from "@/lib/task-labels";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -16,9 +18,9 @@ import { trpc } from "@/lib/trpc";
  */
 
 const PERIODS = [
-  { id: "week", label: "آخر أسبوع", days: 7 },
-  { id: "month", label: "آخر شهر", days: 30 },
-  { id: "all", label: "منذ البداية", days: 0 },
+  { id: "week", label: pair("آخر أسبوع", "Last week"), days: 7 },
+  { id: "month", label: pair("آخر شهر", "Last month"), days: 30 },
+  { id: "all", label: pair("منذ البداية", "All time"), days: 0 },
 ] as const;
 
 type PeriodId = (typeof PERIODS)[number]["id"];
@@ -55,11 +57,11 @@ export default function Statistics() {
     <TimeLayout>
       <div className="tm-inner">
         <header className="tm-head">
-          <h1>الإحصاء</h1>
-          <p>ما حدث فعلاً، لا ما كان مخطّطاً.</p>
+          <h1>{t("الإحصاء", "Statistics")}</h1>
+          <p>{t("ما حدث فعلاً، لا ما كان مخطّطاً.", "What actually happened, not what was planned.")}</p>
         </header>
 
-        <div className="ei-chips st-periods" role="group" aria-label="المدة">
+        <div className="ei-chips st-periods" role="group" aria-label={t("المدة", "Period")}>
           {PERIODS.map(item => (
             <button
               key={item.id}
@@ -68,56 +70,56 @@ export default function Statistics() {
               onClick={() => setPeriod(item.id)}
               aria-pressed={item.id === period}
             >
-              {item.label}
+              {pick(item.label)}
             </button>
           ))}
         </div>
 
         {status.data?.configured === false && (
           <p className="tm-empty" style={{ marginBlockStart: "var(--space-9)" }}>
-            المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> ثم أعد النشر.
+            {t("المهام غير موصولة بعد. اضبط ", "Tasks are not connected yet. Set ")}<code>SUPABASE_URL</code>{t(" و", " and ")}<code>SUPABASE_ANON_KEY</code>{t(" ثم أعد النشر.", ", then redeploy.")}
           </p>
         )}
 
-        {loading && <p className="tm-empty" style={{ marginBlockStart: "var(--space-9)" }}>…جارٍ الحساب</p>}
+        {loading && <p className="tm-empty" style={{ marginBlockStart: "var(--space-9)" }}>{t("…جارٍ الحساب", "Calculating…")}</p>}
 
         {error && (
           <p className="tm-empty tm-error" role="alert" style={{ marginBlockStart: "var(--space-9)" }}>
-            تعذّر قراءة الأرقام. {error.message}
+            {t("تعذّر قراءة الأرقام.", "Could not load the numbers.")} {error.message}
           </p>
         )}
 
         {enabled && !loading && !error && (
           <>
             <section className="tm-section" aria-labelledby="st-numbers">
-              <h2 id="st-numbers">في هذه المدة</h2>
+              <h2 id="st-numbers">{t("في هذه المدة", "In this period")}</h2>
               <div className="st-cards">
                 <p className="st-card">
                   <span className="st-value">{stats.completedTasks}</span>
-                  <span className="st-label">مهمة أُنجزت</span>
+                  <span className="st-label">{t("مهمة أُنجزت", "Tasks completed")}</span>
                 </p>
                 <p className="st-card">
                   <span className="st-value">{stats.focusSessions}</span>
-                  <span className="st-label">جلسة تركيز اكتملت</span>
+                  <span className="st-label">{t("جلسة تركيز اكتملت", "Focus sessions completed")}</span>
                 </p>
                 <p className="st-card">
-                  <span className="st-value">{formatMinutes(stats.focusMinutes)}</span>
-                  <span className="st-label">قُضيت في التركيز</span>
+                  <span className="st-value">{formatMinutes(stats.focusMinutes, getLang())}</span>
+                  <span className="st-label">{t("قُضيت في التركيز", "Spent focusing")}</span>
                 </p>
               </div>
             </section>
 
             <section className="tm-section" aria-labelledby="st-quadrants">
-              <h2 id="st-quadrants">أين ذهب المنجَز</h2>
+              <h2 id="st-quadrants">{t("أين ذهب المنجَز", "Where completed work went")}</h2>
               <p className="st-note">
                 {/* السؤال الوحيد الذي تستحقّ المصفوفة أن تُسأله بعد شهر. */}
-                نصيب «مهم وغير عاجل» هو ما يفرّق بين من يخطّط ومن يطفئ الحرائق.
+                {t("نصيب «مهم وغير عاجل» هو ما يفرّق بين من يخطّط ومن يطفئ الحرائق.", "The share of “Important, not urgent” is what separates planning from firefighting.")}
               </p>
 
               <ul className="st-bars">
                 {stats.byQuadrant.map(row => (
                   <li key={row.quadrant} className="st-bar">
-                    <span className="st-bar-label">{row.title}</span>
+                    <span className="st-bar-label">{quadrantLabel(row.quadrant)}</span>
                     <span className="st-bar-track" aria-hidden="true">
                       <span className="st-bar-fill" style={{ inlineSize: `${(row.count / peak) * 100}%` }} />
                     </span>
@@ -128,14 +130,17 @@ export default function Statistics() {
 
               {stats.unclassified > 0 && (
                 <p className="st-note">
-                  و{stats.unclassified} مهمة أُنجزت دون أن تُصنَّف — وهذا ليس خطأً، بعض العمل يُفعل ولا يُقاس.
+                  {t(
+                    `و${stats.unclassified} مهمة أُنجزت دون أن تُصنَّف — وهذا ليس خطأً، بعض العمل يُفعل ولا يُقاس.`,
+                    `${stats.unclassified} completed without being classified — that is fine, some work gets done without being measured.`,
+                  )}
                 </p>
               )}
             </section>
 
             <div className="tm-primary">
               <Link className="tm-btn tm-btn-ghost" href={ARCHIVE_ROUTE}>
-                عرض الأرشيف
+                {t("عرض الأرشيف", "View archive")}
               </Link>
             </div>
           </>

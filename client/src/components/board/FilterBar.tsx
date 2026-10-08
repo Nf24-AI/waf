@@ -1,6 +1,7 @@
 import React from "react";
 import { CalendarCheck, CalendarDays, CheckCircle2, Clock, LayoutGrid } from "lucide-react";
 import { FILTERS, type FilterId } from "@shared/board";
+import { getLang, t } from "@/lib/i18n";
 
 /**
  * شريط الفلاتر — يعمل فعلاً، لا يزيّن.
@@ -27,7 +28,7 @@ export default function FilterBar({
   onChange: (next: FilterId) => void;
 }) {
   return (
-    <div className="bd-filters" role="tablist" aria-label="تصفية المهام">
+    <div className="bd-filters" role="tablist" aria-label={t("تصفية المهام", "Filter tasks")}>
       {FILTERS.map(filter => {
         const Icon = ICONS[filter.id];
         const current = filter.id === value;
@@ -41,7 +42,7 @@ export default function FilterBar({
             onClick={() => onChange(filter.id)}
           >
             <Icon size={15} aria-hidden="true" />
-            {filter.label}
+            {getLang() === "ar" ? filter.label : filter.labelEn}
             {/* العدد يُقرأ قبل الضغط: يعرف المستخدم إن كان الفلتر سيُفرغ الشاشة. */}
             <span className="bd-filter-count">{counts[filter.id]}</span>
           </button>

@@ -17,10 +17,10 @@ export const FLOW_KEY = "flow";
 export const FLOW_NEW = "new";
 
 export const FLOW_STEPS = [
-  { id: "add", label: "إضافة المهمة", route: ADD_TASK_ROUTE },
-  { id: "classify", label: "التصنيف", route: TIME_METHOD_ROUTES.eisenhower },
-  { id: "schedule", label: "حجز الوقت", route: TIME_METHOD_ROUTES.timeBlocking },
-  { id: "focus", label: "التركيز", route: TIME_METHOD_ROUTES.focus },
+  { id: "add", label: "إضافة المهمة", labelEn: "Add task", route: ADD_TASK_ROUTE },
+  { id: "classify", label: "التصنيف", labelEn: "Classify", route: TIME_METHOD_ROUTES.eisenhower },
+  { id: "schedule", label: "حجز الوقت", labelEn: "Block time", route: TIME_METHOD_ROUTES.timeBlocking },
+  { id: "focus", label: "التركيز", labelEn: "Focus", route: TIME_METHOD_ROUTES.focus },
 ] as const;
 
 export type FlowStepId = (typeof FLOW_STEPS)[number]["id"];

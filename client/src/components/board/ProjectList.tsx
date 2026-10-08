@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { allProgress, progressLabel, type Project, type ProjectProgress } from "@shared/projects";
 import { type Task } from "@shared/tasks";
 import { TASKS_ROUTE } from "@shared/routes";
+import { getLang, t } from "@/lib/i18n";
 
 /**
  * بطاقات المشاريع.
@@ -36,7 +37,7 @@ function ProjectCard({ row }: { row: ProjectProgress }) {
 
       <span className="bd-project-body">
         <span className="bd-project-name">{row.project.name}</span>
-        <span className="bd-project-sub">{progressLabel(row)}</span>
+        <span className="bd-project-sub">{progressLabel(row, getLang())}</span>
       </span>
 
       <span className="bd-project-track" aria-hidden="true">
@@ -54,9 +55,9 @@ export default function ProjectList({ projects, tasks }: { projects: Project[]; 
   return (
     <section className="bd-panel" aria-labelledby="bd-projects-title">
       <header className="bd-panel-head">
-        <h2 id="bd-projects-title">مشاريعي</h2>
+        <h2 id="bd-projects-title">{t("مشاريعي", "My projects")}</h2>
         <Link className="bd-panel-more" href={TASKS_ROUTE}>
-          عرض الكل
+          {t("عرض الكل", "View all")}
         </Link>
       </header>
 

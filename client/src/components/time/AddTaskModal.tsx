@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { QUADRANTS, type Quadrant, type RepeatRule } from "@shared/tasks";
 import { type Project } from "@shared/projects";
+import { dir, pair, pick, t } from "@/lib/i18n";
+import { quadrantLabel, quadrantVerbLabel } from "@/lib/task-labels";
 import mountains from "@/assets/night-mountains.jpg";
 
 /**
@@ -48,17 +50,17 @@ const QUADRANT_ICON: Record<Quadrant, typeof Target> = {
  * «حجز الوقت»، وهي خطوة قائمة بذاتها.
  */
 const WHEN_OPTIONS = [
-  { id: "", label: "اختر وقتاً" },
-  { id: "today-09", label: "اليوم ٩:٠٠", day: 0, hour: 9 },
-  { id: "today-14", label: "اليوم ٢:٠٠ ظهراً", day: 0, hour: 14 },
-  { id: "tomorrow-09", label: "غداً ٩:٠٠", day: 1, hour: 9 },
+  { id: "", label: pair("اختر وقتاً", "Choose a time") },
+  { id: "today-09", label: pair("اليوم ٩:٠٠", "Today 9:00"), day: 0, hour: 9 },
+  { id: "today-14", label: pair("اليوم ٢:٠٠ ظهراً", "Today 2:00 pm"), day: 0, hour: 14 },
+  { id: "tomorrow-09", label: pair("غداً ٩:٠٠", "Tomorrow 9:00"), day: 1, hour: 9 },
 ] as const;
 
 const REMINDER_OPTIONS = [
-  { value: "", label: "بدون تذكير" },
-  { value: "0", label: "عند الموعد" },
-  { value: "10", label: "قبل ١٠ دقائق" },
-  { value: "60", label: "قبل ساعة" },
+  { value: "", label: pair("بدون تذكير", "No reminder") },
+  { value: "0", label: pair("عند الموعد", "At the scheduled time") },
+  { value: "10", label: pair("قبل ١٠ دقائق", "10 minutes before") },
+  { value: "60", label: pair("قبل ساعة", "1 hour before") },
 ] as const;
 
 const DURATION_OPTIONS = [25, 45, 60, 90] as const;
@@ -162,28 +164,28 @@ export default function AddTaskModal({
       role="presentation"
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="ntk" role="dialog" aria-modal="true" aria-labelledby="ntk-title" dir="rtl">
+      <div className="ntk" role="dialog" aria-modal="true" aria-labelledby="ntk-title" dir={dir()}>
         <header className="ntk-head">
           <img src={mountains} alt="" aria-hidden="true" />
-          <button type="button" className="ntk-close" onClick={onClose} aria-label="إغلاق">
+          <button type="button" className="ntk-close" onClick={onClose} aria-label={t("إغلاق", "Close")}>
             <X size={18} aria-hidden="true" />
           </button>
 
           <div className="ntk-head-text">
-            <h2 id="ntk-title">إضافة مهمة</h2>
-            <p>خطوة صغيرة اليوم تصنع فرقاً أكبر غداً.</p>
+            <h2 id="ntk-title">{t("إضافة مهمة", "Add a task")}</h2>
+            <p>{t("خطوة صغيرة اليوم تصنع فرقاً أكبر غداً.", "A small step today makes a bigger difference tomorrow.")}</p>
           </div>
 
           <p className="ntk-head-aside">
-            <b>الأفكار العظيمة</b>
-            تبدأ من مهمة واحدة.
+            <b>{t("الأفكار العظيمة", "Great ideas")}</b>
+            {t("تبدأ من مهمة واحدة.", "start with a single task.")}
           </p>
         </header>
 
         <form className="ntk-body" onSubmit={submit}>
           <label className="ntk-field">
             <span className="ntk-label">
-              ماذا تريد إنجازه؟ <i aria-hidden="true">*</i>
+              {t("ماذا تريد إنجازه؟", "What do you want to get done?")} <i aria-hidden="true">*</i>
             </span>
             <span className="ntk-input">
               <Target size={17} aria-hidden="true" />
@@ -193,21 +195,21 @@ export default function AddTaskModal({
                 value={title}
                 required
                 maxLength={200}
-                placeholder="مثال: إعداد العرض التقديمي"
+                placeholder={t("مثال: إعداد العرض التقديمي", "Example: Prepare the presentation")}
                 onChange={e => setTitle(e.target.value)}
               />
             </span>
           </label>
 
           <label className="ntk-field">
-            <span className="ntk-label">الوصف (اختياري)</span>
+            <span className="ntk-label">{t("الوصف (اختياري)", "Description (optional)")}</span>
             <span className="ntk-input ntk-input-area">
               <FileText size={17} aria-hidden="true" />
               <textarea
                 rows={3}
                 value={description}
                 maxLength={DESCRIPTION_LIMIT}
-                placeholder="أضف تفاصيل تساعدك عند العودة للمهمة …"
+                placeholder={t("أضف تفاصيل تساعدك عند العودة للمهمة …", "Add details that will help when you come back to this task …")}
                 onChange={e => setDescription(e.target.value)}
               />
               <i className="ntk-count" aria-hidden="true">
@@ -217,7 +219,7 @@ export default function AddTaskModal({
           </label>
 
           <fieldset className="ntk-field ntk-quads">
-            <legend className="ntk-label">التصنيف (اختياري)</legend>
+            <legend className="ntk-label">{t("التصنيف (اختياري)", "Classification (optional)")}</legend>
 
             <div className="ntk-grid">
               {QUADRANTS.map(item => {
@@ -236,8 +238,8 @@ export default function AddTaskModal({
                   >
                     <Icon size={19} aria-hidden="true" />
                     <span className="ntk-quad-text">
-                      <b>{item.title}</b>
-                      <i>{item.verb}</i>
+                      <b>{quadrantLabel(item.id)}</b>
+                      <i>{quadrantVerbLabel(item.id)}</i>
                     </span>
                     <span className="ntk-radio" aria-hidden="true" />
                   </button>
@@ -251,7 +253,7 @@ export default function AddTaskModal({
             لمشروع جديد يريد المشروع الآن، ونقلُه إلى مكان آخر يقطع ما يفعله.
           */}
           <div className="ntk-field">
-            <span className="ntk-label">المشروع (اختياري)</span>
+            <span className="ntk-label">{t("المشروع (اختياري)", "Project (optional)")}</span>
             {addingProject ? (
               <span className="ntk-input">
                 <FolderPlus size={17} aria-hidden="true" />
@@ -260,7 +262,7 @@ export default function AddTaskModal({
                   value={newProject}
                   maxLength={80}
                   autoFocus
-                  placeholder="اسم المشروع الجديد"
+                  placeholder={t("اسم المشروع الجديد", "New project name")}
                   onChange={e => setNewProject(e.target.value)}
                   onKeyDown={async e => {
                     if (e.key !== "Enter") return;
@@ -286,13 +288,13 @@ export default function AddTaskModal({
                   setProjectId(e.target.value);
                 }}
               >
-                <option value="">بدون مشروع</option>
+                <option value="">{t("بدون مشروع", "No project")}</option>
                 {projects.map(project => (
                   <option key={project.id} value={project.id}>
                     {project.name}
                   </option>
                 ))}
-                <option value="__new">+ مشروع جديد…</option>
+                <option value="__new">{t("+ مشروع جديد…", "+ New project…")}</option>
               </select>
             )}
           </div>
@@ -301,12 +303,12 @@ export default function AddTaskModal({
             <label className="ntk-field">
               <span className="ntk-label">
                 <Clock size={14} aria-hidden="true" />
-                المدة (اختياري)
+                {t("المدة (اختياري)", "Duration (optional)")}
               </span>
               <select value={minutes} onChange={e => setMinutes(Number(e.target.value))}>
                 {DURATION_OPTIONS.map(option => (
                   <option key={option} value={option}>
-                    {option} دقيقة
+                    {t(`${option} دقيقة`, `${option} min`)}
                   </option>
                 ))}
               </select>
@@ -315,12 +317,12 @@ export default function AddTaskModal({
             <label className="ntk-field">
               <span className="ntk-label">
                 <CalendarDays size={14} aria-hidden="true" />
-                الوقت (اختياري)
+                {t("الوقت (اختياري)", "Time (optional)")}
               </span>
               <select value={when} onChange={e => setWhen(e.target.value)}>
                 {WHEN_OPTIONS.map(option => (
                   <option key={option.id} value={option.id}>
-                    {option.label}
+                    {pick(option.label)}
                   </option>
                 ))}
               </select>
@@ -329,13 +331,13 @@ export default function AddTaskModal({
             <label className="ntk-field">
               <span className="ntk-label">
                 <Bell size={14} aria-hidden="true" />
-                التذكير (اختياري)
+                {t("التذكير (اختياري)", "Reminder (optional)")}
               </span>
               {/* بلا وقت لا تذكير: الخانة تُعطَّل بدل أن تَعِد بما لا يقع. */}
               <select value={reminder} disabled={!when} onChange={e => setReminder(e.target.value)}>
                 {REMINDER_OPTIONS.map(option => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {pick(option.label)}
                   </option>
                 ))}
               </select>
@@ -352,16 +354,16 @@ export default function AddTaskModal({
             <div className="ntk-acts">
               <button type="submit" className="tp-btn tp-btn-primary" disabled={pending || !title.trim()}>
                 {pending ? <Loader2 size={16} className="tm-spin" aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-                إضافة المهمة
+                {t("إضافة المهمة", "Add task")}
               </button>
               <button type="button" className="tp-btn" onClick={onClose}>
-                إلغاء
+                {t("إلغاء", "Cancel")}
               </button>
             </div>
 
             <p className="ntk-hint">
               <Sparkles size={15} aria-hidden="true" />
-              يمكنك تعديل كل هذه الخيارات لاحقاً.
+              {t("يمكنك تعديل كل هذه الخيارات لاحقاً.", "You can change all of these options later.")}
             </p>
           </footer>
         </form>

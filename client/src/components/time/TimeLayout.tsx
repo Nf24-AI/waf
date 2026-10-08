@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { BottomNav, NavDrawer, Sidebar } from "./TimeNav";
 import TopBar from "./TopBar";
+import { dir } from "@/lib/i18n";
 
 /**
  * إطار منتج إدارة الوقت: شريط جانبي على المكتب، ودرج على الجوّال، وشريط
@@ -29,14 +30,14 @@ export default function TimeLayout({
 
   if (quiet) {
     return (
-      <div className="tp-frame" data-waf-theme="navy" dir="rtl">
+      <div className="tp-frame" data-waf-theme="navy" dir={dir()}>
         <div className="tp-body">{children}</div>
       </div>
     );
   }
 
   return (
-    <div className="tp-frame" data-waf-theme="navy" dir="rtl">
+    <div className="tp-frame" data-waf-theme="navy" dir={dir()}>
       <Sidebar />
       <NavDrawer open={drawer} onClose={() => setDrawer(false)} />
 

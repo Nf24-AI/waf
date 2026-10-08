@@ -8,6 +8,8 @@ import { ADD_TASK_ROUTE, TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes"
 import FlowSteps from "@/components/time/FlowSteps";
 import TimeLayout from "@/components/time/TimeLayout";
 import { flowHref, useInFlow } from "@/lib/flow";
+import { dir, t } from "@/lib/i18n";
+import { quadrantLabel, quadrantVerbLabel } from "@/lib/task-labels";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -42,7 +44,7 @@ function TaskChip({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={() => onPick(task)}
-      aria-label={`نقل ${task.title}`}
+      aria-label={t(`نقل ${task.title}`, `Move ${task.title}`)}
     >
       {task.title}
     </button>
@@ -86,29 +88,29 @@ export default function Eisenhower() {
         <FlowSteps current="classify" />
 
         <header className="tp-head">
-          <h1>صنّف المهمة</h1>
-          <p>حدّد الأولوية بوضوح.</p>
+          <h1>{t("صنّف المهمة", "Classify the task")}</h1>
+          <p>{t("حدّد الأولوية بوضوح.", "Set the priority clearly.")}</p>
         </header>
 
         <div className="tp-actions">
           <Link className="tp-btn" href={TASKS_ROUTE}>
-            المهام المفتوحة
+            {t("المهام المفتوحة", "Open tasks")}
           </Link>
           <Link className="tp-btn tp-btn-primary" href={ADD_TASK_ROUTE}>
             <Plus size={17} aria-hidden="true" />
-            إضافة مهمة
+            {t("إضافة مهمة", "Add task")}
           </Link>
         </div>
 
         {status.data?.configured === false && (
           <p className="tm-empty" style={{ marginBlockStart: "var(--space-9)" }}>
-            المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> ثم أعد النشر.
+            {t("المهام غير موصولة بعد. اضبط ", "Tasks are not connected yet. Set ")}<code>SUPABASE_URL</code>{t(" و", " and ")}<code>SUPABASE_ANON_KEY</code>{t(" ثم أعد النشر.", ", then redeploy.")}
           </p>
         )}
 
         {open.isError && (
           <p className="tm-empty tm-error" role="alert" style={{ marginBlockStart: "var(--space-9)" }}>
-            تعذّر قراءة المهام. {open.error.message}
+            {t("تعذّر قراءة المهام.", "Could not load tasks.")} {open.error.message}
           </p>
         )}
 
@@ -116,7 +118,7 @@ export default function Eisenhower() {
         {unclassified.length > 0 && (
           <section className="ei-tray" aria-labelledby="ei-tray-title">
             <h2 id="ei-tray-title">
-              في انتظار التصنيف
+              {t("في انتظار التصنيف", "Waiting to be classified")}
               <span className="tm-tab-count">{unclassified.length}</span>
             </h2>
             <div className="ei-chips">
@@ -142,7 +144,7 @@ export default function Eisenhower() {
                 key={quadrant.id}
                 className={over === quadrant.id ? "ei-cell is-over" : "ei-cell"}
                 data-q={quadrant.id}
-                aria-label={quadrant.title}
+                aria-label={quadrantLabel(quadrant.id)}
                 onDragOver={event => {
                   event.preventDefault();
                   setOver(quadrant.id);
@@ -154,8 +156,8 @@ export default function Eisenhower() {
                 }}
               >
                 <header className="ei-cell-head">
-                  <h3>{quadrant.title}</h3>
-                  <p>{quadrant.verb}</p>
+                  <h3>{quadrantLabel(quadrant.id)}</h3>
+                  <p>{quadrantVerbLabel(quadrant.id)}</p>
                 </header>
 
                 <div className="ei-chips">
@@ -169,7 +171,7 @@ export default function Eisenhower() {
                       onPick={setPicking}
                     />
                   ))}
-                  {inside.length === 0 && <p className="ei-cell-empty">لا مهام هنا</p>}
+                  {inside.length === 0 && <p className="ei-cell-empty">{t("لا مهام هنا", "No tasks here")}</p>}
                 </div>
               </section>
             );
@@ -179,17 +181,17 @@ export default function Eisenhower() {
         {/* اقتراح بعد التصنيف — يُتجاهَل بلا ثمن. */}
         {justPlaced && (
           <div className="ei-suggest" role="status">
-            <span>هل تريد إعطاء «{justPlaced.title}» وقتاً؟</span>
+            <span>{t(`هل تريد إعطاء «${justPlaced.title}» وقتاً؟`, `Give “${justPlaced.title}” a time slot?`)}</span>
             <div className="ei-suggest-actions">
               <Link
                 className="tp-btn tp-btn-primary"
                 href={inFlow ? flowHref(TIME_METHOD_ROUTES.timeBlocking, justPlaced.id) : `${TIME_METHOD_ROUTES.timeBlocking}?task=${justPlaced.id}`}
               >
                 <CalendarClock size={16} aria-hidden="true" />
-                حجز الوقت
+                {t("حجز الوقت", "Block time")}
               </Link>
               <button type="button" className="tp-btn" onClick={() => setJustPlaced(null)}>
-                لاحقاً
+                {t("لاحقاً", "Later")}
               </button>
             </div>
           </div>
@@ -199,9 +201,9 @@ export default function Eisenhower() {
       {/* على اللمس لا سحب: تُختار المهمة ثم يُختار رُبعها. */}
       {picking && (
         <div className="tm-scrim" role="presentation" onClick={event => event.target === event.currentTarget && setPicking(null)}>
-          <div className="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="ei-pick-title" dir="rtl">
+          <div className="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="ei-pick-title" dir={dir()}>
             <header className="tm-dialog-head">
-              <h2 id="ei-pick-title">أين تضع «{picking.title}»؟</h2>
+              <h2 id="ei-pick-title">{t(`أين تضع «${picking.title}»؟`, `Where does “${picking.title}” go?`)}</h2>
             </header>
             <div className="ei-pick">
               {QUADRANTS.map(quadrant => (
@@ -212,14 +214,14 @@ export default function Eisenhower() {
                   onClick={() => place(picking.id, quadrant.id)}
                   disabled={classify.isPending}
                 >
-                  <span className="ei-pick-title">{quadrant.title}</span>
-                  <span className="ei-pick-verb">{quadrant.verb}</span>
+                  <span className="ei-pick-title">{quadrantLabel(quadrant.id)}</span>
+                  <span className="ei-pick-verb">{quadrantVerbLabel(quadrant.id)}</span>
                 </button>
               ))}
             </div>
             <div className="tm-form-actions">
               <button type="button" className="tm-btn tm-btn-ghost" onClick={() => setPicking(null)}>
-                إلغاء
+                {t("إلغاء", "Cancel")}
               </button>
             </div>
           </div>

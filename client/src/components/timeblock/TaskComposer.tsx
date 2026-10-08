@@ -5,15 +5,16 @@ import {
   DAY_END_MIN,
   DURATIONS,
   PRIORITY_LABEL,
-  WEEKDAY_SHORT,
   formatDuration,
   formatTime,
   minutesOf,
   parseDuration,
   shiftDay,
   timeOf,
+  weekdayShort,
   type TimeFormat,
 } from "@/lib/timeblock";
+import { pair, pick, t, type Pair } from "@/lib/i18n";
 
 /**
  * درج «مهمة جديدة» — التقاطٌ سريع ثم جدولة إن شاء صاحبها.
@@ -41,12 +42,12 @@ export interface ComposerPrefill {
 
 type Due = "today" | "tomorrow" | "pick";
 
-const REPEATS: { value: RepeatRule | null; label: string }[] = [
-  { value: null, label: "لا يتكرّر" },
-  { value: "daily", label: "كل يوم" },
-  { value: "weekdays", label: "أيام العمل" },
-  { value: "weekly", label: "كل أسبوع" },
-  { value: "custom", label: "مخصّص" },
+const REPEATS: { value: RepeatRule | null; label: Pair }[] = [
+  { value: null, label: pair("لا يتكرّر", "Does not repeat") },
+  { value: "daily", label: pair("كل يوم", "Every day") },
+  { value: "weekdays", label: pair("أيام العمل", "Workdays") },
+  { value: "weekly", label: pair("كل أسبوع", "Every week") },
+  { value: "custom", label: pair("مخصّص", "Custom") },
 ];
 
 /** خانة الوقت لا تقبل «24:00»، فآخر ما يُكتب فيها دقيقةٌ قبلها. */
@@ -148,14 +149,21 @@ export default function TaskComposer({
     event.preventDefault();
     const clean = title.trim();
     if (!clean) {
-      setError("اكتب اسم المهمة");
+      setError(t("اكتب اسم المهمة", "Enter a task name"));
       nameRef.current?.focus();
       return;
     }
-    if (!timed && !validMinutes) return setError("اكتب مدّة صحيحة، مثل «1س 20د» أو «45»");
-    if (timed && endMin - startMin < 5) return setError("وقت الانتهاء يجب أن يلي وقت البداية");
-    if (repeat === "custom" && !days.length) return setError("اختر يوماً واحداً على الأقل للتكرار");
-    if (clash) return setError(`الوقت مأخوذ بـ«${clash}». اختر وقتاً آخر أو اضغط «أول وقت فارغ».`);
+    if (!timed && !validMinutes) return setError(t("اكتب مدّة صحيحة، مثل «1س 20د» أو «45»", "Enter a valid duration, such as “1h 20m” or “45”"));
+    if (timed && endMin - startMin < 5) return setError(t("وقت الانتهاء يجب أن يلي وقت البداية", "End time must be after the start time"));
+    if (repeat === "custom" && !days.length) return setError(t("اختر يوماً واحداً على الأقل للتكرار", "Choose at least one day to repeat on"));
+    if (clash) {
+      return setError(
+        t(
+          `الوقت مأخوذ بـ«${clash}». اختر وقتاً آخر أو اضغط «أول وقت فارغ».`,
+          `That time is taken by “${clash}”. Choose another time or press “First free slot”.`,
+        ),
+      );
+    }
 
     setError(null);
     onCreate({
@@ -180,32 +188,32 @@ export default function TaskComposer({
       <form className="tbk-drawer-panel" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="tbk-composer-title">
         <div className="tbk-drawer-head">
           <div>
-            <div className="tbk-eyebrow">التقاط سريع</div>
-            <h2 id="tbk-composer-title">مهمة جديدة</h2>
+            <div className="tbk-eyebrow">{t("التقاط سريع", "Quick capture")}</div>
+            <h2 id="tbk-composer-title">{t("مهمة جديدة", "New task")}</h2>
           </div>
-          <button className="tbk-close" type="button" onClick={onClose} aria-label="إغلاق">
+          <button className="tbk-close" type="button" onClick={onClose} aria-label={t("إغلاق", "Close")}>
             <X size={18} aria-hidden="true" />
           </button>
         </div>
 
         <div className="tbk-form">
-          <label htmlFor="tbk-task-name">على ماذا ستعمل؟</label>
+          <label htmlFor="tbk-task-name">{t("على ماذا ستعمل؟", "What will you work on?")}</label>
           <input
             id="tbk-task-name"
             ref={nameRef}
             className="tbk-input tbk-input-lg"
-            placeholder="مثال: إنهاء تصميم الصفحة الرئيسية"
+            placeholder={t("مثال: إنهاء تصميم الصفحة الرئيسية", "e.g. Finish the home page design")}
             autoComplete="off"
             value={title}
             onChange={event => setTitle(event.target.value)}
           />
 
-          <div className="tbk-label">متى</div>
-          <div className="tbk-choices" role="group" aria-label="متى">
+          <div className="tbk-label">{t("متى", "When")}</div>
+          <div className="tbk-choices" role="group" aria-label={t("متى", "When")}>
             {([
-              ["today", "اليوم"],
-              ["tomorrow", "غداً"],
-              ["pick", "اختر تاريخاً"],
+              ["today", t("اليوم", "Today")],
+              ["tomorrow", t("غداً", "Tomorrow")],
+              ["pick", t("اختر تاريخاً", "Pick a date")],
             ] as const).map(([value, label]) => (
               <button key={value} type="button" className="tbk-choice" aria-pressed={due === value} onClick={() => setDue(value)}>
                 {label}
@@ -217,7 +225,7 @@ export default function TaskComposer({
               <input
                 className="tbk-input"
                 type="date"
-                aria-label="التاريخ"
+                aria-label={t("التاريخ", "Date")}
                 value={picked}
                 onChange={event => setPicked(event.target.value)}
               />
@@ -228,16 +236,16 @@ export default function TaskComposer({
             <button type="button" className="tbk-option" aria-pressed={!timed} onClick={() => chooseTimed(false)}>
               <span className="tbk-option-icon"><Clock size={15} aria-hidden="true" /></span>
               <span>
-                <strong>بلا وقت محدّد</strong>
-                <small>تبقى في القائمة حتى تسحبها إلى ساعتها</small>
+                <strong>{t("بلا وقت محدّد", "No specific time")}</strong>
+                <small>{t("تبقى في القائمة حتى تسحبها إلى ساعتها", "Stays in the list until you drag it to its hour")}</small>
               </span>
               <i>{!timed ? <Check size={15} aria-hidden="true" /> : <Circle size={13} aria-hidden="true" />}</i>
             </button>
             <button type="button" className="tbk-option" aria-pressed={timed} onClick={() => chooseTimed(true)}>
               <span className="tbk-option-icon"><Clock size={15} aria-hidden="true" /></span>
               <span>
-                <strong>حدّد وقتاً</strong>
-                <small>توضع مباشرةً على جدولك الزمني</small>
+                <strong>{t("حدّد وقتاً", "Schedule a time")}</strong>
+                <small>{t("توضع مباشرةً على جدولك الزمني", "Goes straight onto your timeline")}</small>
               </span>
               <i>{timed ? <Check size={15} aria-hidden="true" /> : <Circle size={13} aria-hidden="true" />}</i>
             </button>
@@ -246,44 +254,44 @@ export default function TaskComposer({
             <div className="tbk-reveal">
               <div className="tbk-timefields">
                 <div className="tbk-field">
-                  <label htmlFor="tbk-task-start">البداية</label>
+                  <label htmlFor="tbk-task-start">{t("البداية", "Start")}</label>
                   <input id="tbk-task-start" className="tbk-input" type="time" value={start} onChange={event => changeStart(event.target.value)} />
                 </div>
                 <div className="tbk-field">
-                  <label htmlFor="tbk-task-end">النهاية</label>
+                  <label htmlFor="tbk-task-end">{t("النهاية", "End")}</label>
                   <input id="tbk-task-end" className="tbk-input" type="time" value={end} onChange={event => changeEnd(event.target.value)} />
                 </div>
               </div>
               <p className={clash ? "tbk-hint is-warn" : "tbk-hint"} role={clash ? "alert" : undefined}>
                 {clash
-                  ? `يتعارض مع «${clash}».`
+                  ? t(`يتعارض مع «${clash}».`, `Clashes with “${clash}”.`)
                   : endMin > startMin
                     ? `${formatTime(startMin, format)} – ${formatTime(endMin, format)} · ${formatDuration(endMin - startMin)}`
-                    : "وقت الانتهاء يجب أن يلي البداية."}
+                    : t("وقت الانتهاء يجب أن يلي البداية.", "End time must be after the start.")}
                 <button type="button" className="tbk-link" onClick={pickFirstFree}>
-                  أول وقت فارغ
+                  {t("أول وقت فارغ", "First free slot")}
                 </button>
               </p>
             </div>
           )}
 
-          <div className="tbk-label">كم تحتاج؟</div>
-          <div className="tbk-choices" role="group" aria-label="المدّة">
+          <div className="tbk-label">{t("كم تحتاج؟", "How long do you need?")}</div>
+          <div className="tbk-choices" role="group" aria-label={t("المدّة", "Duration")}>
             {DURATIONS.map(option => (
               <button key={option} type="button" className="tbk-choice" aria-pressed={duration === option} onClick={() => chooseDuration(option)}>
                 {formatDuration(option)}
               </button>
             ))}
             <button type="button" className="tbk-choice" aria-pressed={duration === "custom"} onClick={() => chooseDuration("custom")}>
-              مخصّص
+              {t("مخصّص", "Custom")}
             </button>
           </div>
           {duration === "custom" && (
             <div className="tbk-reveal">
               <input
                 className="tbk-input"
-                aria-label="مدّة مخصّصة"
-                placeholder="مثال: 1س 20د أو 80"
+                aria-label={t("مدّة مخصّصة", "Custom duration")}
+                placeholder={t("مثال: 1س 20د أو 80", "e.g. 1h 20m or 80")}
                 value={custom}
                 onChange={event => {
                   setCustom(event.target.value);
@@ -294,19 +302,19 @@ export default function TaskComposer({
             </div>
           )}
 
-          <div className="tbk-label">التكرار</div>
-          <div className="tbk-choices" role="group" aria-label="التكرار">
+          <div className="tbk-label">{t("التكرار", "Repeat")}</div>
+          <div className="tbk-choices" role="group" aria-label={t("التكرار", "Repeat")}>
             {REPEATS.map(option => (
-              <button key={option.label} type="button" className="tbk-choice" aria-pressed={repeat === option.value} onClick={() => setRepeat(option.value)}>
-                {option.label}
+              <button key={option.value ?? "none"} type="button" className="tbk-choice" aria-pressed={repeat === option.value} onClick={() => setRepeat(option.value)}>
+                {pick(option.label)}
               </button>
             ))}
           </div>
           {repeat === "custom" && (
             <div className="tbk-reveal">
-              <div className="tbk-reveal-title">يتكرّر في</div>
-              <div className="tbk-choices" role="group" aria-label="أيام التكرار">
-                {WEEKDAY_SHORT.map((name, index) => (
+              <div className="tbk-reveal-title">{t("يتكرّر في", "Repeats on")}</div>
+              <div className="tbk-choices" role="group" aria-label={t("أيام التكرار", "Repeat days")}>
+                {weekdayShort().map((name, index) => (
                   <button
                     key={name}
                     type="button"
@@ -320,10 +328,10 @@ export default function TaskComposer({
               </div>
             </div>
           )}
-          {repeat && !timed && <p className="tbk-hint">التكرار يبدأ حين تُحجز للمهمة ساعة.</p>}
+          {repeat && !timed && <p className="tbk-hint">{t("التكرار يبدأ حين تُحجز للمهمة ساعة.", "Repeating starts once the task is scheduled.")}</p>}
 
-          <div className="tbk-label">الفئة</div>
-          <div className="tbk-catgrid" role="group" aria-label="الفئة">
+          <div className="tbk-label">{t("الفئة", "Category")}</div>
+          <div className="tbk-catgrid" role="group" aria-label={t("الفئة", "Category")}>
             {TASK_CATEGORIES.map(item => (
               <button key={item.id} type="button" className="tbk-catchoice" aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>
                 <span className="tbk-dot" data-tone={item.tone} aria-hidden="true" />
@@ -332,11 +340,11 @@ export default function TaskComposer({
             ))}
           </div>
 
-          <div className="tbk-label">الأولوية</div>
-          <div className="tbk-choices" role="group" aria-label="الأولوية">
+          <div className="tbk-label">{t("الأولوية", "Priority")}</div>
+          <div className="tbk-choices" role="group" aria-label={t("الأولوية", "Priority")}>
             {TASK_PRIORITIES.map(value => (
               <button key={value} type="button" className="tbk-choice" aria-pressed={priority === value} onClick={() => setPriority(value)}>
-                {PRIORITY_LABEL[value]}
+                {pick(PRIORITY_LABEL[value])}
               </button>
             ))}
           </div>
@@ -344,8 +352,13 @@ export default function TaskComposer({
           <div className="tbk-tip">
             <ArrowUpDown size={15} aria-hidden="true" />
             <div>
-              <strong>جدولة مرنة</strong>
-              <small>اتركها بلا وقت ثم اسحبها إلى أي ساعة في الجدول الزمني. على الجوّال: اضغط عليها مطوّلاً ثم اسحب.</small>
+              <strong>{t("جدولة مرنة", "Flexible scheduling")}</strong>
+              <small>
+                {t(
+                  "اتركها بلا وقت ثم اسحبها إلى أي ساعة في الجدول الزمني. على الجوّال: اضغط عليها مطوّلاً ثم اسحب.",
+                  "Leave it unscheduled, then drag it to any hour on the timeline. On a phone: press and hold, then drag.",
+                )}
+              </small>
             </div>
           </div>
 
@@ -358,10 +371,10 @@ export default function TaskComposer({
 
         <div className="tbk-drawer-foot">
           <button className="tbk-btn" type="button" onClick={onClose}>
-            إلغاء
+            {t("إلغاء", "Cancel")}
           </button>
           <button className="tbk-btn tbk-btn-primary" type="submit" disabled={pending}>
-            إنشاء المهمة
+            {t("إنشاء المهمة", "Create task")}
           </button>
         </div>
       </form>

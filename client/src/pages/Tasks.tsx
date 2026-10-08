@@ -6,6 +6,7 @@ import { type Task } from "@shared/tasks";
 import { ARCHIVE_ROUTE } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
 import TaskRow from "@/components/time/TaskRow";
+import { pair, pick, t } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -17,11 +18,11 @@ import { trpc } from "@/lib/trpc";
  */
 
 const TABS = [
-  { id: "all", label: "الكل" },
-  { id: "unclassified", label: "غير مصنّفة" },
-  { id: "planned", label: "مخطّطة" },
-  { id: "ready", label: "جاهزة للتركيز" },
-  { id: "late", label: "متأخّرة" },
+  { id: "all", label: pair("الكل", "All") },
+  { id: "unclassified", label: pair("غير مصنّفة", "Unclassified") },
+  { id: "planned", label: pair("مخطّطة", "Planned") },
+  { id: "ready", label: pair("جاهزة للتركيز", "Ready to focus") },
+  { id: "late", label: pair("متأخّرة", "Overdue") },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -69,13 +70,13 @@ export default function Tasks() {
     <TimeLayout>
       <div className="tm-inner">
         <header className="tp-head">
-          <h1>{query ? "نتائج البحث" : "مهامي المفتوحة"}</h1>
+          <h1>{query ? t("نتائج البحث", "Search results") : t("مهامي المفتوحة", "My open tasks")}</h1>
           <p>
-            ما لم يُنجَز بعد. المكتملة في <Link href={ARCHIVE_ROUTE}>الأرشيف</Link>.
+            {t("ما لم يُنجَز بعد. المكتملة في ", "Not done yet. Completed tasks are in the ")}<Link href={ARCHIVE_ROUTE}>{t("الأرشيف", "archive")}</Link>.
           </p>
         </header>
 
-        <div className="tp-tabs" role="tablist" aria-label="تصفية المهام">
+        <div className="tp-tabs" role="tablist" aria-label={t("تصفية المهام", "Filter tasks")}>
           {TABS.map(item => {
             const count = all.filter(task => matches(task, item.id, now)).length;
             return (
@@ -87,7 +88,7 @@ export default function Tasks() {
                 className={tab === item.id ? "tp-tab is-current" : "tp-tab"}
                 onClick={() => setTab(item.id)}
               >
-                {item.label}
+                {pick(item.label)}
                 <span className="tp-tab-count">{count}</span>
               </button>
             );
@@ -97,23 +98,23 @@ export default function Tasks() {
         <section className="tm-section" aria-live="polite">
           {status.data?.configured === false && (
             <p className="tm-empty">
-              المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> ثم أعد النشر.
+              {t("المهام غير موصولة بعد. اضبط ", "Tasks are not connected yet. Set ")}<code>SUPABASE_URL</code>{t(" و", " and ")}<code>SUPABASE_ANON_KEY</code>{t(" ثم أعد النشر.", ", then redeploy.")}
             </p>
           )}
 
-          {open.isLoading && status.data?.configured && <p className="tm-empty">…جارٍ التحميل</p>}
+          {open.isLoading && status.data?.configured && <p className="tm-empty">{t("…جارٍ التحميل", "Loading…")}</p>}
 
           {open.isError && (
             <p className="tm-empty tm-error" role="alert">
-              تعذّر قراءة المهام. {open.error.message}
+              {t("تعذّر قراءة المهام.", "Could not load tasks.")} {open.error.message}
             </p>
           )}
 
           {open.isSuccess && shown.length === 0 && (
             <div className="tm-empty-state">
-              <p>{all.length === 0 ? "لا توجد مهام بعد." : "لا مهام في هذا التصنيف."}</p>
+              <p>{all.length === 0 ? t("لا توجد مهام بعد.", "No tasks yet.") : t("لا مهام في هذا التصنيف.", "No tasks in this tab.")}</p>
               <p className="tm-empty-hint">
-                {all.length === 0 ? "ابدأ بمهمة واحدة من إدارة الوقت." : "جرّب تبويباً آخر."}
+                {all.length === 0 ? t("ابدأ بمهمة واحدة من إدارة الوقت.", "Start with one task from Time management.") : t("جرّب تبويباً آخر.", "Try another tab.")}
               </p>
             </div>
           )}

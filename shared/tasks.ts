@@ -141,10 +141,14 @@ export function stateOf(task: Omit<Task, "state">): TaskState {
 }
 
 /** ما الذي تحتاجه هذه المهمة الآن؟ يحدّد زرّ البطاقة. */
-export function nextActionOf(task: Task): { label: string; method: "eisenhower" | "time-blocking" | "focus" } {
-  if (!task.quadrant) return { label: "تصنيف المهمة", method: "eisenhower" };
-  if (!task.scheduledStart) return { label: "حجز وقت", method: "time-blocking" };
-  return { label: "ابدأ التركيز", method: "focus" };
+export function nextActionOf(
+  task: Task,
+  lang: "ar" | "en" = "ar",
+): { label: string; method: "eisenhower" | "time-blocking" | "focus" } {
+  const ar = lang === "ar";
+  if (!task.quadrant) return { label: ar ? "تصنيف المهمة" : "Classify task", method: "eisenhower" };
+  if (!task.scheduledStart) return { label: ar ? "حجز وقت" : "Block time", method: "time-blocking" };
+  return { label: ar ? "ابدأ التركيز" : "Start focus", method: "focus" };
 }
 
 export function isOpen(task: Task): boolean {

@@ -895,3 +895,23 @@
 /* والصفحة لا ترتدّ ولا تُحدَّث بالسحب إلى أسفل ما دام الإصبع يحمل مهمة. */
 html.tbk-dragging { overscroll-behavior: none; }
 html.tbk-dragging .tbk-row { transition: none; }
+
+/* ---- الاتجاه الأيسر (الإنجليزية) ---- */
+
+/* ما كُتب أعلاه بجهةٍ فيزيائية يُعكس هنا؛ والعربية تبقى كما هي حرفاً بحرف. */
+[dir="ltr"] .tbk-daysection {
+  background: linear-gradient(to right, color-mix(in srgb, var(--k-active) 45%, transparent), transparent);
+}
+[dir="ltr"] .tbk-block {
+  background: linear-gradient(to right,
+    color-mix(in srgb, var(--tone, var(--k-gray)) calc(var(--k-block-mix) * .3), var(--k-ring-hole)),
+    color-mix(in srgb, var(--tone, var(--k-gray)) calc(var(--k-block-mix) * .1), var(--k-ring-hole)));
+}
+[dir="ltr"] .tbk-toast,
+[dir="ltr"] .tbk-day[data-busy="true"]::after { translate: -50% 0; }
+/* فوق الجوّال وحده: هناك تلتصق القائمة بطرف الزرّ ولا تُوسَّط. */
+@media (min-width: 761px) {
+  [dir="ltr"] .tbk-pop { translate: -50% 0; }
+}
+[dir="ltr"] .tbk-drawer-panel { box-shadow: -25px 0 80px rgba(0, 0, 0, .45); animation-name: tbk-slide-ltr; }
+@keyframes tbk-slide-ltr { from { transform: translateX(30px); opacity: 0; } }

@@ -1,9 +1,11 @@
 import React from "react";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Link } from "wouter";
 import { whenLabel } from "@shared/board";
-import { nextActionOf, quadrantTitle, type Task } from "@shared/tasks";
+import { nextActionOf, type Task } from "@shared/tasks";
 import { TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { dir, getLang, t } from "@/lib/i18n";
+import { quadrantLabel } from "@/lib/task-labels";
 
 /**
  * قائمة المهام القادمة.
@@ -19,6 +21,12 @@ function toneOf(task: Task): "danger" | "go" | "warn" | "mute" {
   if (task.quadrant === "not_important_urgent") return "warn";
   return "mute";
 }
+
+const ACTION_LABELS_EN: Record<ReturnType<typeof nextActionOf>["method"], string> = {
+  eisenhower: "Classify task",
+  "time-blocking": "Block time",
+  focus: "Start focus",
+};
 
 function hrefOf(task: Task): string {
   const { method } = nextActionOf(task);
@@ -43,6 +51,8 @@ export function TaskItem({
   busy: boolean;
 }) {
   const action = nextActionOf(task);
+  const actionLabel = t(action.label, ACTION_LABELS_EN[action.method]);
+  const Go = dir() === "rtl" ? ArrowLeft : ArrowRight;
 
   return (
     <li className="bd-row">
@@ -51,7 +61,7 @@ export function TaskItem({
         className="bd-check"
         onClick={() => onComplete(task.id)}
         disabled={busy}
-        aria-label={`إنجاز ${task.title}`}
+        aria-label={t(`إنجاز ${task.title}`, `Complete ${task.title}`)}
       >
         <Check size={13} aria-hidden="true" />
       </button>
@@ -60,14 +70,14 @@ export function TaskItem({
 
       <span className="bd-row-body">
         <span className="bd-row-title">{task.title}</span>
-        <span className="bd-row-meta">{task.quadrant ? quadrantTitle(task.quadrant) : "بدون تصنيف"}</span>
+        <span className="bd-row-meta">{task.quadrant ? quadrantLabel(task.quadrant) : t("بدون تصنيف", "Unclassified")}</span>
       </span>
 
-      <time className="bd-row-when">{whenLabel(task, now)}</time>
+      <time className="bd-row-when">{whenLabel(task, now, getLang())}</time>
 
-      <Link className="bd-row-go" href={hrefOf(task)} aria-label={`${action.label}: ${task.title}`}>
-        {action.label}
-        <ArrowLeft size={14} aria-hidden="true" />
+      <Link className="bd-row-go" href={hrefOf(task)} aria-label={`${actionLabel}: ${task.title}`}>
+        {actionLabel}
+        <Go size={14} aria-hidden="true" />
       </Link>
     </li>
   );
@@ -89,9 +99,9 @@ export default function TaskList({
   return (
     <section className="bd-panel" aria-labelledby="bd-tasks-title">
       <header className="bd-panel-head">
-        <h2 id="bd-tasks-title">المهام القادمة</h2>
+        <h2 id="bd-tasks-title">{t("المهام القادمة", "Upcoming tasks")}</h2>
         <Link className="bd-panel-more" href={TASKS_ROUTE}>
-          عرض الكل
+          {t("عرض الكل", "View all")}
         </Link>
       </header>
 

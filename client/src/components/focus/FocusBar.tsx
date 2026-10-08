@@ -2,6 +2,7 @@ import React from "react";
 import { Archive, BarChart3, CalendarDays, ClipboardList, Clock, Home, Settings, Timer } from "lucide-react";
 import { Link } from "wouter";
 import { useAuthSession } from "@/contexts/AuthContext";
+import { pair, pick, t } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
 import {
   ARCHIVE_ROUTE,
@@ -23,13 +24,13 @@ import {
  */
 
 const LINKS = [
-  { href: TIME_HOME_ROUTE, label: "Home", icon: Home },
-  { href: TASKS_ROUTE, label: "Tasks", icon: ClipboardList },
-  { href: TIME_MANAGEMENT_ROUTE, label: "Time Management", icon: Clock },
-  { href: MEETING_ROUTES.prepare, label: "Meetings", icon: CalendarDays },
-  { href: STATISTICS_ROUTE, label: "Statistics", icon: BarChart3 },
-  { href: ARCHIVE_ROUTE, label: "Archive", icon: Archive },
-  { href: SETTINGS_ROUTE, label: "Settings", icon: Settings },
+  { href: TIME_HOME_ROUTE, label: pair("الرئيسية", "Home"), icon: Home },
+  { href: TASKS_ROUTE, label: pair("المهام", "Tasks"), icon: ClipboardList },
+  { href: TIME_MANAGEMENT_ROUTE, label: pair("إدارة الوقت", "Time Management"), icon: Clock },
+  { href: MEETING_ROUTES.prepare, label: pair("الاجتماعات", "Meetings"), icon: CalendarDays },
+  { href: STATISTICS_ROUTE, label: pair("الإحصائيات", "Statistics"), icon: BarChart3 },
+  { href: ARCHIVE_ROUTE, label: pair("الأرشيف", "Archive"), icon: Archive },
+  { href: SETTINGS_ROUTE, label: pair("الإعدادات", "Settings"), icon: Settings },
 ];
 
 export default function FocusBar({ liveTime }: { liveTime: string | null }) {
@@ -37,7 +38,7 @@ export default function FocusBar({ liveTime }: { liveTime: string | null }) {
   // الاجتماعات مساحة واحدة: من لا يملكها لا يُعرض له بابها.
   const workspace = trpc.meetings.access.useQuery();
   const links = LINKS.filter(link => link.href !== MEETING_ROUTES.prepare || workspace.data?.owner === true);
-  const name = (user?.user_metadata?.name as string | undefined)?.trim() || user?.email || "Account";
+  const name = (user?.user_metadata?.name as string | undefined)?.trim() || user?.email || t("الحساب", "Account");
 
   return (
     <header className="ft-nav">
@@ -46,16 +47,16 @@ export default function FocusBar({ liveTime }: { liveTime: string | null }) {
           واف
         </Link>
 
-        <nav aria-label="Main">
+        <nav aria-label={t("التنقّل الرئيسي", "Main")}>
           <span className="ft-nav-timer" data-live={liveTime !== null}>
             <Timer size={14} aria-hidden="true" />
-            {liveTime ?? "00:00"}
+            <span dir="ltr">{liveTime ?? "00:00"}</span>
             <i aria-hidden="true" />
           </span>
           {links.map(({ href, label, icon: Icon }) => (
             <Link key={href} className="ft-nav-link" href={href}>
               <Icon size={16} aria-hidden="true" />
-              <span>{label}</span>
+              <span>{pick(label)}</span>
             </Link>
           ))}
         </nav>
@@ -65,7 +66,7 @@ export default function FocusBar({ liveTime }: { liveTime: string | null }) {
             {name}
           </Link>
           <button type="button" className="ft-nav-cta" onClick={() => void signOut()}>
-            Sign Out
+            {t("تسجيل الخروج", "Sign Out")}
           </button>
         </div>
       </div>

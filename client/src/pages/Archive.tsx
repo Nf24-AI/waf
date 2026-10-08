@@ -3,9 +3,11 @@
 import React, { useMemo } from "react";
 import { Check } from "lucide-react";
 import { Link } from "wouter";
-import { quadrantTitle, type Task } from "@shared/tasks";
+import { type Task } from "@shared/tasks";
 import { STATISTICS_ROUTE } from "@shared/routes";
 import TimeLayout from "@/components/time/TimeLayout";
+import { locale, t } from "@/lib/i18n";
+import { quadrantLabel } from "@/lib/task-labels";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -18,7 +20,7 @@ import { trpc } from "@/lib/trpc";
 
 /** «الثلاثاء ٢٢ سبتمبر» — العنوان الذي يُفصل به اليوم عمّا قبله. */
 function dayTitle(iso: string): string {
-  return new Date(iso).toLocaleDateString("ar", {
+  return new Date(iso).toLocaleDateString(locale(), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -26,7 +28,7 @@ function dayTitle(iso: string): string {
 }
 
 function timeOf(iso: string): string {
-  return new Date(iso).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date(iso).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 /** المنجَز مجموعاً بيومه، بالترتيب الذي جاء به من الخادم (الأحدث أولاً). */
@@ -55,30 +57,30 @@ export default function Archive() {
     <TimeLayout>
       <div className="tm-inner">
         <header className="tm-head">
-          <h1>الأرشيف</h1>
-          <p>ما أنجزته، بيومه.</p>
+          <h1>{t("الأرشيف", "Archive")}</h1>
+          <p>{t("ما أنجزته، بيومه.", "What you completed, day by day.")}</p>
         </header>
 
         {status.data?.configured === false && (
           <p className="tm-empty" style={{ marginBlockStart: "var(--space-9)" }}>
-            المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> ثم أعد النشر.
+            {t("المهام غير موصولة بعد. اضبط ", "Tasks are not connected yet. Set ")}<code>SUPABASE_URL</code>{t(" و", " and ")}<code>SUPABASE_ANON_KEY</code>{t(" ثم أعد النشر.", ", then redeploy.")}
           </p>
         )}
 
         {enabled && completed.isLoading && (
-          <p className="tm-empty" style={{ marginBlockStart: "var(--space-9)" }}>…جارٍ التحميل</p>
+          <p className="tm-empty" style={{ marginBlockStart: "var(--space-9)" }}>{t("…جارٍ التحميل", "Loading…")}</p>
         )}
 
         {completed.isError && (
           <p className="tm-empty tm-error" role="alert" style={{ marginBlockStart: "var(--space-9)" }}>
-            تعذّر قراءة الأرشيف. {completed.error.message}
+            {t("تعذّر قراءة الأرشيف.", "Could not load the archive.")} {completed.error.message}
           </p>
         )}
 
         {completed.isSuccess && days.length === 0 && (
           <div className="tm-empty-state" style={{ marginBlockStart: "var(--space-9)" }}>
-            <p>لم يُنجَز شيء بعد.</p>
-            <p className="tm-empty-hint">أوّل مهمة تُنهيها تظهر هنا.</p>
+            <p>{t("لم يُنجَز شيء بعد.", "Nothing completed yet.")}</p>
+            <p className="tm-empty-hint">{t("أوّل مهمة تُنهيها تظهر هنا.", "The first task you finish will show up here.")}</p>
           </div>
         )}
 
@@ -92,8 +94,8 @@ export default function Archive() {
                   <Check size={16} aria-hidden="true" className="ar-check" />
                   <span className="ar-title">{task.title}</span>
                   <span className="ar-meta">
-                    {task.quadrant ? quadrantTitle(task.quadrant) : "غير مصنّفة"}
-                    {task.completedSessions > 0 && ` · ${task.completedSessions} جلسة`}
+                    {task.quadrant ? quadrantLabel(task.quadrant) : t("غير مصنّفة", "Unclassified")}
+                    {task.completedSessions > 0 && t(` · ${task.completedSessions} جلسة`, ` · ${task.completedSessions} ${task.completedSessions === 1 ? "session" : "sessions"}`)}
                   </span>
                   <time className="ar-time" dateTime={task.completedAt}>
                     {timeOf(task.completedAt!)}
@@ -107,7 +109,7 @@ export default function Archive() {
         {days.length > 0 && (
           <div className="tm-primary">
             <Link className="tm-btn tm-btn-ghost" href={STATISTICS_ROUTE}>
-              عرض الإحصاء
+              {t("عرض الإحصاء", "View statistics")}
             </Link>
           </div>
         )}

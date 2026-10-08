@@ -4,7 +4,9 @@ import { Link, useLocation } from "wouter";
 import { attentionList } from "@shared/dashboard";
 import { nextActionOf } from "@shared/tasks";
 import { TASKS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { getLang, locale, t } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
+import LangToggle from "@/components/LangToggle";
 
 /**
  * الشريط العلوي.
@@ -62,7 +64,7 @@ export default function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, [panel]);
 
-  const today = new Date().toLocaleDateString("ar", {
+  const today = new Date().toLocaleDateString(locale(), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -81,7 +83,7 @@ export default function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
         type="button"
         className="tp-burger"
         onClick={onOpenNav}
-        aria-label="فتح القائمة"
+        aria-label={t("فتح القائمة", "Open menu")}
       >
         <Menu size={18} aria-hidden="true" />
       </button>
@@ -92,8 +94,8 @@ export default function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
           ref={searchRef}
           type="search"
           value={query}
-          placeholder="ابحث عن مهمة، اجتماع، أو أي شيء …"
-          aria-label="بحث في المهام"
+          placeholder={t("ابحث عن مهمة، اجتماع، أو أي شيء …", "Search tasks, meetings, or anything …")}
+          aria-label={t("بحث في المهام", "Search tasks")}
           onChange={event => setQuery(event.target.value)}
         />
         <span className="tp-kbd" aria-hidden="true">
@@ -104,12 +106,21 @@ export default function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
       <div className="tp-top-end">
         <time className="tp-date">{today}</time>
 
+        <LangToggle short className="tp-icon-btn" />
+
         <div className="tp-bell-wrap" ref={bellRef}>
           <button
             type="button"
             className="tp-icon-btn"
             onClick={() => setPanel(current => !current)}
-            aria-label={due.length ? `${due.length} مهمة تحتاج انتباهك` : "لا شيء يحتاج انتباهك"}
+            aria-label={
+              due.length
+                ? t(
+                    `${due.length} مهمة تحتاج انتباهك`,
+                    due.length === 1 ? "1 task needs your attention" : `${due.length} tasks need your attention`,
+                  )
+                : t("لا شيء يحتاج انتباهك", "Nothing needs your attention")
+            }
             aria-expanded={panel}
           >
             <Bell size={17} aria-hidden="true" />
@@ -117,17 +128,17 @@ export default function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
           </button>
 
           {panel && (
-            <div className="tp-panel" role="dialog" aria-label="ما يحتاج انتباهك">
-              <h2>تحتاج انتباهك</h2>
+            <div className="tp-panel" role="dialog" aria-label={t("ما يحتاج انتباهك", "What needs your attention")}>
+              <h2>{t("تحتاج انتباهك", "Needs your attention")}</h2>
               {due.length === 0 ? (
-                <p className="tp-empty">لا شيء متأخّر ولا عاجل.</p>
+                <p className="tp-empty">{t("لا شيء متأخّر ولا عاجل.", "Nothing overdue or urgent.")}</p>
               ) : (
                 <ul className="tp-panel-list">
                   {due.map(task => (
                     <li key={task.id}>
                       <Link
                         className="tp-panel-row"
-                        href={hrefOf(task.id, nextActionOf(task).method)}
+                        href={hrefOf(task.id, nextActionOf(task, getLang()).method)}
                         onClick={() => setPanel(false)}
                       >
                         <span className="tp-dot" data-tone="danger" aria-hidden="true" />

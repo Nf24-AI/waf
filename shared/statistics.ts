@@ -67,8 +67,12 @@ export function summarize(completed: Task[], sessions: FocusSession[]): Statisti
 }
 
 /** «ساعتان و١٥ دقيقة» — الدقائق وحدها تصير غير مقروءة بعد المئة. */
-export function formatMinutes(minutes: number): string {
+export function formatMinutes(minutes: number, lang: "ar" | "en" = "ar"): string {
   const safe = Math.max(0, Math.round(minutes));
+  if (lang === "en") {
+    if (safe < 60) return `${safe} min`;
+    return safe % 60 ? `${Math.floor(safe / 60)} hr ${safe % 60} min` : `${Math.floor(safe / 60)} hr`;
+  }
   if (safe < 60) return `${safe} دقيقة`;
 
   const hours = Math.floor(safe / 60);

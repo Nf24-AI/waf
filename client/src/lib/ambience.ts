@@ -7,18 +7,18 @@
  */
 
 export const AMBIENCE = [
-  { id: "fireplace", label: "Fireplace" },
-  { id: "nature", label: "Nature" },
-  { id: "ocean", label: "Ocean" },
-  { id: "rain", label: "Rain" },
-  { id: "cafe", label: "Café" },
-  { id: "forest", label: "Forest" },
-  { id: "brown", label: "Brown Noise" },
-  { id: "white", label: "White Noise" },
-  { id: "thunder", label: "Thunder" },
-  { id: "keyboard", label: "Keyboard" },
-  { id: "fan", label: "Fan" },
-  { id: "theta", label: "Theta Waves" },
+  { id: "fireplace", label: "Fireplace", labelAr: "مدفأة" },
+  { id: "nature", label: "Nature", labelAr: "طبيعة" },
+  { id: "ocean", label: "Ocean", labelAr: "محيط" },
+  { id: "rain", label: "Rain", labelAr: "مطر" },
+  { id: "cafe", label: "Café", labelAr: "مقهى" },
+  { id: "forest", label: "Forest", labelAr: "غابة" },
+  { id: "brown", label: "Brown Noise", labelAr: "ضجيج بنّي" },
+  { id: "white", label: "White Noise", labelAr: "ضجيج أبيض" },
+  { id: "thunder", label: "Thunder", labelAr: "رعد" },
+  { id: "keyboard", label: "Keyboard", labelAr: "لوحة مفاتيح" },
+  { id: "fan", label: "Fan", labelAr: "مروحة" },
+  { id: "theta", label: "Theta Waves", labelAr: "موجات ثيتا" },
 ] as const;
 
 export type AmbienceId = (typeof AMBIENCE)[number]["id"];

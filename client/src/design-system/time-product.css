@@ -2156,3 +2156,18 @@ a.ft-btn, a.ft-chip { text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .tp-side, .tp-top { backdrop-filter: none; }
 }
+
+/*
+ * صفحة التركيز بالعربية.
+ *
+ * كُتبت أنماطها والصفحة إنجليزية وحدها، فبقي فيها ما يفترض حروفاً لاتينية:
+ * تباعدٌ بين الحروف يفكّ اتصال العربية، وميلٌ لا يليق بها، وتوسيطٌ يحسب من
+ * حافّةٍ انقلبت.
+ */
+[dir="rtl"] .ft-pop-list,
+[dir="rtl"] .ft-sounds { translate: 50% 0; }
+[dir="rtl"] .ft-eyebrow,
+[dir="rtl"] .ft-field span,
+[dir="rtl"] .ft-volume span,
+[dir="rtl"] .ft-ampm { letter-spacing: 0; }
+[dir="rtl"] .ft-quote { font-style: normal; }

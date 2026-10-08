@@ -67,6 +67,7 @@ export function completionRate(openCount: number, completedThisWeek: number): nu
 
 /** أحرف الأيام كما تُكتب في الرسم: سبت، أحد، اثنين… */
 const DAY_INITIALS = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
+const DAY_INITIALS_EN = ["S", "M", "T", "W", "T", "F", "S"];
 
 export interface DayBar {
   /** «2026-09-22» */
@@ -83,7 +84,7 @@ export interface DayBar {
  * الأحدث في آخر الصفّ لا أوّله: العين العربية تقرأ من اليمين، والرسم يُقلب
  * بالتنسيق لا بترتيب البيانات — فيبقى الترتيب هنا زمنيّاً مقروءاً في الاختبار.
  */
-export function weekBars(completed: Task[], now: Date = new Date()): DayBar[] {
+export function weekBars(completed: Task[], now: Date = new Date(), lang: "ar" | "en" = "ar"): DayBar[] {
   const counts = new Map<string, number>();
   for (const task of completed) {
     if (!task.completedAt) continue;
@@ -99,7 +100,7 @@ export function weekBars(completed: Task[], now: Date = new Date()): DayBar[] {
     const key = dayKey(date);
     bars.push({
       day: key,
-      initial: DAY_INITIALS[date.getDay()],
+      initial: (lang === "ar" ? DAY_INITIALS : DAY_INITIALS_EN)[date.getDay()],
       count: counts.get(key) ?? 0,
       isToday: back === 0,
     });
@@ -112,8 +113,9 @@ function dayKey(date: Date): string {
 }
 
 /** تحيّة الوقت — بلا اسم إن لم يُعرف، فتحيّة ناقصة أهون من اسم مخترع. */
-export function greeting(now: Date = new Date()): string {
+export function greeting(now: Date = new Date(), lang: "ar" | "en" = "ar"): string {
   const hour = now.getHours();
+  if (lang === "en") return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   if (hour < 12) return "صباح الخير";
   if (hour < 17) return "مساء الخير";
   return "مساء الخير";

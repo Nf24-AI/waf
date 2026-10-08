@@ -1,4 +1,5 @@
 import { TASK_CATEGORIES, type TaskCategory } from "@shared/tasks";
+import { t } from "./i18n";
 import { supabase } from "./supabase";
 
 /**
@@ -14,8 +15,6 @@ export type CategoryLabels = Partial<Record<TaskCategory, string>>;
 const KEY = "timeblock_labels";
 export const LABEL_MAX = 24;
 
-const DEFAULTS = Object.fromEntries(TASK_CATEGORIES.map(item => [item.id, item.label])) as Record<TaskCategory, string>;
-
 /**
  * ما يصحّ حفظه من الأسماء.
  *
@@ -25,11 +24,11 @@ const DEFAULTS = Object.fromEntries(TASK_CATEGORIES.map(item => [item.id, item.l
 export function cleanLabels(input: unknown): CategoryLabels {
   if (!input || typeof input !== "object") return {};
   const labels: CategoryLabels = {};
-  for (const { id } of TASK_CATEGORIES) {
+  for (const { id, label, labelEn } of TASK_CATEGORIES) {
     const raw = (input as Record<string, unknown>)[id];
     if (typeof raw !== "string") continue;
     const name = raw.trim().slice(0, LABEL_MAX);
-    if (name && name !== DEFAULTS[id]) labels[id] = name;
+    if (name && name !== label && name !== labelEn) labels[id] = name;
   }
   return labels;
 }
@@ -53,6 +52,6 @@ export async function loadAccountLabels(): Promise<CategoryLabels | null> {
 export async function saveAccountLabels(labels: CategoryLabels): Promise<boolean> {
   if (!supabase) return false;
   const { error } = await supabase.auth.updateUser({ data: { [KEY]: cleanLabels(labels) } });
-  if (error) throw new Error("تعذّر حفظ أسماء الفئات في حسابك. حاول مرة أخرى.");
+  if (error) throw new Error(t("تعذّر حفظ أسماء الفئات في حسابك. حاول مرة أخرى.", "Could not save category names to your account. Try again."));
   return true;
 }

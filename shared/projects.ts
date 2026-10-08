@@ -49,7 +49,11 @@ export function allProgress(projects: Project[], tasks: Task[]): ProjectProgress
 }
 
 /** «8 من 12 مهمة» — كما في المرجع. */
-export function progressLabel(progress: ProjectProgress): string {
+export function progressLabel(progress: ProjectProgress, lang: "ar" | "en" = "ar"): string {
+  if (lang === "en") {
+    if (progress.total === 0) return "No tasks yet";
+    return `${progress.done} of ${progress.total} ${progress.total === 1 ? "task" : "tasks"}`;
+  }
   if (progress.total === 0) return "لا مهام بعد";
   return `${progress.done} من ${progress.total} مهمة`;
 }

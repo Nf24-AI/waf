@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { CalendarX, Check, Timer } from "lucide-react";
 import { Link } from "wouter";
 import { TASK_CATEGORIES, type Task, type TaskCategory } from "@shared/tasks";
+import { t } from "@/lib/i18n";
 import { DAY_END_MIN, formatDuration, formatTime, minutesOf, timeOf, type TimeFormat } from "@/lib/timeblock";
 
 /**
@@ -68,10 +69,10 @@ export default function BlockModal({
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!valid) return setError("وقت الانتهاء يجب أن يلي وقت البداية");
-    if (clash) return setError(`الوقت مأخوذ بـ«${clash}». اختر وقتاً آخر.`);
+    if (!valid) return setError(t("وقت الانتهاء يجب أن يلي وقت البداية", "End time must be after the start time"));
+    if (clash) return setError(t(`الوقت مأخوذ بـ«${clash}». اختر وقتاً آخر.`, `That time is taken by “${clash}”. Choose another time.`));
     setError(null);
-    onSave({ title: title.trim() || "حجز جديد", start: startMin, end: endMin, category });
+    onSave({ title: title.trim() || t("حجز جديد", "New time block"), start: startMin, end: endMin, category });
   }
 
   return (
@@ -82,31 +83,31 @@ export default function BlockModal({
       }}
     >
       <form className="tbk-modalbox" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="tbk-block-title">
-        <h2 id="tbk-block-title">{task ? "تعديل الحجز" : "إضافة حجز"}</h2>
+        <h2 id="tbk-block-title">{task ? t("تعديل الحجز", "Edit time block") : t("إضافة حجز", "Add time block")}</h2>
 
         <div className="tbk-field">
-          <label htmlFor="tbk-block-name">ماذا ستفعل؟</label>
+          <label htmlFor="tbk-block-name">{t("ماذا ستفعل؟", "What will you do?")}</label>
           <input
             id="tbk-block-name"
             ref={titleRef}
             className="tbk-input"
-            placeholder="مثال: تصميم الصفحة الرئيسية"
+            placeholder={t("مثال: تصميم الصفحة الرئيسية", "e.g. Design the home page")}
             value={title}
             onChange={event => setTitle(event.target.value)}
           />
         </div>
         <div className="tbk-timefields">
           <div className="tbk-field">
-            <label htmlFor="tbk-block-start">وقت البداية</label>
+            <label htmlFor="tbk-block-start">{t("وقت البداية", "Start time")}</label>
             <input id="tbk-block-start" className="tbk-input" type="time" value={start} onChange={event => setStart(event.target.value)} />
           </div>
           <div className="tbk-field">
-            <label htmlFor="tbk-block-end">وقت النهاية</label>
+            <label htmlFor="tbk-block-end">{t("وقت النهاية", "End time")}</label>
             <input id="tbk-block-end" className="tbk-input" type="time" value={end} onChange={event => setEnd(event.target.value)} />
           </div>
         </div>
         <div className="tbk-field">
-          <label htmlFor="tbk-block-category">الفئة</label>
+          <label htmlFor="tbk-block-category">{t("الفئة", "Category")}</label>
           <select
             id="tbk-block-category"
             className="tbk-input"
@@ -124,10 +125,10 @@ export default function BlockModal({
         <p className={clash || error ? "tbk-hint is-warn" : "tbk-hint"} role={clash || error ? "alert" : undefined}>
           {error ??
             (clash
-              ? `يتعارض مع «${clash}».`
+              ? t(`يتعارض مع «${clash}».`, `Clashes with “${clash}”.`)
               : valid
                 ? `${formatTime(startMin, format)} – ${formatTime(endMin, format)} · ${formatDuration(endMin - startMin)}`
-                : "وقت الانتهاء يجب أن يلي البداية.")}
+                : t("وقت الانتهاء يجب أن يلي البداية.", "End time must be after the start."))}
         </p>
 
         {task && (
@@ -135,16 +136,16 @@ export default function BlockModal({
             {focusHref && (
               <Link className="tbk-btn" href={focusHref}>
                 <Timer size={14} aria-hidden="true" />
-                ابدأ التركيز
+                {t("ابدأ التركيز", "Start focus")}
               </Link>
             )}
             <button type="button" className="tbk-btn" onClick={onComplete} disabled={pending}>
               <Check size={14} aria-hidden="true" />
-              أنجزتُها
+              {t("أنجزتُها", "Mark done")}
             </button>
             <button type="button" className="tbk-btn" onClick={onUnschedule} disabled={pending}>
               <CalendarX size={14} aria-hidden="true" />
-              إلغاء الحجز
+              {t("إلغاء الحجز", "Unschedule")}
             </button>
           </div>
         )}
@@ -152,14 +153,14 @@ export default function BlockModal({
         <div className="tbk-modalactions">
           {task && (
             <button type="button" className="tbk-btn tbk-btn-danger" onClick={onDelete} disabled={pending}>
-              حذف
+              {t("حذف", "Delete")}
             </button>
           )}
           <button type="button" className="tbk-btn" onClick={onClose}>
-            إلغاء
+            {t("إلغاء", "Cancel")}
           </button>
           <button type="submit" className="tbk-btn tbk-btn-primary" disabled={pending}>
-            {task ? "حفظ التغييرات" : "إضافة الحجز"}
+            {task ? t("حفظ التغييرات", "Save changes") : t("إضافة الحجز", "Add time block")}
           </button>
         </div>
       </form>

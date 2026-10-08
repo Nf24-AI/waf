@@ -9,11 +9,11 @@ import { type Task } from "./tasks";
  */
 
 export const FILTERS = [
-  { id: "all", label: "الكل" },
-  { id: "today", label: "اليوم" },
-  { id: "week", label: "هذا الأسبوع" },
-  { id: "upcoming", label: "قادمة" },
-  { id: "done", label: "مكتملة" },
+  { id: "all", label: "الكل", labelEn: "All" },
+  { id: "today", label: "اليوم", labelEn: "Today" },
+  { id: "week", label: "هذا الأسبوع", labelEn: "This week" },
+  { id: "upcoming", label: "قادمة", labelEn: "Upcoming" },
+  { id: "done", label: "مكتملة", labelEn: "Completed" },
 ] as const;
 
 export type FilterId = (typeof FILTERS)[number]["id"];
@@ -86,15 +86,15 @@ export function countsOf(open: Task[], completed: Task[], now: Date = new Date()
 }
 
 /** «10:00 ص» أو «28 سبتمبر» — الوقت لليوم، والتاريخ لما بعده. */
-export function whenLabel(task: Task, now: Date = new Date()): string {
-  if (!task.scheduledStart) return "بلا وقت";
+export function whenLabel(task: Task, now: Date = new Date(), lang: "ar" | "en" = "ar"): string {
+  if (!task.scheduledStart) return lang === "ar" ? "بلا وقت" : "Unscheduled";
   const start = new Date(task.scheduledStart);
   const sameDay = start.toDateString() === now.toDateString();
   if (sameDay) {
     const hour = start.getHours();
-    const suffix = hour < 12 ? "ص" : "م";
+    const suffix = lang === "ar" ? (hour < 12 ? "ص" : "م") : hour < 12 ? "AM" : "PM";
     const twelve = hour % 12 === 0 ? 12 : hour % 12;
     return `${twelve}:${String(start.getMinutes()).padStart(2, "0")} ${suffix}`;
   }
-  return start.toLocaleDateString("ar", { day: "numeric", month: "long" });
+  return start.toLocaleDateString(lang === "ar" ? "ar" : "en-GB", { day: "numeric", month: "long" });
 }

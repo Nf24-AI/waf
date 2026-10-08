@@ -6,6 +6,7 @@ import { TASKS_ROUTE, TIME_MANAGEMENT_ROUTE } from "@shared/routes";
 import AddTaskModal, { type NewTask } from "@/components/time/AddTaskModal";
 import TimeManagement from "@/pages/TimeManagement";
 import { flowHref, nextStep } from "@/lib/flow";
+import { t } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -52,7 +53,7 @@ export default function AddTask() {
       <TimeManagement />
       <AddTaskModal
         pending={create.isPending}
-        error={create.error ? "تعذّر حفظ المهمة. حاول مرة أخرى." : null}
+        error={create.error ? t("تعذّر حفظ المهمة. حاول مرة أخرى.", "Could not save the task. Try again.") : null}
         projects={projects.data ?? []}
         onClose={() => navigate(TIME_MANAGEMENT_ROUTE)}
         onSubmit={submit}

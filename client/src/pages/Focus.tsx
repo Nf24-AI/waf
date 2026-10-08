@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  ArrowLeft,
   ArrowRight,
   AudioLines,
   AudioWaveform,
@@ -82,6 +83,7 @@ import {
   writePomodoro,
   writeSound,
 } from "@/lib/focus-timer";
+import { dir, getLang, locale, pair, type Pair, pick, t } from "@/lib/i18n";
 import { useStudyingNow } from "@/lib/presence";
 import { embedUrl } from "@/lib/stream";
 import { useTaskParam } from "@/lib/task-param";
@@ -101,34 +103,34 @@ import { trpc } from "@/lib/trpc";
  * كل ما يعرفه المؤقّت — أمّا الإنجاز فيعرفه هو وحده.
  */
 
-const MODES: { id: Mode; label: string; icon: typeof Timer }[] = [
-  { id: "timer", label: "Timer", icon: Timer },
-  { id: "clock", label: "Clock", icon: Clock },
-  { id: "pomodoro", label: "Pomodoro", icon: Timer },
-  { id: "stopwatch", label: "Stopwatch", icon: Watch },
+const MODES: { id: Mode; label: Pair; icon: typeof Timer }[] = [
+  { id: "timer", label: pair("مؤقّت", "Timer"), icon: Timer },
+  { id: "clock", label: pair("ساعة", "Clock"), icon: Clock },
+  { id: "pomodoro", label: pair("بومودورو", "Pomodoro"), icon: Timer },
+  { id: "stopwatch", label: pair("ساعة إيقاف", "Stopwatch"), icon: Watch },
 ];
 
-const PHASE_LABELS: Record<Phase, string> = {
-  work: "Focus Time",
-  short: "Short Break",
-  long: "Long Break",
+const PHASE_LABELS: Record<Phase, Pair> = {
+  work: pair("وقت التركيز", "Focus Time"),
+  short: pair("استراحة قصيرة", "Short Break"),
+  long: pair("استراحة طويلة", "Long Break"),
 };
 
 const PRESETS = [
-  { label: "15m", seconds: 15 * 60 },
-  { label: "25m", seconds: 25 * 60 },
-  { label: "45m", seconds: 45 * 60 },
-  { label: "1h", seconds: 60 * 60 },
-  { label: "2h", seconds: 120 * 60 },
+  { label: pair("15 د", "15m"), seconds: 15 * 60 },
+  { label: pair("25 د", "25m"), seconds: 25 * 60 },
+  { label: pair("45 د", "45m"), seconds: 45 * 60 },
+  { label: pair("1 س", "1h"), seconds: 60 * 60 },
+  { label: pair("2 س", "2h"), seconds: 120 * 60 },
 ];
 
 /** سطر هادئ تحت المؤقّت والساعة؛ يتبدّل بتبدّل اليوم لا بكل تحميل. */
 const QUOTES = [
-  ["Well begun is half done.", "Aristotle"],
-  ["Little by little, a little becomes a lot.", "Proverb"],
-  ["Time is what we want most, but what we use worst.", "William Penn"],
-  ["Lost time is never found again.", "Benjamin Franklin"],
-  ["Never leave till tomorrow what you can do today.", "Proverb"],
+  [pair("حُسن البداية نصف الإنجاز.", "Well begun is half done."), pair("أرسطو", "Aristotle")],
+  [pair("القليل على القليل يصير كثيراً.", "Little by little, a little becomes a lot."), pair("مثل", "Proverb")],
+  [pair("الوقت أكثر ما نريده، وأسوأ ما نستعمله.", "Time is what we want most, but what we use worst."), pair("ويليام بن", "William Penn")],
+  [pair("الوقت الضائع لا يعود.", "Lost time is never found again."), pair("بنجامين فرانكلين", "Benjamin Franklin")],
+  [pair("لا تؤجّل عمل اليوم إلى الغد.", "Never leave till tomorrow what you can do today."), pair("مثل", "Proverb")],
 ];
 
 const AMBIENCE_ICONS: Record<AmbienceId, typeof Timer> = {
@@ -525,15 +527,15 @@ export default function Focus() {
   const streamValid = embedUrl(streamDraft) !== null;
 
   return (
-    <div className="tp-frame ft-frame" data-waf-theme="navy" dir="ltr" lang="en">
+    <div className="tp-frame ft-frame" data-waf-theme="navy" dir={dir()} lang={getLang()}>
       {!quiet && <FocusBar liveTime={liveTime} />}
 
       <main className={quiet ? "ft is-quiet" : "ft"}>
         {/* كل صفحة تحتاج عنواناً واحداً: قارئ الشاشة يبدأ منه، والصفحة بلا h1 تبدأ من لا شيء. */}
-        <h1 className="sr-only">Focus</h1>
+        <h1 className="sr-only">{t("التركيز", "Focus")}</h1>
 
         <div className="ft-modes">
-          <div className="ft-tabs" role="tablist" aria-label="Timer type">
+          <div className="ft-tabs" role="tablist" aria-label={t("نوع المؤقّت", "Timer type")}>
             {MODES.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -547,21 +549,21 @@ export default function Focus() {
                 }}
               >
                 <Icon size={18} aria-hidden="true" />
-                {label}
+                {pick(label)}
                 {id !== "clock" && id !== mode && runs[id].status === "running" && (
-                  <span className="ft-tab-live" aria-label="running" />
+                  <span className="ft-tab-live" aria-label={t("يعمل", "running")} />
                 )}
               </button>
             ))}
           </div>
           <button type="button" className="ft-tab ft-tab-solo" onClick={toggleQuiet} aria-pressed={quiet}>
             {quiet ? <Minimize size={16} aria-hidden="true" /> : <Maximize size={16} aria-hidden="true" />}
-            {quiet ? "Exit" : "Focus"}
+            {quiet ? t("خروج", "Exit") : t("تركيز", "Focus")}
           </button>
           {pictureInPicture() && (
             <button type="button" className="ft-tab ft-tab-solo" onClick={() => void toggleMini()} aria-pressed={mini !== null}>
               <PictureInPicture2 size={16} aria-hidden="true" />
-              Mini
+              {t("مصغّر", "Mini")}
             </button>
           )}
         </div>
@@ -571,13 +573,13 @@ export default function Focus() {
             <div className="ft-phase">
               <span className="ft-pill" data-phase={phase}>
                 <Timer size={16} aria-hidden="true" />
-                {PHASE_LABELS[phase]}
+                {pick(PHASE_LABELS[phase])}
               </span>
-              <span className="ft-muted">Session {rounds + 1}</span>
+              <span className="ft-muted">{t("الجلسة", "Session")} {rounds + 1}</span>
               <button
                 type="button"
                 className="ft-icon ft-icon-sm"
-                aria-label="Pomodoro settings"
+                aria-label={t("إعدادات بومودورو", "Pomodoro settings")}
                 aria-expanded={panel === "settings"}
                 onClick={() => toggle("settings")}
               >
@@ -591,7 +593,7 @@ export default function Focus() {
               <button
                 type="button"
                 className="ft-icon ft-icon-sm"
-                aria-label="Stopwatch settings"
+                aria-label={t("إعدادات ساعة الإيقاف", "Stopwatch settings")}
                 aria-expanded={panel === "seconds"}
                 onClick={() => toggle("seconds")}
               >
@@ -601,8 +603,8 @@ export default function Focus() {
                 <div className="ft-pop">
                   <label className="ft-toggle">
                     <span>
-                      Show seconds
-                      <small>Hide the ticking seconds</small>
+                      {t("إظهار الثواني", "Show seconds")}
+                      <small>{t("إخفاء عدّ الثواني", "Hide the ticking seconds")}</small>
                     </span>
                     <input type="checkbox" checked={showSeconds} onChange={event => setShowSeconds(event.target.checked)} />
                   </label>
@@ -617,14 +619,14 @@ export default function Focus() {
             <div className="ft-setup">
               <p className="ft-eyebrow">
                 <Clock size={14} aria-hidden="true" />
-                SET DURATION
+                {t("حدّد المدة", "SET DURATION")}
               </p>
-              <div className="ft-fields">
+              <div className="ft-fields" dir="ltr">
                 {(
                   [
-                    ["h", "HOURS", 23],
-                    ["m", "MINUTES", 59],
-                    ["s", "SECONDS", 59],
+                    ["h", t("ساعات", "HOURS"), 23],
+                    ["m", t("دقائق", "MINUTES"), 59],
+                    ["s", t("ثوانٍ", "SECONDS"), 59],
                   ] as const
                 ).map(([key, label, max], index) => (
                   <React.Fragment key={key}>
@@ -652,7 +654,7 @@ export default function Focus() {
               <div className="ft-presets">
                 {PRESETS.map(preset => (
                   <button
-                    key={preset.label}
+                    key={preset.seconds}
                     type="button"
                     className={fieldTotal === preset.seconds ? "ft-chip is-current" : "ft-chip"}
                     onClick={() =>
@@ -663,7 +665,7 @@ export default function Focus() {
                       })
                     }
                   >
-                    {preset.label}
+                    {pick(preset.label)}
                   </button>
                 ))}
               </div>
@@ -671,7 +673,7 @@ export default function Focus() {
           ) : (
             <>
               {/* لا يُعلَن كل ثانية: قارئ الشاشة لا يقاطع التركيز ستّين مرة في الدقيقة. */}
-              <p className="ft-digits" role="timer" aria-live="off">
+              <p className="ft-digits" role="timer" aria-live="off" dir="ltr">
                 {groups.map((group, index) => (
                   <React.Fragment key={index}>
                     {index > 0 && <Colon />}
@@ -682,14 +684,14 @@ export default function Focus() {
 
               {mode === "clock" && (
                 <>
-                  {!hours24 && <p className="ft-ampm">{clockDate.getHours() < 12 ? "AM" : "PM"}</p>}
+                  {!hours24 && <p className="ft-ampm">{clockDate.getHours() < 12 ? t("ص", "AM") : t("م", "PM")}</p>}
                   <div className="ft-phase">
                     <span className="ft-pill">
-                      {clockDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                      {clockDate.toLocaleDateString(getLang() === "ar" ? locale() : "en-US", { weekday: "long", month: "long", day: "numeric" })}
                     </span>
-                    <div className="ft-switch" role="group" aria-label="Time format">
-                      <button type="button" aria-pressed={!hours24} onClick={() => setHours24(false)}>12h</button>
-                      <button type="button" aria-pressed={hours24} onClick={() => setHours24(true)}>24h</button>
+                    <div className="ft-switch" role="group" aria-label={t("صيغة الوقت", "Time format")}>
+                      <button type="button" aria-pressed={!hours24} onClick={() => setHours24(false)}>{t("12 س", "12h")}</button>
+                      <button type="button" aria-pressed={hours24} onClick={() => setHours24(true)}>{t("24 س", "24h")}</button>
                     </div>
                   </div>
                 </>
@@ -698,13 +700,13 @@ export default function Focus() {
               {mode === "stopwatch" && (
                 <div className="ft-goal">
                   <div className="ft-goal-labels">
-                    <span>{hoursMinutes(elapsed, true)} elapsed</span>
-                    <span>{hoursMinutes(Math.max(0, DAILY_GOAL_SECONDS - elapsed))} remaining</span>
+                    <span>{hoursMinutes(elapsed, true, getLang())} {t("منقضية", "elapsed")}</span>
+                    <span>{hoursMinutes(Math.max(0, DAILY_GOAL_SECONDS - elapsed), false, getLang())} {t("متبقّية", "remaining")}</span>
                   </div>
                   <div
                     className="ft-bar"
                     role="progressbar"
-                    aria-label="Session progress toward the daily goal"
+                    aria-label={t("تقدّم الجلسة نحو هدف اليوم", "Session progress toward the daily goal")}
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.min(100, Math.round((elapsed / DAILY_GOAL_SECONDS) * 100))}
@@ -715,14 +717,17 @@ export default function Focus() {
                     className="ft-bar"
                     data-tone="go"
                     role="progressbar"
-                    aria-label="Time until the next check-in"
+                    aria-label={t("الوقت حتى التحقّق التالي", "Time until the next check-in")}
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.round((sinceCheck / CHECK_EVERY_SECONDS) * 100)}
                   >
                     <span style={{ inlineSize: `${(sinceCheck / CHECK_EVERY_SECONDS) * 100}%` }} />
                   </div>
-                  <p className="ft-goal-note">{Math.ceil((CHECK_EVERY_SECONDS - sinceCheck) / 60)}m to check</p>
+                  <p className="ft-goal-note">
+                    {Math.ceil((CHECK_EVERY_SECONDS - sinceCheck) / 60)}
+                    {t(" د حتى التحقّق", "m to check")}
+                  </p>
                 </div>
               )}
             </>
@@ -738,12 +743,12 @@ export default function Focus() {
                   onClick={() => startTimer(fieldTotal)}
                 >
                   <Play size={18} aria-hidden="true" />
-                  Start Timer
+                  {t("ابدأ المؤقّت", "Start Timer")}
                 </button>
               ) : run.status === "running" ? (
                 <button type="button" className="ft-btn ft-btn-primary" onClick={() => pause(mode as RunMode)}>
                   <Pause size={16} aria-hidden="true" />
-                  Pause
+                  {t("إيقاف مؤقّت", "Pause")}
                 </button>
               ) : (
                 <button
@@ -756,18 +761,18 @@ export default function Focus() {
                   }}
                 >
                   <Play size={16} aria-hidden="true" />
-                  {run.status === "paused" ? "Resume" : "Start"}
+                  {run.status === "paused" ? t("متابعة", "Resume") : t("ابدأ", "Start")}
                 </button>
               )}
               {!settingUp && (mode === "pomodoro" || run.status !== "idle") && (
                 <button type="button" className="ft-btn" onClick={() => reset(mode as RunMode)}>
                   <RotateCcw size={16} aria-hidden="true" />
-                  Reset
+                  {t("إعادة ضبط", "Reset")}
                 </button>
               )}
               {mode === "pomodoro" && (
                 <button type="button" className="ft-btn" onClick={skip}>
-                  Skip
+                  {t("تخطّي", "Skip")}
                 </button>
               )}
             </div>
@@ -775,14 +780,17 @@ export default function Focus() {
 
           {mode === "stopwatch" && checking && (
             <p className="ft-check" role="alert">
-              Still studying? The stopwatch paused for a check-in — press Resume to carry on.
+              {t(
+                "ما زلت تدرس؟ توقّفت ساعة الإيقاف للتحقّق — اضغط «متابعة» لتكمل.",
+                "Still studying? The stopwatch paused for a check-in — press Resume to carry on.",
+              )}
             </p>
           )}
 
           {run?.status === "running" && mode !== "pomodoro" && (
             <p className="ft-live" role="status">
               <span aria-hidden="true" />
-              Studying...
+              {t("تدرس الآن...", "Studying...")}
             </p>
           )}
 
@@ -800,12 +808,12 @@ export default function Focus() {
                 onClick={() => toggle("label")}
               >
                 <Tag size={16} aria-hidden="true" />
-                {task ? task.title : "Select Label"}
+                {task ? task.title : t("اختر مهمة", "Select Label")}
                 <ChevronDown size={16} aria-hidden="true" />
               </button>
               {panel === "label" && (
-                <div className="ft-pop ft-pop-list" role="listbox" aria-label="Label">
-                  {tasks.length === 0 && <p className="ft-muted">No open tasks yet. Add one from Tasks.</p>}
+                <div className="ft-pop ft-pop-list" role="listbox" aria-label={t("المهمة", "Label")}>
+                  {tasks.length === 0 && <p className="ft-muted">{t("لا مهام مفتوحة بعد. أضف مهمة من صفحة المهام.", "No open tasks yet. Add one from Tasks.")}</p>}
                   {tasks.map(item => (
                     <button
                       key={item.id}
@@ -827,7 +835,11 @@ export default function Focus() {
                       {item.id === state.taskId && <Check size={14} aria-hidden="true" />}
                     </button>
                   ))}
-                  {sessionOpen && <p className="ft-muted">Finish the running session to change the label.</p>}
+                  {sessionOpen && (
+                    <p className="ft-muted">
+                      {t("أنهِ الجلسة الجارية لتغيّر المهمة.", "Finish the running session to change the label.")}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -835,9 +847,9 @@ export default function Focus() {
 
           {mode === "pomodoro" && panel !== "settings" && (
             <p className="ft-muted ft-summary">
-              Total work time today: {spokenDuration(todayTotal)}
+              {t("مجموع وقت العمل اليوم:", "Total work time today:")} {spokenDuration(todayTotal, getLang())}
               <br />
-              Next: {phase === "work" ? "Break" : "Focus"}
+              {t("التالي:", "Next:")} {phase === "work" ? t("استراحة", "Break") : t("تركيز", "Focus")}
             </p>
           )}
 
@@ -850,15 +862,15 @@ export default function Focus() {
           <div className="ft-tools">
             <button type="button" className="ft-chip ft-chip-lg" aria-expanded={todoOpen} onClick={() => setTodoOpen(!todoOpen)}>
               <ListTodo size={16} aria-hidden="true" />
-              Tasks
+              {t("المهام", "Tasks")}
             </button>
             <button
               type="button"
               className="ft-icon"
               onClick={toggleSound}
               aria-pressed={sound}
-              aria-label={sound ? "Sound enabled" : "Sound muted"}
-              title={sound ? "Sound enabled" : "Sound muted"}
+              aria-label={sound ? t("الصوت مفعّل", "Sound enabled") : t("الصوت مكتوم", "Sound muted")}
+              title={sound ? t("الصوت مفعّل", "Sound enabled") : t("الصوت مكتوم", "Sound muted")}
             >
               {sound ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
             </button>
@@ -866,8 +878,8 @@ export default function Focus() {
               <button
                 type="button"
                 className={ambience.length > 0 ? "ft-icon is-on" : "ft-icon"}
-                aria-label="Relaxation sounds"
-                title="Relaxation sounds"
+                aria-label={t("أصوات الاسترخاء", "Relaxation sounds")}
+                title={t("أصوات الاسترخاء", "Relaxation sounds")}
                 aria-expanded={panel === "sounds"}
                 onClick={() => toggle("sounds")}
               >
@@ -876,7 +888,7 @@ export default function Focus() {
               {panel === "sounds" && (
                 <div className="ft-pop ft-sounds">
                   <div className="ft-sound-grid">
-                    {AMBIENCE.map(({ id, label }) => {
+                    {AMBIENCE.map(({ id, label, labelAr }) => {
                       const Icon = AMBIENCE_ICONS[id];
                       return (
                         <button
@@ -891,20 +903,20 @@ export default function Focus() {
                           }}
                         >
                           <Icon size={20} aria-hidden="true" />
-                          {label}
+                          {t(labelAr, label)}
                         </button>
                       );
                     })}
                   </div>
                   <label className="ft-volume">
                     <Volume2 size={12} aria-hidden="true" />
-                    <span>VOLUME</span>
+                    <span>{t("مستوى الصوت", "VOLUME")}</span>
                     <input
                       type="range"
                       min={0}
                       max={100}
                       value={volume}
-                      aria-label="Volume"
+                      aria-label={t("مستوى الصوت", "Volume")}
                       onChange={event => {
                         const next = Number(event.target.value);
                         setVolume(next);
@@ -919,8 +931,8 @@ export default function Focus() {
             <button
               type="button"
               className={stream ? "ft-icon is-on" : "ft-icon"}
-              aria-label="Stream music"
-              title="Stream music"
+              aria-label={t("بثّ الموسيقى", "Stream music")}
+              title={t("بثّ الموسيقى", "Stream music")}
               aria-expanded={panel === "music"}
               onClick={() => toggle("music")}
             >
@@ -930,8 +942,10 @@ export default function Focus() {
 
           {(mode === "clock" || settingUp) && (
             <p className="ft-quote">
-              &ldquo;{quote[0]}&rdquo;
-              <br />— {quote[1]}
+              {t("«", "“")}
+              {pick(quote[0])}
+              {t("»", "”")}
+              <br />— {pick(quote[1])}
             </p>
           )}
         </section>
@@ -940,8 +954,12 @@ export default function Focus() {
         {asked && (
           <section className="ft-panel ft-ask" role="status">
             <h2>
-              Session finished.
-              <small dir="auto">Did you finish &ldquo;{asked.title}&rdquo;?</small>
+              {t("انتهت الجلسة.", "Session finished.")}
+              <small dir="auto">
+                {t("هل أنجزت «", "Did you finish “")}
+                {asked.title}
+                {t("»؟", "”?")}
+              </small>
             </h2>
             <div className="ft-actions">
               <button
@@ -955,14 +973,14 @@ export default function Focus() {
                 }}
               >
                 <Check size={16} aria-hidden="true" />
-                Yes, it's done
+                {t("نعم، أُنجزت", "Yes, it's done")}
               </button>
               <button type="button" className="ft-btn" onClick={() => setAskingId(null)}>
-                I need more time
+                {t("أحتاج وقتاً أكثر", "I need more time")}
               </button>
               {/* «لاحقاً» يعني وقتاً آخر، فتُعاد إلى حجز الوقت لا إلى القائمة. */}
               <Link className="ft-btn" href={`${TIME_METHOD_ROUTES.timeBlocking}?task=${asked.id}`}>
-                Schedule it later
+                {t("جدوِلها لاحقاً", "Schedule it later")}
               </Link>
             </div>
           </section>
@@ -971,13 +989,19 @@ export default function Focus() {
 
       {/* ---- درج المهام: قائمة واف المفتوحة، تُضاف إليها وتُنجَز منها ---- */}
       {todoOpen && !quiet && (
-        <aside className="ft-drawer" aria-label="Todo list">
-          <button type="button" className="ft-drawer-fold" aria-label="Close todo list" onClick={() => setTodoOpen(false)}>
-            <ArrowRight size={14} aria-hidden="true" />
+        <aside className="ft-drawer" aria-label={t("قائمة المهام", "Todo list")}>
+          <button
+            type="button"
+            className="ft-drawer-fold"
+            aria-label={t("إغلاق قائمة المهام", "Close todo list")}
+            onClick={() => setTodoOpen(false)}
+          >
+            {/* السهم يشير إلى الحافّة التي ينطوي إليها الدرج: يمينٌ في الإنجليزية ويسارٌ في العربية. */}
+            {dir() === "rtl" ? <ArrowLeft size={14} aria-hidden="true" /> : <ArrowRight size={14} aria-hidden="true" />}
           </button>
           <header className="ft-drawer-head">
-            <h2>Todo List</h2>
-            <button type="button" className="ft-icon ft-icon-sm" aria-label="Close" onClick={() => setTodoOpen(false)}>
+            <h2>{t("قائمة المهام", "Todo List")}</h2>
+            <button type="button" className="ft-icon ft-icon-sm" aria-label={t("إغلاق", "Close")} onClick={() => setTodoOpen(false)}>
               <X size={16} aria-hidden="true" />
             </button>
           </header>
@@ -986,7 +1010,7 @@ export default function Focus() {
               <span style={{ inlineSize: `${doneCount + tasks.length ? (doneCount / (doneCount + tasks.length)) * 100 : 0}%` }} />
             </div>
             <span>
-              {doneCount} of {doneCount + tasks.length}
+              {doneCount} {t("من", "of")} {doneCount + tasks.length}
             </span>
           </div>
           <form
@@ -1003,8 +1027,8 @@ export default function Focus() {
               dir="auto"
               value={newTask}
               maxLength={200}
-              placeholder="Add a task"
-              aria-label="Add a task"
+              placeholder={t("أضف مهمة", "Add a task")}
+              aria-label={t("أضف مهمة", "Add a task")}
               onChange={event => setNewTask(event.target.value)}
             />
           </form>
@@ -1014,7 +1038,9 @@ export default function Focus() {
             </p>
           )}
           {status.data?.configured === false && (
-            <p className="ft-muted ft-drawer-note">Tasks are not connected on this deployment yet.</p>
+            <p className="ft-muted ft-drawer-note">
+              {t("المهام غير مربوطة في هذه النسخة بعد.", "Tasks are not connected on this deployment yet.")}
+            </p>
           )}
 
           {tasks.length === 0 ? (
@@ -1022,8 +1048,8 @@ export default function Focus() {
               <span className="ft-icon" aria-hidden="true">
                 <Target size={18} />
               </span>
-              <strong>Nothing on the list</strong>
-              <p>Add a task above to get started.</p>
+              <strong>{t("القائمة فارغة", "Nothing on the list")}</strong>
+              <p>{t("أضف مهمة في الأعلى لتبدأ.", "Add a task above to get started.")}</p>
             </div>
           ) : (
             <ul className="ft-drawer-list">
@@ -1032,7 +1058,7 @@ export default function Focus() {
                   <button
                     type="button"
                     className="ft-todo-check"
-                    aria-label={`Complete ${item.title}`}
+                    aria-label={t(`إنجاز ${item.title}`, `Complete ${item.title}`)}
                     disabled={complete.isPending}
                     onClick={() => {
                       // مهمة جلستها مفتوحة تُغلق جلستها أولاً، فلا تبقى جلسةٌ بلا مهمة.
@@ -1075,26 +1101,32 @@ export default function Focus() {
             <span className="ft-dialog-mark" aria-hidden="true">
               <Radio size={20} />
             </span>
-            <h2 id="ft-stream-title">Stream Music</h2>
-            <p>Paste a Spotify or YouTube link to play while studying</p>
+            <h2 id="ft-stream-title">{t("بثّ الموسيقى", "Stream Music")}</h2>
+            <p>{t("الصق رابط Spotify أو YouTube ليعمل أثناء الدراسة", "Paste a Spotify or YouTube link to play while studying")}</p>
             <input
               type="url"
+              dir="ltr"
               autoFocus
               value={streamDraft}
-              placeholder="https://open.spotify.com/playlist/... or youtube.com/watch?"
-              aria-label="Spotify or YouTube link"
+              placeholder={t(
+                "https://open.spotify.com/playlist/... أو youtube.com/watch?",
+                "https://open.spotify.com/playlist/... or youtube.com/watch?",
+              )}
+              aria-label={t("رابط Spotify أو YouTube", "Spotify or YouTube link")}
               onChange={event => setStreamDraft(event.target.value)}
             />
             <ul>
-              <li data-tone="spotify">Songs, albums, playlists, podcasts</li>
-              <li data-tone="youtube">Videos, playlists, livestreams, YouTube Music</li>
+              <li data-tone="spotify">{t("أغانٍ، ألبومات، قوائم تشغيل، بودكاست", "Songs, albums, playlists, podcasts")}</li>
+              <li data-tone="youtube">
+                {t("مقاطع، قوائم تشغيل، بثّ مباشر، YouTube Music", "Videos, playlists, livestreams, YouTube Music")}
+              </li>
             </ul>
             <div className="ft-dialog-actions">
               <button type="button" className="ft-btn" onClick={() => setPanel(null)}>
-                Cancel
+                {t("إلغاء", "Cancel")}
               </button>
               <button type="submit" className="ft-btn ft-btn-primary" disabled={!streamValid}>
-                Play
+                {t("تشغيل", "Play")}
               </button>
             </div>
           </form>
@@ -1103,12 +1135,12 @@ export default function Focus() {
 
       {stream && (
         <div className="ft-player">
-          <button type="button" className="ft-icon ft-icon-sm" aria-label="Stop music" onClick={() => setStream(null)}>
+          <button type="button" className="ft-icon ft-icon-sm" aria-label={t("إيقاف الموسيقى", "Stop music")} onClick={() => setStream(null)}>
             <X size={14} aria-hidden="true" />
           </button>
           <iframe
             src={stream}
-            title="Music player"
+            title={t("مشغّل الموسيقى", "Music player")}
             loading="lazy"
             allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture"
             referrerPolicy="strict-origin-when-cross-origin"
@@ -1120,11 +1152,11 @@ export default function Focus() {
         <>
           <p className="ft-status" data-ok={online}>
             <span aria-hidden="true" />
-            {online ? "All operations normal" : "You are offline"}
+            {online ? t("كل شيء يعمل", "All operations normal") : t("أنت غير متصل", "You are offline")}
           </p>
           <p className="ft-now">
             <span aria-hidden="true" />
-            {studyingNow} studying now
+            {studyingNow} {t("يدرسون الآن", "studying now")}
           </p>
         </>
       )}
@@ -1160,10 +1192,10 @@ function PomodoroPanel({
   const [autoBreaks, setAutoBreaks] = useState(settings.autoBreaks);
 
   const FIELDS = [
-    ["work", "Work Duration (min)", 240],
-    ["short", "Short Break (min)", 120],
-    ["long", "Long Break (min)", 120],
-    ["every", "Long Break Every", 12],
+    ["work", t("مدة العمل (دقيقة)", "Work Duration (min)"), 240],
+    ["short", t("استراحة قصيرة (دقيقة)", "Short Break (min)"), 120],
+    ["long", t("استراحة طويلة (دقيقة)", "Long Break (min)"), 120],
+    ["every", t("استراحة طويلة بعد كل (جلسات)", "Long Break Every"), 12],
   ] as const;
 
   return (
@@ -1181,8 +1213,8 @@ function PomodoroPanel({
       }}
     >
       <h2>
-        Pomodoro Settings
-        <small>Adjust your timer durations below</small>
+        {t("إعدادات بومودورو", "Pomodoro Settings")}
+        <small>{t("اضبط مدد المؤقّت أدناه", "Adjust your timer durations below")}</small>
       </h2>
       <div className="ft-settings-grid">
         {FIELDS.map(([key, label, max]) => (
@@ -1201,14 +1233,19 @@ function PomodoroPanel({
       </div>
       <label className="ft-toggle">
         <span>
-          Auto-start Breaks
-          <small>Automatically start break timer after work session completes</small>
+          {t("بدء الاستراحات تلقائياً", "Auto-start Breaks")}
+          <small>
+            {t(
+              "يبدأ مؤقّت الاستراحة تلقائياً بعد انتهاء جلسة العمل",
+              "Automatically start break timer after work session completes",
+            )}
+          </small>
         </span>
         <input type="checkbox" checked={autoBreaks} onChange={event => setAutoBreaks(event.target.checked)} />
       </label>
       <button type="submit" className="ft-btn ft-btn-accent">
         <Check size={16} aria-hidden="true" />
-        Apply Settings &amp; Close
+        {t("تطبيق الإعدادات وإغلاق", "Apply Settings & Close")}
       </button>
     </form>
   );

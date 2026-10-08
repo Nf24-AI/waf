@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuthSession } from "@/contexts/AuthContext";
+import { locale, t } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
+import LangToggle from "@/components/LangToggle";
 import {
   ARCHIVE_ROUTE,
   MEETING_ROUTES,
@@ -38,14 +40,15 @@ import {
 export interface NavItem {
   href: string;
   label: string;
+  labelEn: string;
   icon: typeof Clock;
 }
 
 export const PRIMARY_NAV: NavItem[] = [
-  { href: TIME_HOME_ROUTE, label: "الرئيسية", icon: Home },
-  { href: TASKS_ROUTE, label: "المهام", icon: ClipboardList },
-  { href: TIME_MANAGEMENT_ROUTE, label: "إدارة الوقت", icon: Clock },
-  { href: MEETING_ROUTES.prepare, label: "الاجتماعات", icon: CalendarDays },
+  { href: TIME_HOME_ROUTE, label: "الرئيسية", labelEn: "Home", icon: Home },
+  { href: TASKS_ROUTE, label: "المهام", labelEn: "Tasks", icon: ClipboardList },
+  { href: TIME_MANAGEMENT_ROUTE, label: "إدارة الوقت", labelEn: "Time management", icon: Clock },
+  { href: MEETING_ROUTES.prepare, label: "الاجتماعات", labelEn: "Meetings", icon: CalendarDays },
 ];
 
 /**
@@ -60,8 +63,8 @@ export function visibleNav(items: NavItem[], ownsWorkspace: boolean): NavItem[] 
 }
 
 export const RECORD_NAV: NavItem[] = [
-  { href: STATISTICS_ROUTE, label: "الإحصائيات", icon: BarChart3 },
-  { href: ARCHIVE_ROUTE, label: "الأرشيف", icon: Archive },
+  { href: STATISTICS_ROUTE, label: "الإحصائيات", labelEn: "Statistics", icon: BarChart3 },
+  { href: ARCHIVE_ROUTE, label: "الأرشيف", labelEn: "Archive", icon: Archive },
 ];
 
 export const NAV_ITEMS = [...PRIMARY_NAV, ...RECORD_NAV];
@@ -93,7 +96,7 @@ function NavList({ items, onPick }: { items: NavItem[]; onPick?: () => void }) {
             onClick={onPick}
           >
             <Icon size={17} aria-hidden="true" />
-            {item.label}
+            {t(item.label, item.labelEn)}
           </Link>
         );
       })}
@@ -107,8 +110,8 @@ function NavFoot({ onPick }: { onPick?: () => void }) {
   const current = isCurrent(location, SETTINGS_ROUTE);
 
   // الحرف الأوّل من الاسم إن وُجد، وإلا من البريد. ولا يُخترع اسم.
-  const label = (user?.user_metadata?.name as string | undefined)?.trim() || user?.email || "حسابي";
-  const initial = label.slice(0, 1).toLocaleUpperCase("ar");
+  const label = (user?.user_metadata?.name as string | undefined)?.trim() || user?.email || t("حسابي", "My account");
+  const initial = label.slice(0, 1).toLocaleUpperCase(locale());
 
   return (
     <div className="tp-side-foot">
@@ -119,7 +122,7 @@ function NavFoot({ onPick }: { onPick?: () => void }) {
         onClick={onPick}
       >
         <Settings size={17} aria-hidden="true" />
-        الإعدادات
+        {t("الإعدادات", "Settings")}
       </Link>
 
       {/* الحساب واحد في هذه الأداة، فالبطاقة تعريف لا مبدِّل حسابات. */}
@@ -133,8 +136,10 @@ function NavFoot({ onPick }: { onPick?: () => void }) {
 
       <button type="button" className="tp-link" onClick={() => void signOut()}>
         <LogOut size={17} aria-hidden="true" />
-        تسجيل الخروج
+        {t("تسجيل الخروج", "Sign out")}
       </button>
+
+      <LangToggle className="tp-link" />
     </div>
   );
 }
@@ -143,9 +148,9 @@ export function Sidebar() {
   const access = trpc.meetings.access.useQuery();
 
   return (
-    <nav className="tp-side" aria-label="أقسام واف">
+    <nav className="tp-side" aria-label={t("أقسام واف", "Waf sections")}>
       <Link className="tp-brand" href={TIME_HOME_ROUTE}>
-        واف
+        {t("واف", "Waf")}
       </Link>
       <NavList items={visibleNav(PRIMARY_NAV, access.data?.owner === true)} />
       <NavList items={RECORD_NAV} />
@@ -166,7 +171,7 @@ export function BottomNav({ onMore }: { onMore: () => void }) {
   const bottomAccess = trpc.meetings.access.useQuery();
 
   return (
-    <nav className="tp-bottom" aria-label="أقسام واف">
+    <nav className="tp-bottom" aria-label={t("أقسام واف", "Waf sections")}>
       {visibleNav(PRIMARY_NAV, bottomAccess.data?.owner === true).map(item => {
         const Icon = item.icon;
         const current = isCurrent(location, item.href);
@@ -178,14 +183,14 @@ export function BottomNav({ onMore }: { onMore: () => void }) {
             aria-current={current ? "page" : undefined}
           >
             <Icon size={19} aria-hidden="true" />
-            <span>{item.label}</span>
+            <span>{t(item.label, item.labelEn)}</span>
           </Link>
         );
       })}
 
       <button type="button" className="tp-tab" onClick={onMore}>
         <MoreIcon size={19} aria-hidden="true" />
-        <span>المزيد</span>
+        <span>{t("المزيد", "More")}</span>
       </button>
     </nav>
   );
@@ -212,13 +217,13 @@ export function NavDrawer({ open, onClose }: { open: boolean; onClose: () => voi
 
   return (
     <>
-      <button type="button" className="tp-scrim" aria-label="إغلاق القائمة" onClick={onClose} />
-      <nav className="tp-drawer" aria-label="أقسام واف">
+      <button type="button" className="tp-scrim" aria-label={t("إغلاق القائمة", "Close menu")} onClick={onClose} />
+      <nav className="tp-drawer" aria-label={t("أقسام واف", "Waf sections")}>
         <div className="tp-drawer-head">
           <Link className="tp-brand" href={TIME_HOME_ROUTE} onClick={onClose}>
-            واف
+            {t("واف", "Waf")}
           </Link>
-          <button type="button" className="tp-icon-btn" onClick={onClose} aria-label="إغلاق">
+          <button type="button" className="tp-icon-btn" onClick={onClose} aria-label={t("إغلاق", "Close")}>
             <X size={17} aria-hidden="true" />
           </button>
         </div>

@@ -13,6 +13,7 @@ import QuadrantPanel from "@/components/board/QuadrantPanel";
 import SummaryCards from "@/components/board/SummaryCards";
 import TaskList from "@/components/board/TaskList";
 import TimeLayout from "@/components/time/TimeLayout";
+import { t } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -64,7 +65,7 @@ export default function TimeHome() {
     <TimeLayout>
       {status.data?.configured === false && (
         <p className="bd-notice">
-          المهام غير موصولة بعد. اضبط <code>SUPABASE_URL</code> و<code>SUPABASE_ANON_KEY</code> ثم أعد النشر.
+          {t("المهام غير موصولة بعد. اضبط ", "Tasks are not connected yet. Set ")}<code>SUPABASE_URL</code>{t(" و", " and ")}<code>SUPABASE_ANON_KEY</code>{t(" ثم أعد النشر.", ", then redeploy.")}
         </p>
       )}
 
@@ -74,7 +75,7 @@ export default function TimeHome() {
       */}
       {failed && (
         <p className="bd-notice bd-notice-bad" role="alert">
-          تعذّر قراءة المهام — الأرقام تحت غير صحيحة.
+          {t("تعذّر قراءة المهام — الأرقام تحت غير صحيحة.", "Could not load tasks — the numbers below are not accurate.")}
         </p>
       )}
 
@@ -82,7 +83,7 @@ export default function TimeHome() {
 
       <Link className="bd-cta" href={ADD_TASK_ROUTE}>
         <Plus size={20} aria-hidden="true" />
-        إضافة مهمة
+        {t("إضافة مهمة", "Add task")}
       </Link>
 
       <FilterBar value={filter} counts={filterCounts} onChange={setFilter} />
@@ -97,10 +98,10 @@ export default function TimeHome() {
           onComplete={id => complete.mutate({ id })}
           emptyHint={
             loading
-              ? "…جارٍ تحميل مهامك"
+              ? t("…جارٍ تحميل مهامك", "Loading your tasks…")
               : everything.length === 0
-                ? "ابدأ بمهمة واحدة."
-                : "لا مهام في هذا التصنيف."
+                ? t("ابدأ بمهمة واحدة.", "Start with one task.")
+                : t("لا مهام في هذا التصنيف.", "No tasks in this filter.")
           }
         />
 
