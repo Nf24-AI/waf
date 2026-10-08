@@ -36,6 +36,7 @@ import MusicButton from "@/components/timeblock/MusicButton";
 import TaskComposer, { type ComposerPrefill, type ComposerResult } from "@/components/timeblock/TaskComposer";
 import { useAuthSession } from "@/contexts/AuthContext";
 import { useTouchDrag } from "@/hooks/useTouchDrag";
+import { LABEL_MAX, cleanLabels, loadAccountLabels, saveAccountLabels } from "@/lib/category-labels";
 import { toDateInput } from "@/lib/clock";
 import { flowHref, useInFlow } from "@/lib/flow";
 import { readName } from "@/lib/preferences";
@@ -440,6 +441,33 @@ export default function TimeBlocking() {
     const id = event.dataTransfer.getData("text/plain");
     const task = tasks.find(item => item.id === id);
     if (task) void schedule(task, day, from ?? defaultFrom(day));
+  }
+
+  // الأسماء من الحساب تغلب ما في المتصفّح: من سمّى فئةً على جوّاله يراها هنا.
+  // وما سُمّي قبل أن تنتقل الأسماء إلى الحساب يُرفع إليه مرّةً، فلا يضيع.
+  useEffect(() => {
+    let alive = true;
+    void loadAccountLabels().then(saved => {
+      if (!alive) return;
+      if (saved) return setPrefs(current => ({ ...current, labels: saved }));
+      const local = cleanLabels(readPrefs().labels);
+      if (Object.keys(local).length) void saveAccountLabels(local).catch(() => {});
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** «تم»: يُنظَّف ما كُتب ويُحفظ في الحساب. النسخة في المتصفّح تبقى، فالخطأ لا يمحو ما كُتب. */
+  async function finishLabels() {
+    const clean = cleanLabels(prefs.labels);
+    setPrefs(current => ({ ...current, labels: clean }));
+    setEditLabels(false);
+    try {
+      if (await saveAccountLabels(clean)) say("حُفظت أسماء الفئات في حسابك");
+    } catch (error) {
+      say(readable(error), { tone: "error" });
+    }
   }
 
   // اللمس يُسقط حيث يُسقط الفأر: نفس الدالّة، ونفس الإزاحة إلى أول فراغ.
@@ -873,7 +901,11 @@ export default function TimeBlocking() {
             <div className="tbk-card">
               <h2>
                 الفئات
-                <button type="button" className="tbk-link" onClick={() => setEditLabels(current => !current)}>
+                <button
+                  type="button"
+                  className="tbk-link"
+                  onClick={() => (editLabels ? void finishLabels() : setEditLabels(true))}
+                >
                   {editLabels ? "تم" : "تعديل"}
                 </button>
               </h2>
@@ -888,7 +920,7 @@ export default function TimeBlocking() {
                           <input
                             aria-label={`اسم فئة ${DEFAULT_LABELS[item.id]}`}
                             value={prefs.labels[item.id] ?? DEFAULT_LABELS[item.id]}
-                            maxLength={24}
+                            maxLength={LABEL_MAX}
                             onChange={event =>
                               setPrefs(current => ({ ...current, labels: { ...current.labels, [item.id]: event.target.value } }))
                             }
