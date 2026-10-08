@@ -42,7 +42,6 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { type Task } from "@shared/tasks";
-import { TIME_METHOD_ROUTES } from "@shared/routes";
 import FocusBar from "@/components/focus/FocusBar";
 import {
   AMBIENCE,
@@ -86,7 +85,6 @@ import {
 import { dir, getLang, locale, pair, type Pair, pick, t } from "@/lib/i18n";
 import { useStudyingNow } from "@/lib/presence";
 import { embedUrl } from "@/lib/stream";
-import { useTaskParam } from "@/lib/task-param";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -169,20 +167,16 @@ function storedStream(): string {
   }
 }
 
-export default function Focus() {
-  const preselected = useTaskParam();
+/** هذا الإطار يقرأ مهامه وحدها ويكتبها باسمه؛ انظر TASK_ORIGINS. */
+const ORIGIN = "focus" as const;
 
+export default function Focus() {
   const utils = trpc.useUtils();
   const status = trpc.tasks.status.useQuery();
-  const open = trpc.tasks.listOpen.useQuery(undefined, { enabled: status.data?.configured === true });
+  const open = trpc.tasks.listOpen.useQuery({ origin: ORIGIN }, { enabled: status.data?.configured === true });
 
   const [settings, setSettings] = useState<PomodoroSettings>(() => readPomodoro());
-  const [state, setState] = useState<FocusState>(() => {
-    const stored = readFocusState(readPomodoro());
-    // من جاء من بطاقة مهمة يبدأ بها، ما لم تكن جلسة مهمةٍ أخرى مفتوحة.
-    const busy = Object.values(stored.sessions).some(Boolean);
-    return preselected && !busy ? { ...stored, taskId: preselected } : stored;
-  });
+  const [state, setState] = useState<FocusState>(() => readFocusState(readPomodoro()));
   const [now, setNow] = useState(() => Date.now());
   const [today, setToday] = useState(() => readToday());
   const [sound, setSound] = useState(() => readSound());
@@ -978,10 +972,6 @@ export default function Focus() {
               <button type="button" className="ft-btn" onClick={() => setAskingId(null)}>
                 {t("أحتاج وقتاً أكثر", "I need more time")}
               </button>
-              {/* «لاحقاً» يعني وقتاً آخر، فتُعاد إلى حجز الوقت لا إلى القائمة. */}
-              <Link className="ft-btn" href={`${TIME_METHOD_ROUTES.timeBlocking}?task=${asked.id}`}>
-                {t("جدوِلها لاحقاً", "Schedule it later")}
-              </Link>
             </div>
           </section>
         )}
@@ -1018,7 +1008,7 @@ export default function Focus() {
             onSubmit={event => {
               event.preventDefault();
               const title = newTask.trim();
-              if (title && !create.isPending) create.mutate({ title });
+              if (title && !create.isPending) create.mutate({ title, origin: ORIGIN });
             }}
           >
             <Plus size={16} aria-hidden="true" />

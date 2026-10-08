@@ -2171,3 +2171,58 @@ a.ft-btn, a.ft-chip { text-decoration: none; }
 [dir="rtl"] .ft-volume span,
 [dir="rtl"] .ft-ampm { letter-spacing: 0; }
 [dir="rtl"] .ft-quote { font-style: normal; }
+
+/*
+ * مصفوفة أيزنهاور إطاراً قائماً بذاته: شريطها وخانة إضافتها، بلا شريط جانبي.
+ * وصفحة الإطارات تستعير شريطاً صغيراً للعودة واللغة.
+ */
+.ei-top {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--gutter-inline);
+  background: color-mix(in srgb, var(--canvas) 92%, transparent);
+  border-block-end: var(--border-w) solid var(--border-hairline);
+}
+.ei-top-title { display: inline-flex; align-items: center; gap: var(--space-3); margin-inline: auto; color: var(--text-primary); font-weight: var(--fw-medium); }
+.ei-top-end { display: inline-flex; align-items: center; gap: var(--space-3); }
+.ei-top-back, .tf-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 36px;
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-hairline);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-13, 13px);
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.ei-top-back:hover, .tf-back:hover { color: var(--text-primary); border-color: var(--border-default); }
+.tf-bar { display: flex; justify-content: space-between; align-items: center; margin-block-end: var(--space-9); }
+.ei-add { display: flex; gap: var(--space-4); margin-block-start: var(--space-8); }
+.ei-add input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  min-height: 44px;
+  padding-inline: var(--space-6);
+  border-radius: var(--radius-control);
+  border: var(--border-w) solid var(--border-default);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: inherit;
+}
+.ei-add input:focus-visible { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
+@media (max-width: 640px) {
+  .ei-top-title { display: none; }
+  .ei-top-end { margin-inline-start: auto; }
+  .ei-add { flex-direction: column; }
+}
+.ei-frame .tp-main { position: relative; z-index: 1; }

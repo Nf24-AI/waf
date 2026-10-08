@@ -13,7 +13,6 @@ import {
   GripVertical,
   Heart,
   Layers,
-  Menu,
   Moon,
   MoreHorizontal,
   MoreVertical,
@@ -28,10 +27,8 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { TASK_CATEGORIES, type Task, type TaskCategory, type TaskPriority } from "@shared/tasks";
-import { SETTINGS_ROUTE, STATISTICS_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { TIME_MANAGEMENT_ROUTE } from "@shared/routes";
 import LangToggle from "@/components/LangToggle";
-import FlowSteps from "@/components/time/FlowSteps";
-import TimeLayout from "@/components/time/TimeLayout";
 import BlockModal, { type BlockDraft } from "@/components/timeblock/BlockModal";
 import MusicButton from "@/components/timeblock/MusicButton";
 import TaskComposer, { type ComposerPrefill, type ComposerResult } from "@/components/timeblock/TaskComposer";
@@ -39,11 +36,9 @@ import { useAuthSession } from "@/contexts/AuthContext";
 import { useTouchDrag } from "@/hooks/useTouchDrag";
 import { LABEL_MAX, cleanLabels, loadAccountLabels, saveAccountLabels } from "@/lib/category-labels";
 import { toDateInput } from "@/lib/clock";
-import { flowHref, useInFlow } from "@/lib/flow";
 import { dir, locale, pair, pick, t, type Pair } from "@/lib/i18n";
 import { readName } from "@/lib/preferences";
 import { categoryLabel } from "@/lib/task-labels";
-import { useTaskParam } from "@/lib/task-param";
 import {
   DAY_END_MIN,
   SECTIONS,
@@ -74,6 +69,9 @@ import { trpc } from "@/lib/trpc";
  * يكتب `scheduledStart` على صفّها، و«إلغاء الحجز» يمحوه ويُبقيها. ولذلك لا
  * قائمتان تتباعدان — ما في الجدول وما في القائمة صفوفٌ واحدة تُقرأ مرّتين.
  */
+
+/** هذا الإطار يقرأ مهامه وحدها ويكتبها باسمه؛ انظر TASK_ORIGINS. */
+const ORIGIN = "timeblock" as const;
 
 const CATEGORY_ICON: Record<TaskCategory, typeof Brain> = {
   deep: Brain,
@@ -177,14 +175,12 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 export default function TimeBlocking() {
-  const preselected = useTaskParam();
-  // الرحلة تُغيّر الوجهة التالية وحدها، لا ما تفعله الصفحة.
-  const inFlow = useInFlow();
   const auth = useAuthSession();
+  const [account, setAccount] = useState(false);
 
   const utils = trpc.useUtils();
   const status = trpc.tasks.status.useQuery();
-  const open = trpc.tasks.listOpen.useQuery(undefined, { enabled: status.data?.configured === true });
+  const open = trpc.tasks.listOpen.useQuery({ origin: ORIGIN }, { enabled: status.data?.configured === true });
   const create = trpc.tasks.create.useMutation();
   const update = trpc.tasks.update.useMutation();
   const complete = trpc.tasks.complete.useMutation();
@@ -278,9 +274,6 @@ export default function TimeBlocking() {
     [today, nowMin],
   );
 
-  const focusHref = (id: string) =>
-    inFlow ? flowHref(TIME_METHOD_ROUTES.focus, id) : `${TIME_METHOD_ROUTES.focus}?task=${id}`;
-
   /**
    * كل كتابة تمرّ من هنا: تُنفَّذ، ثم تُحدَّث القائمة، والخطأ يُقال في إشعار.
    *
@@ -333,13 +326,13 @@ export default function TimeBlocking() {
         `حُجزت «${task.title}» ${formatTime(slot, format)}${exact ? "" : " — أول وقت فارغ"}`,
         `Scheduled “${task.title}” at ${formatTime(slot, format)}${exact ? "" : " — first free slot"}`,
       ),
-      { action: { label: t("ابدأ التركيز", "Start focus"), href: focusHref(task.id) } },
     );
   }
 
   async function createTask(result: ComposerResult) {
     const saved = await act(() =>
       create.mutateAsync({
+        origin: ORIGIN,
         title: result.title,
         estimatedMinutes: result.minutes,
         category: result.category,
@@ -372,6 +365,7 @@ export default function TimeBlocking() {
             schedule: when,
           })
         : create.mutateAsync({
+            origin: ORIGIN,
             title: draft.title,
             category: draft.category,
             estimatedMinutes: draft.end - draft.start,
@@ -554,17 +548,15 @@ export default function TimeBlocking() {
   const realBlocks = blocks.filter(block => !block.ghost);
   const [Previous, Next] = dir() === "rtl" ? [ChevronRight, ChevronLeft] : [ChevronLeft, ChevronRight];
 
-  const top = (onOpenNav: () => void) => (
+  const top = (
     <header className="tbk-top">
-      <button type="button" className="tbk-iconbtn tbk-burger" onClick={onOpenNav} aria-label={t("فتح القائمة", "Open menu")}>
-        <Menu size={18} aria-hidden="true" />
-      </button>
-      <div className="tbk-brand">
+      {/* العلامة هي المخرج الوحيد: إلى صفحة الإطارات، لا إلى إطارٍ آخر. */}
+      <Link className="tbk-brand" href={TIME_MANAGEMENT_ROUTE} aria-label={t("العودة إلى الإطارات", "Back to frameworks")}>
         <span className="tbk-brandmark" aria-hidden="true">
           <CalendarClock size={16} />
         </span>
         <b>{t("حجز الوقت", "Time blocking")}</b>
-      </div>
+      </Link>
 
       <div className="tbk-navcenter">
         <div className="tbk-navpill">
@@ -605,18 +597,38 @@ export default function TimeBlocking() {
           {prefs.theme === "dark" ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
         </button>
         <LangToggle short className="tbk-iconbtn" />
-        <Link className="tbk-profile" href={SETTINGS_ROUTE} aria-label={t("الإعدادات", "Settings")}>
-          <span className="tbk-avatar">{(name || t("و", "W")).slice(0, 1).toUpperCase()}</span>
-          <span>{name}</span>
-        </Link>
+        <div className="tbk-music-wrap">
+          <button
+            type="button"
+            className="tbk-profile"
+            aria-label={t("الحساب", "Account")}
+            aria-expanded={account}
+            onClick={() => setAccount(current => !current)}
+          >
+            <span className="tbk-avatar">{(name || t("و", "W")).slice(0, 1).toUpperCase()}</span>
+            <span>{name}</span>
+          </button>
+          {account && (
+            <div className="tbk-pop tbk-pop-end" role="dialog" aria-label={t("الحساب", "Account")}>
+              {auth.user?.email && <h3 dir="ltr">{auth.user.email}</h3>}
+              <Link className="tbk-pop-file" href={TIME_MANAGEMENT_ROUTE}>
+                {t("كل الإطارات", "All frameworks")}
+              </Link>
+              <button type="button" className="tbk-pop-file" onClick={() => void auth.signOut()}>
+                {t("تسجيل الخروج", "Sign out")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
 
   return (
-    <TimeLayout top={top}>
+    <div className="tbk-frame" data-theme={prefs.theme} dir={dir()}>
+      {top}
+      <main className="tbk-main">
       <div className="tbk" data-theme={prefs.theme}>
-        <FlowSteps current="schedule" />
 
         <section className="tbk-hero">
           <div className="tbk-greeting">
@@ -696,7 +708,6 @@ export default function TimeBlocking() {
                     key={task.id}
                     className="tbk-task"
                     draggable
-                    data-current={task.id === preselected}
                     onDragStart={event => {
                       if (touch.busy()) return event.preventDefault();
                       event.dataTransfer.setData("text/plain", task.id);
@@ -927,9 +938,6 @@ export default function TimeBlocking() {
             <div className="tbk-card">
               <h2>
                 {t("التركيز", "Focus")}
-                <Link className="tbk-link" href={STATISTICS_ROUTE}>
-                  {t("عرض التفاصيل ←", "View details →")}
-                </Link>
               </h2>
               <div className="tbk-focusrow">
                 <div className="tbk-ring" style={{ "--p": stats.focusPercent } as React.CSSProperties}>
@@ -1030,6 +1038,7 @@ export default function TimeBlocking() {
           </aside>
         </section>
       </div>
+      </main>
 
       {createPortal(
         <div className="tbk-portal" data-theme={prefs.theme} dir={dir()}>
@@ -1055,7 +1064,6 @@ export default function TimeBlocking() {
               format={format}
               labels={labels}
               pending={pending}
-              focusHref={modal.task ? focusHref(modal.task.id) : null}
               clashTitle={(start, end) =>
                 clashWith(blocks, start, end, block => block.task.id === modal.task?.id)?.task.title ?? null
               }
@@ -1090,7 +1098,7 @@ export default function TimeBlocking() {
         </div>,
         document.body,
       )}
-    </TimeLayout>
+    </div>
   );
 }
 

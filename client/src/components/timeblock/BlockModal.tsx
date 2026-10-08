@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { CalendarX, Check, Timer } from "lucide-react";
-import { Link } from "wouter";
+import { CalendarX, Check } from "lucide-react";
 import { TASK_CATEGORIES, type Task, type TaskCategory } from "@shared/tasks";
 import { t } from "@/lib/i18n";
 import { DAY_END_MIN, formatDuration, formatTime, minutesOf, timeOf, type TimeFormat } from "@/lib/timeblock";
@@ -25,7 +24,6 @@ export default function BlockModal({
   format,
   labels,
   pending,
-  focusHref,
   clashTitle,
   onClose,
   onSave,
@@ -39,7 +37,6 @@ export default function BlockModal({
   format: TimeFormat;
   labels: Record<TaskCategory, string>;
   pending: boolean;
-  focusHref: string | null;
   clashTitle: (start: number, end: number) => string | null;
   onClose: () => void;
   onSave: (draft: BlockDraft) => void;
@@ -133,12 +130,6 @@ export default function BlockModal({
 
         {task && (
           <div className="tbk-quickacts">
-            {focusHref && (
-              <Link className="tbk-btn" href={focusHref}>
-                <Timer size={14} aria-hidden="true" />
-                {t("ابدأ التركيز", "Start focus")}
-              </Link>
-            )}
             <button type="button" className="tbk-btn" onClick={onComplete} disabled={pending}>
               <Check size={14} aria-hidden="true" />
               {t("أنجزتُها", "Mark done")}

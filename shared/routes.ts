@@ -35,6 +35,19 @@ export const ADD_TASK_ROUTE = "/tasks/new";
 export const STATISTICS_ROUTE = "/statistics";
 export const ARCHIVE_ROUTE = "/archive";
 
+/**
+ * مسارات المنتج المشترك السابق: ذهبت صفحاتها مع فصل الإطارات، وبقيت عناوينها
+ * محفوظةً هنا لتُعاد إلى صفحة الإطارات بدل أن تنكسر على من حفظها.
+ */
+export const RETIRED_TIME_ROUTES = [
+  TIME_HOME_ROUTE,
+  SETTINGS_ROUTE,
+  TASKS_ROUTE,
+  ADD_TASK_ROUTE,
+  STATISTICS_ROUTE,
+  ARCHIVE_ROUTE,
+] as const;
+
 export const DECISIONS_ROUTE = "/decisions";
 export const STATUS_REPORT_ROUTE = "/status";
 

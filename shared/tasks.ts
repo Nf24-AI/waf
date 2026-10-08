@@ -67,6 +67,19 @@ export type TaskCategory = (typeof TASK_CATEGORIES)[number]["id"];
 /** «2026-10-08» — يوم بلا ساعة، فلا منطقة زمنية تزيحه. */
 export const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * الإطار الذي وُلدت فيه المهمة.
+ *
+ * الإطارات الثلاثة تُستعمل منفصلةً: من يفتح حجز الوقت يرى ما حجزه فيه، لا
+ * ما صنّفه في المصفوفة ولا ما سمّاه في جلسة تركيز. فكل مهمة تحمل اسم إطارها،
+ * وكل إطار يقرأ مهامه وحدها.
+ *
+ * وما سبق هذا الفصل بلا إطار، فيُحسب على المصفوفة: فيها وُلد الجدول، ومهمةٌ
+ * تختفي من كل مكان أسوأ من مهمةٍ في مكانٍ قد لا تُطلب فيه.
+ */
+export const TASK_ORIGINS = ["eisenhower", "timeblock", "focus"] as const;
+export type TaskOrigin = (typeof TASK_ORIGINS)[number];
+
 export const TASK_PRIORITIES = ["low", "medium", "high"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
@@ -90,6 +103,8 @@ export interface Task {
   repeatDays?: number[];
   category?: TaskCategory;
   priority?: TaskPriority;
+  /** الإطار الذي تنتمي إليه. غيابه = مهمة سبقت فصل الإطارات. */
+  origin?: TaskOrigin;
   /** يوم الاستحقاق «2026-10-08» لمهمة لم تُحجز لها ساعة بعد. */
   dueDate?: string;
   /** دقائق قبل الموعد يُنبَّه فيها. صفر = عند الموعد، وغياب القيمة = بلا تذكير. */
