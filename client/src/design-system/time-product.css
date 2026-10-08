@@ -2226,3 +2226,22 @@ a.ft-btn, a.ft-chip { text-decoration: none; }
   .ei-add { flex-direction: column; }
 }
 .ei-frame .tp-main { position: relative; z-index: 1; }
+
+/* حذف مهمة من قائمة جلسة التركيز: في نهاية الصفّ، خافتاً حتى يُقصد. */
+.ft-todo-del {
+  margin-inline-start: auto;
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  opacity: .45;
+  cursor: pointer;
+  transition: opacity .15s, color .15s, background .15s;
+}
+.ft-todo-del:hover:not(:disabled), .ft-todo-del:focus-visible { opacity: 1; color: var(--tp-danger); background: var(--tp-danger-quiet); }
+.ft-todo-del:disabled { opacity: .2; cursor: default; }

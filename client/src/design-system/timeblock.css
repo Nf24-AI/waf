@@ -924,3 +924,9 @@ button.tbk-profile { background: none; border: 0; padding: 0; cursor: pointer; }
 .tbk-pop.tbk-pop-end { inset-inline: auto 0; translate: 0 0; inline-size: 230px; }
 .tbk-pop-end h3 { overflow: hidden; text-overflow: ellipsis; text-align: start; }
 a.tbk-pop-file { text-decoration: none; }
+
+/* زرّ الحذف في صفّ المهمة: عمود رابع، يظهر خافتاً ويحمرّ عند المرور. */
+.tbk-task { grid-template-columns: 24px 1fr 20px 22px; }
+.tbk-del { opacity: .55; }
+.tbk-del:hover, .tbk-del:focus-visible { opacity: 1; color: var(--k-red) !important; }
+.tbk-task.is-done { grid-template-columns: 24px 1fr 22px; }

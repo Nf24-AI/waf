@@ -32,6 +32,7 @@ import {
   Tag,
   Target,
   Timer,
+  Trash2,
   TreePine,
   Volume1,
   Volume2,
@@ -213,6 +214,10 @@ export default function Focus() {
       setDoneCount(count => count + 1);
       void utils.tasks.listOpen.invalidate();
     },
+  });
+  // الحذف أرشفة: الصفّ يبقى في القاعدة ويختفي من القائمة، ولا يُحسب إنجازاً.
+  const archive = trpc.tasks.archive.useMutation({
+    onSuccess: () => void utils.tasks.listOpen.invalidate(),
   });
   const create = trpc.tasks.create.useMutation({
     onSuccess: () => {
@@ -1067,6 +1072,19 @@ export default function Focus() {
                     }}
                   />
                   <span dir="auto">{item.title}</span>
+                  <button
+                    type="button"
+                    className="ft-todo-del"
+                    aria-label={t(`حذف ${item.title}`, `Delete ${item.title}`)}
+                    // مهمة جلستها جارية لا تُحذف من تحتها: تُنهى الجلسة أولاً.
+                    disabled={archive.isPending || (item.id === state.taskId && sessionOpen)}
+                    onClick={() => {
+                      if (item.id === state.taskId) setState(previous => ({ ...previous, taskId: null }));
+                      archive.mutate({ id: item.id });
+                    }}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
                 </li>
               ))}
             </ul>
