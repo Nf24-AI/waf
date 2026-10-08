@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { MEETING_PARAM, PLATFORM_ROUTE } from "@shared/routes";
+import { MEETING_PARAM, SERVICES_ROUTE } from "@shared/routes";
 import {
   ArrowLeft,
   CalendarClock,
@@ -880,7 +880,7 @@ export default function Home() {
       <aside className="workspace-sidebar hidden lg:flex">
         {/* الشعار هو طريق الرجوع: الاجتماعات خدمة واحدة داخل واف، لا واف كله. */}
         <Link
-          href={PLATFORM_ROUTE}
+          href={SERVICES_ROUTE}
           className="brand-lockup brand-lockup-link"
           aria-label={isArabic ? "الرجوع إلى خدمات واف" : "Back to Waf services"}
         >

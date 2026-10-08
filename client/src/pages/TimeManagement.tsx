@@ -3,7 +3,7 @@
 import React from "react";
 import { ArrowLeft, ArrowRight, CalendarClock, LayoutGrid, Timer } from "lucide-react";
 import { Link } from "wouter";
-import { PLATFORM_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
+import { SERVICES_ROUTE, TIME_METHOD_ROUTES } from "@shared/routes";
 import mountains from "@/assets/night-mountains.jpg";
 import LangToggle from "@/components/LangToggle";
 import { dir, pair, pick, t } from "@/lib/i18n";
@@ -62,7 +62,7 @@ export default function TimeManagement() {
       <div className="platform-inner">
         <header className="platform-head">
           <div className="tf-bar">
-            <Link className="tf-back" href={PLATFORM_ROUTE}>
+            <Link className="tf-back" href={SERVICES_ROUTE}>
               <Back size={15} aria-hidden="true" />
               {t("الخدمات", "Services")}
             </Link>

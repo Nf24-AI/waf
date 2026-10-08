@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { ArrowRight, CalendarDays, Search, UserRound, Users } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { MEETING_ROUTES, PLATFORM_ROUTE, meetingHref } from "@shared/routes";
+import { MEETING_ROUTES, SERVICES_ROUTE, meetingHref } from "@shared/routes";
 import {
   collectDecisions,
   decisionOwners,
@@ -79,7 +79,7 @@ export default function Decisions() {
     <main className="platform-shell waf-dots" dir="rtl">
       <div className="platform-inner">
         <header className="platform-head">
-          <Link className="decision-back" href={PLATFORM_ROUTE}>
+          <Link className="decision-back" href={SERVICES_ROUTE}>
             <ArrowRight size={14} aria-hidden="true" />
             خدمات واف
           </Link>
