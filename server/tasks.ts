@@ -10,6 +10,8 @@ import {
   stateOf,
   type Importance,
   type RepeatRule,
+  type TaskCategory,
+  type TaskPriority,
   type Urgency,
 } from "@shared/tasks";
 import { type FocusSession } from "@shared/statistics";
@@ -113,6 +115,10 @@ interface Row {
   repeat_rule: RepeatRule | null;
   reminder_minutes: number | null;
   project_id: string | null;
+  category: TaskCategory | null;
+  priority: TaskPriority | null;
+  due_date: string | null;
+  repeat_days: number[] | null;
   is_done: boolean;
   created_at: string;
 }
@@ -144,6 +150,10 @@ function toTask(row: Row, sessions = 0): Task {
     repeatRule: row.repeat_rule ?? undefined,
     reminderMinutes: row.reminder_minutes ?? undefined,
     projectId: row.project_id ?? undefined,
+    category: row.category ?? undefined,
+    priority: row.priority ?? undefined,
+    dueDate: row.due_date ?? undefined,
+    repeatDays: row.repeat_days ?? undefined,
     completedSessions: sessions,
     createdAt: row.created_at,
     completedAt: completedAt ?? undefined,
@@ -153,7 +163,15 @@ function toTask(row: Row, sessions = 0): Task {
 }
 
 /** الأعمدة التي قد لا تكون رُحِّلت بعد. تُحذف من الطلب حين يقول الخادم إنها غائبة. */
-const OPTIONAL_COLUMNS = ["repeat_rule", "reminder_minutes", "project_id"] as const;
+const OPTIONAL_COLUMNS = [
+  "repeat_rule",
+  "reminder_minutes",
+  "project_id",
+  "category",
+  "priority",
+  "due_date",
+  "repeat_days",
+] as const;
 type OptionalColumn = (typeof OPTIONAL_COLUMNS)[number];
 
 const BASE_COLUMNS =
@@ -204,6 +222,14 @@ async function withSchemaFallback<T>(run: () => Promise<T>): Promise<T> {
     try {
       return await run();
     } catch (error) {
+      // القيد القديم يعرف «يومي» و«أسبوعي» وحدهما. من اختار غيرهما قبل
+      // الترحيل يُقال له السبب، لا «حاول مرة أخرى» على شيء لن ينجح بالإعادة.
+      if (/repeat_rule_check/.test(String((error as { detail?: string })?.detail ?? ""))) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "هذا التكرار يحتاج ترحيل قاعدة البيانات (waf-timeblock.sql). اختر «كل يوم» أو «كل أسبوع» الآن.",
+        });
+      }
       const column = absentColumn(error);
       if (!column || missing.has(column)) throw error;
       missing.add(column);
@@ -269,7 +295,17 @@ export async function createTask(who: Identity, input: {
   repeatRule?: RepeatRule;
   reminderMinutes?: number;
   projectId?: string;
-}): Promise<Task> {
+  category?: TaskCategory;
+  priority?: TaskPriority;
+  dueDate?: string;
+  repeatDays?: number[];
+}, guard = false): Promise<Task> {
+  // الحارس لما يطلبه المستخدم بيده. النسخة التالية من مهمة متكرّرة تُنشأ بلا
+  // حارس: تعارضٌ في الغد لا يصحّ أن يُفشل إنجازَ اليوم.
+  if (guard && input.scheduledStart && input.scheduledEnd) {
+    await assertFree(who, input.scheduledStart, input.scheduledEnd);
+  }
+
   const split = input.quadrant ? splitQuadrant(input.quadrant) : null;
 
   const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?select=${columns()}`, {
@@ -293,6 +329,10 @@ export async function createTask(who: Identity, input: {
         repeat_rule: input.repeatRule ?? null,
         reminder_minutes: input.reminderMinutes ?? null,
         project_id: input.projectId ?? null,
+        category: input.category ?? null,
+        priority: input.priority ?? null,
+        due_date: input.dueDate ?? null,
+        repeat_days: input.repeatDays?.length ? input.repeatDays : null,
       }),
       }),
     }),
@@ -326,24 +366,9 @@ export async function scheduleTask(
   startIso: string,
   endIso: string,
   repeatRule?: RepeatRule | null,
+  repeatDays?: number[] | null,
 ): Promise<Task> {
-  if (new Date(endIso) <= new Date(startIso)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "وقت الانتهاء يجب أن يلي وقت البداية" });
-  }
-
-  // موعدان يتداخلان إن بدأ كلٌّ قبل نهاية الآخر. تُستثنى المهمة نفسها كي
-  // تُعاد جدولتها على وقتها دون أن تصطدم بنفسها.
-  const window =
-    `scheduled_start=lt.${encodeURIComponent(endIso)}` +
-    `&scheduled_end=gt.${encodeURIComponent(startIso)}`;
-  const clashes = await rest<{ id: string; name: string }[]>(who, `${TABLE}?select=id,name&completed_at=is.null&is_archived=eq.false&${window}&id=neq.${id}`,
-  );
-  if (clashes.length) {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: `يوجد تعارض في هذا الوقت مع «${clashes[0].name}»`,
-    });
-  }
+  await assertFree(who, startIso, endIso, id);
 
   const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
       method: "PATCH",
@@ -353,7 +378,110 @@ export async function scheduleTask(
         scheduled_end: endIso,
         // undefined يعني «لا تمسّ»، و null يعني «ألغِ التكرار».
         ...(repeatRule === undefined ? {} : optional({ repeat_rule: repeatRule })),
+        ...(repeatDays === undefined ? {} : optional({ repeat_days: repeatDays?.length ? repeatDays : null })),
       }),
+    }),
+  );
+  if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
+  return withSessions(who, row);
+}
+
+/**
+ * يرفض موعداً يتداخل مع موعدٍ قائم.
+ *
+ * موعدان يتداخلان إن بدأ كلٌّ قبل نهاية الآخر. و`except` المهمة نفسها، كي
+ * تُعاد جدولتها على وقتها دون أن تصطدم بنفسها.
+ */
+async function assertFree(who: Identity, startIso: string, endIso: string, except?: string): Promise<void> {
+  if (new Date(endIso) <= new Date(startIso)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "وقت الانتهاء يجب أن يلي وقت البداية" });
+  }
+
+  const window =
+    `scheduled_start=lt.${encodeURIComponent(endIso)}` +
+    `&scheduled_end=gt.${encodeURIComponent(startIso)}`;
+  const self = except ? `&id=neq.${except}` : "";
+  const clashes = await rest<{ id: string; name: string }[]>(who, `${TABLE}?select=id,name&completed_at=is.null&is_archived=eq.false&${window}${self}`,
+  );
+  if (clashes.length) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: `يوجد تعارض في هذا الوقت مع «${clashes[0].name}»`,
+    });
+  }
+}
+
+/**
+ * تعديل مهمة قائمة: ما حضر من الحقول يُكتب، وما غاب لا يُمسّ.
+ *
+ * و`schedule: null` يُلغي الحجز ولا يحذف المهمة — تعود إلى قائمة ما ينتظر
+ * وقتاً. الحذف شيء آخر، وله فعله.
+ */
+export async function updateTask(who: Identity, id: string, patch: {
+  title?: string;
+  description?: string | null;
+  estimatedMinutes?: number | null;
+  category?: TaskCategory | null;
+  priority?: TaskPriority | null;
+  dueDate?: string | null;
+  repeatRule?: RepeatRule | null;
+  repeatDays?: number[] | null;
+  schedule?: { start: string; end: string } | null;
+}): Promise<Task> {
+  if (patch.schedule) await assertFree(who, patch.schedule.start, patch.schedule.end, id);
+
+  const body: Record<string, unknown> = {};
+  if (patch.title !== undefined) body.name = patch.title.trim();
+  if (patch.description !== undefined) body.description = patch.description?.trim() || null;
+  if (patch.estimatedMinutes !== undefined) body.estimated_minutes = patch.estimatedMinutes;
+  if (patch.schedule !== undefined) {
+    body.scheduled_start = patch.schedule?.start ?? null;
+    body.scheduled_end = patch.schedule?.end ?? null;
+  }
+
+  const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        ...body,
+        ...optional({
+          ...(patch.category === undefined ? {} : { category: patch.category }),
+          ...(patch.priority === undefined ? {} : { priority: patch.priority }),
+          ...(patch.dueDate === undefined ? {} : { due_date: patch.dueDate }),
+          ...(patch.repeatRule === undefined ? {} : { repeat_rule: patch.repeatRule }),
+          ...(patch.repeatDays === undefined
+            ? {}
+            : { repeat_days: patch.repeatDays?.length ? patch.repeatDays : null }),
+        }),
+      }),
+    }),
+  );
+  if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
+  return withSessions(who, row);
+}
+
+/**
+ * الحذف أرشفةٌ لا محو: الصفّ يبقى ويُخفى، فيُستعاد بضغطة «تراجع».
+ *
+ * مهمةٌ حُذفت خطأً ومعها جلسات تركيزها لا تعود بالمحو، وتعود بعَلَم.
+ */
+export async function setTaskArchived(who: Identity, id: string, archived: boolean): Promise<Task> {
+  const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ is_archived: archived }),
+    }),
+  );
+  if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
+  return withSessions(who, row);
+}
+
+/** يعيد فتح مهمة أُنجزت خطأً. لا يمسّ نسخةً تالية أنشأها التكرار. */
+export async function reopenTask(who: Identity, id: string): Promise<Task> {
+  const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ completed_at: null, is_done: false }),
     }),
   );
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
@@ -378,7 +506,7 @@ export async function completeTask(who: Identity, id: string): Promise<Task> {
 
   // بلا موعد لا تكرار: «كل يوم» تحتاج ساعةً تقع فيها.
   if (row.repeat_rule && row.scheduled_start && row.scheduled_end) {
-    const when = nextOccurrence(row.scheduled_start, row.scheduled_end, row.repeat_rule);
+    const when = nextOccurrence(row.scheduled_start, row.scheduled_end, row.repeat_rule, row.repeat_days ?? []);
     await createTask(who, {
       title: row.name,
       description: row.description ?? undefined,
@@ -390,6 +518,9 @@ export async function completeTask(who: Identity, id: string): Promise<Task> {
       scheduledEnd: when.end,
       estimatedMinutes: row.estimated_minutes ?? undefined,
       repeatRule: row.repeat_rule,
+      repeatDays: row.repeat_days ?? undefined,
+      category: row.category ?? undefined,
+      priority: row.priority ?? undefined,
     });
   }
 
