@@ -139,6 +139,25 @@ interface Toast {
   action?: { label: string; run?: () => void; href?: string };
 }
 
+/**
+ * نصّ الخطأ كما يُقال لصاحبه.
+ *
+ * رفضُ التحقق يصل مصفوفة JSON خاماً من zod؛ عرضها كما هي يملأ الإشعار رموزاً
+ * لا يفهمها أحد. فتؤخذ رسالة أول مشكلة، وما لا يُقرأ يُستبدل بجملة عامّة.
+ */
+function readable(error: unknown): string {
+  const fallback = "تعذّر تنفيذ العملية. حاول مرة أخرى.";
+  const message = (error as Error)?.message?.trim();
+  if (!message) return fallback;
+  if (!message.startsWith("[")) return message;
+  try {
+    const first = (JSON.parse(message) as { message?: string }[])[0]?.message;
+    return first && /[؀-ۿ]/.test(first) ? first : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   return Boolean(el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable));
@@ -259,7 +278,7 @@ export default function TimeBlocking() {
       await utils.tasks.listOpen.invalidate();
       return result;
     } catch (error) {
-      say((error as Error)?.message || "تعذّر تنفيذ العملية. حاول مرة أخرى.", { tone: "error" });
+      say(readable(error), { tone: "error" });
       return null;
     }
   }

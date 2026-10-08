@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DAY_PATTERN,
   QUADRANTS,
   isOpen,
   nextActionOf,
@@ -110,6 +111,16 @@ describe("تكرار المهمة", () => {
     const before = new Date(end).getTime() - new Date(start).getTime();
     const after = new Date(next.end).getTime() - new Date(next.start).getTime();
     expect(after).toBe(before);
+  });
+});
+
+describe("نمط اليوم", () => {
+  // سقطت الشرطة من النمط مرّة فرُفض كل تاريخ، وفشل إنشاء كل مهمة من الدرج.
+  it("يقبل يوماً صحيحاً ويرفض غيره", () => {
+    expect(DAY_PATTERN.test("2026-10-08")).toBe(true);
+    expect(DAY_PATTERN.test("2026-10-8")).toBe(false);
+    expect(DAY_PATTERN.test("dddd-dd-dd")).toBe(false);
+    expect(DAY_PATTERN.test("2026-10-08T09:00:00.000Z")).toBe(false);
   });
 });
 

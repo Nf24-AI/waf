@@ -28,15 +28,14 @@ import {
   tasksAreConfigured,
   updateTask,
 } from "./tasks";
-import { QUADRANTS, REPEAT_RULES, TASK_CATEGORIES, TASK_PRIORITIES } from "@shared/tasks";
+import { DAY_PATTERN, QUADRANTS, REPEAT_RULES, TASK_CATEGORIES, TASK_PRIORITIES } from "@shared/tasks";
 
 const quadrantId = z.enum(QUADRANTS.map(q => q.id) as [string, ...string[]]);
 const repeatRule = z.enum(REPEAT_RULES);
 const repeatDays = z.array(z.number().int().min(0).max(6)).max(7);
 const taskCategory = z.enum(TASK_CATEGORIES.map(c => c.id) as [string, ...string[]]);
 const taskPriority = z.enum(TASK_PRIORITIES);
-/** «2026-10-08» — يوم بلا ساعة، فلا منطقة زمنية تزيحه. */
-const dayString = z.string().regex(/^d{4}-d{2}-d{2}$/);
+const dayString = z.string().regex(DAY_PATTERN, "تاريخ غير صالح");
 
 const agendaItem = z.object({
   title: z.string(),

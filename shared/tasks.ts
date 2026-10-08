@@ -64,6 +64,9 @@ export const TASK_CATEGORIES = [
 ] as const;
 export type TaskCategory = (typeof TASK_CATEGORIES)[number]["id"];
 
+/** «2026-10-08» — يوم بلا ساعة، فلا منطقة زمنية تزيحه. */
+export const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 export const TASK_PRIORITIES = ["low", "medium", "high"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
