@@ -112,3 +112,32 @@ describe("تكرار المهمة", () => {
     expect(after).toBe(before);
   });
 });
+
+describe("تكرار أيام العمل والمخصّص", () => {
+  // 2026-10-08 خميس. 09:00Z = 12:00 في الرياض.
+  const start = "2026-10-08T09:00:00.000Z";
+  const end = "2026-10-08T10:00:00.000Z";
+
+  it("أيام العمل تقفز من الخميس إلى الأحد", () => {
+    expect(nextOccurrence(start, end, "weekdays").start).toBe("2026-10-11T09:00:00.000Z");
+    expect(nextOccurrence("2026-10-11T09:00:00.000Z", "2026-10-11T10:00:00.000Z", "weekdays").start).toBe(
+      "2026-10-12T09:00:00.000Z",
+    );
+  });
+
+  it("المخصّص يذهب إلى أقرب يومٍ مختار", () => {
+    expect(nextOccurrence(start, end, "custom", [0, 2]).start).toBe("2026-10-11T09:00:00.000Z");
+    expect(nextOccurrence(start, end, "custom", [4]).start).toBe("2026-10-15T09:00:00.000Z");
+  });
+
+  it("المخصّص بلا أيام يُعامَل أسبوعياً", () => {
+    expect(nextOccurrence(start, end, "custom").start).toBe("2026-10-15T09:00:00.000Z");
+  });
+
+  it("يوم الأسبوع بتوقيت الرياض لا UTC", () => {
+    // 22:00Z الخميس = 01:00 الجمعة في الرياض: ليس يوم عمل، فالتالي الأحد.
+    expect(nextOccurrence("2026-10-08T22:00:00.000Z", "2026-10-08T23:00:00.000Z", "weekdays").start).toBe(
+      "2026-10-10T22:00:00.000Z",
+    );
+  });
+});

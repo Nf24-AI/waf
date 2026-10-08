@@ -11,13 +11,18 @@ import TopBar from "./TopBar";
  *
  * و`quiet` يُسقط التنقّل كلّه — جلسة التركيز تبدأ فيُزاح كل ما يُقرأ. أداة
  * تعد بالتركيز ثم تترك خريطةً كاملة تحت عينك لا تفي بوعدها.
+ *
+ * و`top` يُبدّل الشريط العلويّ وحده: صفحة حجز الوقت لها شريطها (تنقّل
+ * الأيام وصيغة الوقت)، والشريط الجانبيّ يبقى فلا تنقطع عن بقيّة المنتج.
  */
 export default function TimeLayout({
   children,
   quiet = false,
+  top,
 }: {
   children: React.ReactNode;
   quiet?: boolean;
+  top?: (onOpenNav: () => void) => React.ReactNode;
 }) {
   const [drawer, setDrawer] = useState(false);
 
@@ -36,9 +41,9 @@ export default function TimeLayout({
       <NavDrawer open={drawer} onClose={() => setDrawer(false)} />
 
       <div className="tp-body">
-        <TopBar onOpenNav={() => setDrawer(true)} />
+        {top ? top(() => setDrawer(true)) : <TopBar onOpenNav={() => setDrawer(true)} />}
 
-        <main className="tp-main">{children}</main>
+        <main className={top ? "tp-main tp-main-wide" : "tp-main"}>{children}</main>
       </div>
 
       <BottomNav onMore={() => setDrawer(true)} />

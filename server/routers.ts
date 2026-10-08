@@ -22,12 +22,21 @@ import {
   listFocusSessions,
   listOpenTasks,
   openFocusSession,
+  reopenTask,
   scheduleTask,
+  setTaskArchived,
   tasksAreConfigured,
+  updateTask,
 } from "./tasks";
-import { QUADRANTS } from "@shared/tasks";
+import { QUADRANTS, REPEAT_RULES, TASK_CATEGORIES, TASK_PRIORITIES } from "@shared/tasks";
 
 const quadrantId = z.enum(QUADRANTS.map(q => q.id) as [string, ...string[]]);
+const repeatRule = z.enum(REPEAT_RULES);
+const repeatDays = z.array(z.number().int().min(0).max(6)).max(7);
+const taskCategory = z.enum(TASK_CATEGORIES.map(c => c.id) as [string, ...string[]]);
+const taskPriority = z.enum(TASK_PRIORITIES);
+/** «2026-10-08» — يوم بلا ساعة، فلا منطقة زمنية تزيحه. */
+const dayString = z.string().regex(/^d{4}-d{2}-d{2}$/);
 
 const agendaItem = z.object({
   title: z.string(),
@@ -166,14 +175,52 @@ export const appRouter = router({
           scheduledStart: z.string().datetime().optional(),
           scheduledEnd: z.string().datetime().optional(),
           estimatedMinutes: z.number().int().positive().optional(),
-          repeatRule: z.enum(["daily", "weekly"]).optional(),
+          repeatRule: repeatRule.optional(),
+          repeatDays: repeatDays.optional(),
           reminderMinutes: z.number().int().min(0).max(1440).optional(),
           projectId: z.string().uuid().optional(),
+          category: taskCategory.optional(),
+          priority: taskPriority.optional(),
+          dueDate: dayString.optional(),
         }),
       )
       .mutation(({ ctx, input }) =>
-        createTask(ctx.identity, input as Parameters<typeof createTask>[1]),
+        createTask(ctx.identity, input as Parameters<typeof createTask>[1], true),
       ),
+
+    update: authedProcedure
+      .input(
+        z.object({
+          id: z.string().uuid(),
+          title: z.string().trim().min(1, "المهمة تحتاج عنواناً").optional(),
+          description: z.string().trim().nullable().optional(),
+          estimatedMinutes: z.number().int().positive().nullable().optional(),
+          category: taskCategory.nullable().optional(),
+          priority: taskPriority.nullable().optional(),
+          dueDate: dayString.nullable().optional(),
+          repeatRule: repeatRule.nullable().optional(),
+          repeatDays: repeatDays.nullable().optional(),
+          schedule: z
+            .object({ start: z.string().datetime(), end: z.string().datetime() })
+            .nullable()
+            .optional(),
+        }),
+      )
+      .mutation(({ ctx, input: { id, ...patch } }) =>
+        updateTask(ctx.identity, id, patch as Parameters<typeof updateTask>[2]),
+      ),
+
+    archive: authedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(({ ctx, input }) => setTaskArchived(ctx.identity, input.id, true)),
+
+    restore: authedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(({ ctx, input }) => setTaskArchived(ctx.identity, input.id, false)),
+
+    reopen: authedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(({ ctx, input }) => reopenTask(ctx.identity, input.id)),
 
     classify: authedProcedure
       .input(z.object({ id: z.string().uuid(), quadrant: quadrantId }))
@@ -187,11 +234,12 @@ export const appRouter = router({
           id: z.string().uuid(),
           start: z.string().datetime(),
           end: z.string().datetime(),
-          repeatRule: z.enum(["daily", "weekly"]).nullable().optional(),
+          repeatRule: repeatRule.nullable().optional(),
+          repeatDays: repeatDays.nullable().optional(),
         }),
       )
       .mutation(({ ctx, input }) =>
-        scheduleTask(ctx.identity, input.id, input.start, input.end, input.repeatRule),
+        scheduleTask(ctx.identity, input.id, input.start, input.end, input.repeatRule, input.repeatDays),
       ),
 
     complete: authedProcedure

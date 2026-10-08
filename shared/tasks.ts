@@ -37,8 +37,35 @@ export type Urgency = (typeof QUADRANTS)[number]["urgency"];
 export const TASK_STATES = ["new", "classified", "scheduled", "focusing", "completed"] as const;
 export type TaskState = (typeof TASK_STATES)[number];
 
-/** التكرار: يوميّ أو أسبوعيّ، أو لا تكرار. أكثر من ذلك يحتاج قواعد لا عموداً. */
-export type RepeatRule = "daily" | "weekly";
+/**
+ * التكرار: يوميّ، أو أيام العمل، أو أسبوعيّ، أو أيام يختارها صاحبها.
+ *
+ * «أيام العمل» الأحد إلى الخميس: المنتج سعوديّ، وأسبوعٌ يبدأ الإثنين يحجز
+ * الجمعة لمن لا يعمل فيها. و«custom» يقرأ أيامه من `repeatDays`.
+ */
+export const REPEAT_RULES = ["daily", "weekdays", "weekly", "custom"] as const;
+export type RepeatRule = (typeof REPEAT_RULES)[number];
+
+/** أيام العمل بترقيم Date.getDay(): الأحد 0 … الخميس 4. */
+export const WORK_DAYS: readonly number[] = [0, 1, 2, 3, 4];
+
+/**
+ * فئة المهمة — لون الحجز في الجدول الزمني.
+ *
+ * خمس لا أكثر: الفئة تُقرأ بلونها من طرف العين، وسادس لونٍ لا يُميَّز عن
+ * خامسه في شريط عرضه أربعة بكسلات.
+ */
+export const TASK_CATEGORIES = [
+  { id: "deep", label: "عمل عميق", tone: "purple" },
+  { id: "meeting", label: "اجتماعات", tone: "blue" },
+  { id: "personal", label: "شخصي", tone: "teal" },
+  { id: "project", label: "عمل على مشروع", tone: "orange" },
+  { id: "other", label: "أخرى", tone: "gray" },
+] as const;
+export type TaskCategory = (typeof TASK_CATEGORIES)[number]["id"];
+
+export const TASK_PRIORITIES = ["low", "medium", "high"] as const;
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
 export interface Task {
   id: string;
@@ -56,6 +83,12 @@ export interface Task {
   /** المشروع الذي تنتمي إليه، إن انتمت. مهمة بلا مشروع سليمة تماماً. */
   projectId?: string;
   repeatRule?: RepeatRule;
+  /** أيام التكرار المخصّص بترقيم Date.getDay(). تُقرأ مع «custom» وحدها. */
+  repeatDays?: number[];
+  category?: TaskCategory;
+  priority?: TaskPriority;
+  /** يوم الاستحقاق «2026-10-08» لمهمة لم تُحجز لها ساعة بعد. */
+  dueDate?: string;
   /** دقائق قبل الموعد يُنبَّه فيها. صفر = عند الموعد، وغياب القيمة = بلا تذكير. */
   reminderMinutes?: number;
   completedSessions: number;
@@ -128,10 +161,41 @@ export function nextOccurrence(
   startIso: string,
   endIso: string,
   rule: RepeatRule,
+  days: readonly number[] = [],
 ): { start: string; end: string } {
-  const step = rule === "daily" ? DAY_MS : 7 * DAY_MS;
+  // «custom» بلا أيام يُعامَل أسبوعياً: قاعدةٌ لا تقع على يومٍ قط تُضيّع
+  // المهمة بعد أول إنجاز، وأسبوعٌ كامل أهون من لا شيء.
+  const anchor = weekdayOf(startIso);
+  let step = 7;
+  for (let offset = 1; offset <= 7; offset += 1) {
+    if (repeatsOn(rule, (anchor + offset) % 7, anchor, days)) {
+      step = offset;
+      break;
+    }
+  }
   return {
-    start: new Date(new Date(startIso).getTime() + step).toISOString(),
-    end: new Date(new Date(endIso).getTime() + step).toISOString(),
+    start: new Date(new Date(startIso).getTime() + step * DAY_MS).toISOString(),
+    end: new Date(new Date(endIso).getTime() + step * DAY_MS).toISOString(),
   };
+}
+
+/** الرياض UTC+3 بلا توقيت صيفي: به يُعرف أيّ يومٍ من الأسبوع تقع فيه اللحظة. */
+const RIYADH_OFFSET_MS = 3 * 3_600_000;
+
+/** يوم الأسبوع (0 = الأحد) كما يراه صاحب الموعد، لا كما يراه الخادم. */
+export function weekdayOf(iso: string): number {
+  return new Date(new Date(iso).getTime() + RIYADH_OFFSET_MS).getUTCDay();
+}
+
+/** هل تقع القاعدة على هذا اليوم من الأسبوع؟ `anchor` يوم الموعد الأصلي. */
+export function repeatsOn(
+  rule: RepeatRule,
+  weekday: number,
+  anchor: number,
+  days: readonly number[] = [],
+): boolean {
+  if (rule === "daily") return true;
+  if (rule === "weekdays") return WORK_DAYS.includes(weekday);
+  if (rule === "weekly") return weekday === anchor;
+  return days.includes(weekday);
 }
