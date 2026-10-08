@@ -1,8 +1,9 @@
 // مستورَد صراحةً كما في بقية الملفات: تحويل JSX تحت vitest كلاسيكي،
 // فيحتاج React في النطاق وإن كان بناء Vite يستغني عنه.
 import React from "react";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
+import { dir, pair, pick, t, type Pair } from "@/lib/i18n";
 import { useServiceHref } from "@/lib/service-access";
 import { rootServices } from "@shared/services";
 import Reveal from "./Reveal";
@@ -22,8 +23,8 @@ interface LandingService {
   id: string;
   number: string;
   category: string;
-  title: string;
-  description: string;
+  title: Pair;
+  description: Pair;
   href: string;
   external?: boolean;
   icon: "people" | "calendar" | "directory";
@@ -43,31 +44,43 @@ const LANDING_COPY: Record<
 > = {
   meetings: {
     number: "02",
-    title: "خدمة الاجتماعات",
-    description:
+    title: pair("خدمة الاجتماعات", "Meetings"),
+    description: pair(
       "جهّز الاجتماع، شارك جدول الأعمال، أدر الحضور، واحتفظ بكل ما يهم الاجتماع في مكان واحد.",
+      "Prepare the meeting, share the agenda, manage attendance, and keep everything that matters in one place.",
+    ),
     icon: "people",
     visual: "meetings",
   },
   time: {
     number: "01",
-    title: "إدارة الوقت",
-    description:
+    title: pair("إدارة الوقت", "Time management"),
+    description: pair(
       "رتّب مهامك بين المهم والعاجل، وشاهد وقتك بوضوح، لتترك مساحة لما يهم فعلاً.",
+      "Sort your tasks by what is important and what is urgent, see your time clearly, and leave room for what matters.",
+    ),
     icon: "calendar",
     visual: "time",
   },
   directory: {
     number: "03",
-    title: "أي خدمة",
-    description:
+    title: pair("أي خدمة", "Service directory"),
+    description: pair(
       "دليل موحّد لمزوّدي الخدمة والشركاء: تعرف من تتواصل معه، وبأي قسم، وكيف، خلال ثوانٍ.",
+      "One directory of service providers and partners: know who to contact, in which department, and how, in seconds.",
+    ),
     icon: "directory",
     visual: "directory",
   },
 };
 
-const COUNT_AR: Record<number, string> = { 1: "خدمة واحدة", 2: "خدمتان", 3: "ثلاث خدمات", 4: "أربع خدمات", 5: "خمس خدمات" };
+const COUNT_AR: Record<number, Pair> = {
+  1: pair("خدمة واحدة", "One service"),
+  2: pair("خدمتان", "Two services"),
+  3: pair("ثلاث خدمات", "Three services"),
+  4: pair("أربع خدمات", "Four services"),
+  5: pair("خمس خدمات", "Five services"),
+};
 
 /**
  * البطاقات مشتقّة من الكتالوج لا مكتوبة هنا.
@@ -199,7 +212,7 @@ function ServiceVisual({ kind }: { kind: LandingService["visual"] }) {
   if (kind === "time") {
     return (
       <div className="svc-visual svc-visual-time" aria-hidden="true">
-        <span className="svc-chip svc-chip-today">اليوم</span>
+        <span className="svc-chip svc-chip-today">{t("اليوم", "Today")}</span>
         <div className="svc-sheet">
           <span className="svc-task">
             <i className="svc-dot" />
@@ -265,7 +278,10 @@ function ServiceVisual({ kind }: { kind: LandingService["visual"] }) {
 }
 
 function ServiceCard({ service }: { service: LandingService }) {
-  const enterLabel = `ادخل ${service.title}`;
+  const title = pick(service.title);
+  const enterLabel = t(`ادخل ${title}`, `Open ${title}`);
+  // السهم يشير مع اتجاه القراءة: يساراً في العربية، يميناً في الإنجليزية.
+  const Arrow = dir() === "rtl" ? ArrowLeft : ArrowRight;
 
   // الزائر يُنقل إلى الدخول حاملاً وجهته؛ المسجَّل يدخل مباشرة. والخدمة
   // الخارجية تبقى رابطاً مفتوحاً: ليست لنا حتى نحرسها.
@@ -284,12 +300,12 @@ function ServiceCard({ service }: { service: LandingService }) {
 
         <div className="svc-content">
           <div className="svc-title">
-            <h3>{service.title}</h3>
+            <h3>{title}</h3>
             <span className="svc-icon" aria-hidden="true">
               <ServiceGlyph kind={service.icon} />
             </span>
           </div>
-          <p>{service.description}</p>
+          <p>{pick(service.description)}</p>
         </div>
       </div>
 
@@ -297,16 +313,16 @@ function ServiceCard({ service }: { service: LandingService }) {
         {service.external ? (
           // خدمة على أصل آخر: يُنتقل إليها في اللسان نفسه، ولا تحتاج مرجعنا ولا بابنا.
           <a className="svc-enter" href={service.href} rel="noreferrer" aria-label={enterLabel}>
-            ادخل الخدمة
+            {t("ادخل الخدمة", "Open service")}
             <span className="svc-arrow" aria-hidden="true">
-              <ArrowLeft size={17} />
+              <Arrow size={17} />
             </span>
           </a>
         ) : (
           <Link className="svc-enter" href={gate} aria-label={enterLabel}>
-            ادخل الخدمة
+            {t("ادخل الخدمة", "Open service")}
             <span className="svc-arrow" aria-hidden="true">
-              <ArrowLeft size={17} />
+              <Arrow size={17} />
             </span>
           </Link>
         )}
@@ -315,7 +331,7 @@ function ServiceCard({ service }: { service: LandingService }) {
           // تطبيق مستقلّ بحساباته: يُقال قبل الضغط أن الدخول هناك غير الدخول هنا.
           <span className="svc-aside">
             <ExternalLink size={13} aria-hidden="true" />
-            تطبيق مستقلّ بدخوله الخاص
+            {t("تطبيق مستقلّ بدخوله الخاص", "Separate app with its own sign-in")}
           </span>
         )}
       </footer>
@@ -324,6 +340,11 @@ function ServiceCard({ service }: { service: LandingService }) {
 }
 
 export default function ServicesSection() {
+  const counted = COUNT_AR[LANDING_SERVICES.length];
+  const count = counted
+    ? pick(counted)
+    : t(`${LANDING_SERVICES.length} خدمات`, `${LANDING_SERVICES.length} services`);
+
   return (
     <section
       id="services"
@@ -342,22 +363,22 @@ export default function ServicesSection() {
               <span className="svc-index-top">
                 <i className="svc-rule" aria-hidden="true" />
                 <span className="svc-number">02</span>
-                <span className="svc-index-ar">الخدمات</span>
+                <span className="svc-index-ar">{t("الخدمات", "Services")}</span>
               </span>
               <span className="svc-index-en">OUR SERVICES</span>
             </div>
 
             <p className="svc-note">
-              أدوات بسيطة
+              {t("أدوات بسيطة", "Simple tools")}
               <br />
-              تركّز على ما يهم فعلاً.
+              {t("تركّز على ما يهم فعلاً.", "focused on what matters.")}
             </p>
           </div>
 
           <div className="svc-lead">
-            <p className="svc-eyebrow">خدمات واف، كما هي اليوم.</p>
-            <h2 id="svc-heading">نبدأ بما نحتاجه.</h2>
-            <p className="svc-sub">{COUNT_AR[LANDING_SERVICES.length] ?? `${LANDING_SERVICES.length} خدمات`}، والبداية من هنا.</p>
+            <p className="svc-eyebrow">{t("خدمات واف، كما هي اليوم.", "Waf services, as they stand today.")}</p>
+            <h2 id="svc-heading">{t("نبدأ بما نحتاجه.", "We start with what we need.")}</h2>
+            <p className="svc-sub">{t(`${count}، والبداية من هنا.`, `${count}, and this is where it starts.`)}</p>
           </div>
         </Reveal>
 
@@ -369,7 +390,7 @@ export default function ServicesSection() {
         </Reveal>
 
         <footer className="svc-foot">
-          <span>أدوات اليوم .. لبناء غدٍ أفضل.</span>
+          <span>{t("أدوات اليوم .. لبناء غدٍ أفضل.", "Today's tools, for a better tomorrow.")}</span>
           <span className="svc-foot-mark">
             WAF
             <i className="svc-rule" aria-hidden="true" />

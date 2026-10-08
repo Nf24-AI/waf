@@ -84,6 +84,7 @@ import {
   writeSound,
 } from "@/lib/focus-timer";
 import { dir, getLang, locale, pair, type Pair, pick, t } from "@/lib/i18n";
+import { errorText } from "@/lib/error-text";
 import { useStudyingNow } from "@/lib/presence";
 import { embedUrl } from "@/lib/stream";
 import { trpc } from "@/lib/trpc";
@@ -854,7 +855,7 @@ export default function Focus() {
 
           {startSession.error && (
             <p className="tm-form-error" role="alert" dir="auto">
-              {startSession.error.message}
+              {errorText(startSession.error)}
             </p>
           )}
 
@@ -1029,7 +1030,7 @@ export default function Focus() {
           </form>
           {create.error && (
             <p className="tm-form-error" role="alert" dir="auto">
-              {create.error.message}
+              {errorText(create.error)}
             </p>
           )}
           {status.data?.configured === false && (

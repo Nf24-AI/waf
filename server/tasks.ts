@@ -15,7 +15,6 @@ import {
   type TaskPriority,
   type Urgency,
 } from "@shared/tasks";
-import { type FocusSession } from "@shared/statistics";
 
 /**
  * المهام في Supabase، والملكية من جلسة المستخدم.
@@ -295,14 +294,6 @@ export async function listOpenTasks(who: Identity, origin?: TaskOrigin): Promise
   return rows.map(row => toTask(row, counts.get(row.id) ?? 0));
 }
 
-export async function listCompletedTasks(who: Identity, sinceIso?: string): Promise<Task[]> {
-  const since = sinceIso ? `&completed_at=gte.${encodeURIComponent(sinceIso)}` : "";
-  const rows = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?select=${columns()}&completed_at=not.is.null${since}&order=completed_at.desc`),
-  );
-  const counts = await sessionCounts(who, rows.map(row => row.id));
-  return rows.map(row => toTask(row, counts.get(row.id) ?? 0));
-}
-
 export async function createTask(who: Identity, input: {
   title: string;
   description?: string;
@@ -367,39 +358,6 @@ export async function classifyTask(who: Identity, id: string, quadrant: Quadrant
       method: "PATCH",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({ importance, urgency, classified_at: new Date().toISOString() }),
-    }),
-  );
-  if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
-  return withSessions(who, row);
-}
-
-/**
- * الجدولة، مع منع التعارض عند المصدر.
- *
- * الفحص هنا لا في الواجهة وحدها: واجهتان مفتوحتان في لسانين تريان القائمة
- * نفسها وقد تحجزان الوقت ذاته، ولا يمنع ذلك إلا من يكتب. القيد في الجدول
- * يحرس شكل الموعد؛ هذا يحرس ألّا يتداخل موعدان.
- */
-export async function scheduleTask(
-  who: Identity,
-  id: string,
-  startIso: string,
-  endIso: string,
-  repeatRule?: RepeatRule | null,
-  repeatDays?: number[] | null,
-): Promise<Task> {
-  await assertFree(who, startIso, endIso, id, await originOf(who, id));
-
-  const [row] = await withSchemaFallback(() => rest<Row[]>(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
-        scheduled_start: startIso,
-        scheduled_end: endIso,
-        // undefined يعني «لا تمسّ»، و null يعني «ألغِ التكرار».
-        ...(repeatRule === undefined ? {} : optional({ repeat_rule: repeatRule })),
-        ...(repeatDays === undefined ? {} : optional({ repeat_days: repeatDays?.length ? repeatDays : null })),
-      }),
     }),
   );
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "لا مهمة بهذا المعرّف" });
@@ -597,22 +555,3 @@ export async function closeFocusSession(who: Identity, id: string, completed: bo
   });
 }
 
-/**
- * جلسات التركيز في مدة — للإحصاء وحده.
- *
- * تُقرأ بالبداية لا بالنهاية: الجلسة التي بدأت أمس وانتهت اليوم تنتمي إلى
- * أمس، وهو اليوم الذي قُضيت فيه.
- */
-export async function listFocusSessions(who: Identity, sinceIso?: string): Promise<FocusSession[]> {
-  const since = sinceIso ? `&started_at=gte.${encodeURIComponent(sinceIso)}` : "";
-  const rows = await rest<
-    { started_at: string; ended_at: string | null; planned_minutes: number; completed: boolean }[]
-  >(who, `${SESSIONS}?select=started_at,ended_at,planned_minutes,completed${since}&order=started_at.desc`);
-
-  return rows.map(row => ({
-    startedAt: row.started_at,
-    endedAt: row.ended_at ?? undefined,
-    plannedMinutes: row.planned_minutes,
-    completed: row.completed,
-  }));
-}

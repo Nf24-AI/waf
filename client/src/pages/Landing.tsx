@@ -6,7 +6,9 @@ import { Link, useLocation } from "wouter";
 import Atmosphere from "@/components/landing/Atmosphere";
 import Reveal from "@/components/landing/Reveal";
 import ServicesSection from "@/components/landing/ServicesSection";
+import LangToggle from "@/components/LangToggle";
 import { createAsciiStage, type AsciiStage, type RenderMode } from "@/lib/ascii-stage";
+import { dir, pair, pick, t } from "@/lib/i18n";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useSmoothScroll } from "@/lib/smooth-scroll";
 import tanomah from "@/assets/village-at-dusk.jpg";
@@ -133,10 +135,10 @@ function AsciiHero() {
   }, []);
 
   const MODES: { id: RenderMode; label: string }[] = [
-    { id: "characters", label: "حروف" },
-    { id: "dots", label: "نقاط" },
-    { id: "mosaic", label: "فسيفساء" },
-    { id: "halfblocks", label: "أنصاف" },
+    { id: "characters", label: t("حروف", "Characters") },
+    { id: "dots", label: t("نقاط", "Dots") },
+    { id: "mosaic", label: t("فسيفساء", "Mosaic") },
+    { id: "halfblocks", label: t("أنصاف", "Half blocks") },
   ];
 
   return (
@@ -145,7 +147,10 @@ function AsciiHero() {
         <canvas
           ref={canvasRef}
           className="landing-canvas"
-          aria-label="قرية حجرية عند المغرب، مرسومة بحروف على شبكة عشرة بكسل"
+          aria-label={t(
+            "قرية حجرية عند المغرب، مرسومة بحروف على شبكة عشرة بكسل",
+            "A stone village at dusk, drawn in characters on a ten-pixel grid",
+          )}
         />
         <div className="landing-brand" ref={brandRef} style={{ left: `${place.x}%`, top: `${place.y}%` }}>
           <h1 className="landing-brand-word">
@@ -161,27 +166,31 @@ function AsciiHero() {
             </span>
           </h1>
           <p className={meaningIn ? "landing-brand-meaning is-in" : "landing-brand-meaning"}>
-            من وَفَى .. أتمَّ وأكمل.
+            {t("من وَفَى .. أتمَّ وأكمل.", "From the Arabic wafa: to fulfil and complete.")}
           </p>
         </div>
       </div>
 
       <div className="landing-wrap landing-band">
-        <p className="landing-eyebrow">منصّة أدوات مدير المشروع ومالك المنتج</p>
+        <p className="landing-eyebrow">
+          {t("منصّة أدوات مدير المشروع ومالك المنتج", "A toolkit for project managers and product owners")}
+        </p>
         <p className="landing-lede">
-          واف ليس أداة واحدة. هو باب تدخل منه فتجد الخدمة التي تحتاجها الآن — تُجهّز اجتماعاً، أو
-          ترتّب مهامك، أو تقرأ ما تقرّر الأسبوع الماضي — وتخرج.
+          {t(
+            "واف ليس أداة واحدة. هو باب تدخل منه فتجد الخدمة التي تحتاجها الآن — تُجهّز اجتماعاً، أو ترتّب مهامك، أو تقرأ ما تقرّر الأسبوع الماضي — وتخرج.",
+            "Waf is not a single tool. It is a door: you walk in, find the service you need right now — prepare a meeting, sort your tasks, or read what was decided last week — and leave.",
+          )}
         </p>
         <div className="landing-acts">
           <a className="landing-btn landing-btn-primary" href="#services">
-            اطّلع على الخدمات
+            {t("اطّلع على الخدمات", "See the services")}
           </a>
         </div>
       </div>
 
       <div className="landing-wrap landing-meta">
         <span>ascii · cell 10px · original colors · hover to reveal</span>
-        <span className="landing-modes" role="group" aria-label="نمط الرسم">
+        <span className="landing-modes" role="group" aria-label={t("نمط الرسم", "Rendering style")}>
           {MODES.map(item => (
             <button
               key={item.id}
@@ -202,8 +211,8 @@ function AsciiHero() {
 
 /** بيانات اللقطة كما سجّلها صاحبها. تُعرض كما تُعرض على ظهر مطبوعة. */
 const FRAME = {
-  place: "تنومة",
-  country: "المملكة العربية السعودية",
+  place: pair("تنومة", "Tanomah"),
+  country: pair("المملكة العربية السعودية", "Saudi Arabia"),
   date: "2020 . 07 . 14",
   lat: "18.9881° N",
   lng: "42.0669° E",
@@ -226,7 +235,10 @@ function AboutWaf() {
       <img
         className="frame-photo"
         src={tanomah}
-        alt="قرية حجرية في تنومة عند الغروب، نوافذها مضاءة وخلفها سلاسل الجبال"
+        alt={t(
+          "قرية حجرية في تنومة عند الغروب، نوافذها مضاءة وخلفها سلاسل الجبال",
+          "A stone village in Tanomah at sunset, its windows lit, with mountain ranges behind it",
+        )}
       />
       <div className="frame-wash" aria-hidden="true" />
 
@@ -238,9 +250,9 @@ function AboutWaf() {
 
       <div className="frame-meta">
         <span className="frame-slug frame-slug-place">
-          <b>{FRAME.place}</b>
+          <b>{pick(FRAME.place)}</b>
           <i className="frame-rule" aria-hidden="true" />
-          <span>{FRAME.country}</span>
+          <span>{pick(FRAME.country)}</span>
         </span>
         <span className="frame-slug frame-slug-date">
           <time dateTime="2020-07-14">{FRAME.date}</time>
@@ -256,18 +268,21 @@ function AboutWaf() {
       </div>
 
       <Reveal className="frame-story">
-        <p className="frame-label">عن واف</p>
+        <p className="frame-label">{t("عن واف", "About Waf")}</p>
         <h2 id="about-heading">
-          من هناك بدأنا،
+          {t("من هناك بدأنا،", "That is where we began,")}
           <br />
-          ومن هنا نحكي.
+          {t("ومن هنا نحكي.", "and this is where we tell it.")}
         </h2>
         <p className="frame-note">
-          تنومة، موطن الـ ٢٢ عاماً.
+          {t("تنومة، موطن الـ ٢٢ عاماً.", "Tanomah, home for 22 years.")}
           <br />
-          هنا كبرت أحلامنا، وتشكّلت ملامحنا، وكانت البدايات.
+          {t(
+            "هنا كبرت أحلامنا، وتشكّلت ملامحنا، وكانت البدايات.",
+            "Our dreams grew here, we took shape here, and it all began here.",
+          )}
           <br />
-          واليوم، نحمل ذلك المكان في كل ما نبنيه.
+          {t("واليوم، نحمل ذلك المكان في كل ما نبنيه.", "Today, we carry that place into everything we build.")}
         </p>
 
         <p className="frame-brand">
@@ -280,7 +295,9 @@ function AboutWaf() {
           </span>
         </p>
 
-        <p className={meaningIn ? "frame-meaning is-in" : "frame-meaning"}>من الوفاء، ومن التمام.</p>
+        <p className={meaningIn ? "frame-meaning is-in" : "frame-meaning"}>
+          {t("من الوفاء، ومن التمام.", "From keeping your word, and seeing things through.")}
+        </p>
       </Reveal>
     </section>
   );
@@ -315,7 +332,7 @@ export default function Landing() {
   useSmoothScroll(true, HEADER_OFFSET);
 
   return (
-    <div className="landing" data-waf-theme="navy" dir="rtl">
+    <div className="landing" data-waf-theme="navy" dir={dir()}>
       <Atmosphere />
       <header className="landing-topbar">
         <div className="landing-wrap landing-topbar-in">
@@ -323,7 +340,7 @@ export default function Landing() {
             <span className="landing-mark" aria-hidden="true">
               <LayoutGrid size={16} />
             </span>
-            <b>واف</b>
+            <b>{t("واف", "Waf")}</b>
           </div>
           {/*
             لا «ادخل المنصّة» هنا: الزائر يرى الخدمات أمامه، والباب إلى كل
@@ -331,9 +348,9 @@ export default function Landing() {
             وجود له — وليس فيها اليوم إلا هذه الخدمات.
           */}
           <nav>
-            <a href="#services">الخدمات</a>
+            <a href="#services">{t("الخدمات", "Services")}</a>
             {/* مرساة في الصفحة نفسها لا مسار: القسم أسفل هذه الصفحة. */}
-            <a href="#about-waf">عن واف</a>
+            <a href="#about-waf">{t("عن واف", "About Waf")}</a>
           </nav>
 
           {/*
@@ -342,17 +359,18 @@ export default function Landing() {
             وهو يعرفه.
           */}
           <div className="landing-acts landing-topbar-acts">
+            <LangToggle className="landing-btn" />
             {user ? (
               <Link className="landing-btn landing-btn-primary" href={SERVICES_ROUTE}>
-                الرئيسية
+                {t("الرئيسية", "Home")}
               </Link>
             ) : (
               <>
                 <Link className="landing-btn" href={LOGIN_ROUTE}>
-                  تسجيل الدخول
+                  {t("تسجيل الدخول", "Sign in")}
                 </Link>
                 <Link className="landing-btn landing-btn-primary" href={SIGNUP_ROUTE}>
-                  ابدأ الآن
+                  {t("ابدأ الآن", "Get started")}
                 </Link>
               </>
             )}
@@ -362,7 +380,7 @@ export default function Landing() {
 
       <main>
         {/* اللوحة والنصّ وشريط الأنماط قسم واحد، فتستقرّ التمريرة على أوّله. */}
-        <section className="landing-hero" aria-label="واف">
+        <section className="landing-hero" aria-label={t("واف", "Waf")}>
           <AsciiHero />
         </section>
 
@@ -371,7 +389,7 @@ export default function Landing() {
       </main>
 
       <footer className="landing-wrap landing-foot">
-        <p>واف — منصّة أدوات مدير المشروع ومالك المنتج</p>
+        <p>{t("واف — منصّة أدوات مدير المشروع ومالك المنتج", "Waf — a toolkit for project managers and product owners")}</p>
       </footer>
     </div>
   );

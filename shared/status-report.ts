@@ -95,7 +95,9 @@ function toReportMeeting(meeting: MeetingRecord, iso: string): ReportMeeting {
 export function buildStatusReport(
   meetings: readonly MeetingRecord[],
   window: ReportWindow,
+  lang: "ar" | "en" = "ar",
 ): StatusReport {
+  const untitled = lang === "ar" ? "اجتماع بلا عنوان" : "Untitled meeting";
   const held: ReportMeeting[] = [];
   const upcoming: ReportMeeting[] = [];
   const actions: StatusReport["actions"] = [];
@@ -116,8 +118,8 @@ export function buildStatusReport(
       if (meeting.status === "مسودة") {
         attention.push({
           kind: "overdue-draft",
-          what: clean(meeting.title) || "اجتماع بلا عنوان",
-          why: "مسودة مضى تاريخها ولم تُعرض",
+          what: clean(meeting.title) || untitled,
+          why: lang === "ar" ? "مسودة مضى تاريخها ولم تُعرض" : "A draft whose date passed without being presented",
           meetingId: meeting.id,
           meetingTitle: clean(meeting.title),
         });
@@ -137,8 +139,8 @@ export function buildStatusReport(
     if (meeting.status === "تم الاجتماع" && entry.decisions === 0) {
       attention.push({
         kind: "met-without-deciding",
-        what: entry.title || "اجتماع بلا عنوان",
-        why: "انعقد ولم يُسجَّل فيه قرار",
+        what: entry.title || untitled,
+        why: lang === "ar" ? "انعقد ولم يُسجَّل فيه قرار" : "Held with no decision recorded",
         meetingId: meeting.id,
         meetingTitle: entry.title,
       });
@@ -154,7 +156,7 @@ export function buildStatusReport(
     attention.push({
       kind: "unowned-decision",
       what: entry.decision,
-      why: "قرار بلا مالك",
+      why: lang === "ar" ? "قرار بلا مالك" : "A decision with no owner",
       meetingId: entry.meetingId,
       meetingTitle: entry.meetingTitle,
     });
