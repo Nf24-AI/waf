@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, CalendarDays, Search, UserRound, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Search, UserRound, Users } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import LangToggle from "@/components/LangToggle";
+import { dir, getLang, t } from "@/lib/i18n";
 import { MEETING_ROUTES, SERVICES_ROUTE, meetingHref } from "@shared/routes";
 import {
   collectDecisions,
@@ -10,6 +12,7 @@ import {
   unownedCount,
   type DecisionEntry,
 } from "@shared/decisions";
+import { fromIsoDate } from "@shared/meeting-date";
 
 /**
  * سجلّ القرارات.
@@ -20,6 +23,9 @@ import {
  */
 
 function DecisionCard({ entry }: { entry: DecisionEntry }) {
+  const Back = dir() === "rtl" ? ArrowRight : ArrowLeft;
+  const date = getLang() === "en" && entry.isoDate ? fromIsoDate(entry.isoDate, "en") : entry.date;
+
   return (
     <article className="decision-card">
       <p className="decision-text">{entry.decision}</p>
@@ -29,18 +35,18 @@ function DecisionCard({ entry }: { entry: DecisionEntry }) {
 
         <span className="decision-chip">
           <UserRound size={12} aria-hidden="true" />
-          {entry.owner || <span className="decision-unowned">بلا مالك</span>}
+          {entry.owner || <span className="decision-unowned">{t("بلا مالك", "No owner")}</span>}
         </span>
 
-        {entry.date && (
+        {date && (
           <span className="decision-chip">
             <CalendarDays size={12} aria-hidden="true" />
-            {entry.date}
+            {date}
           </span>
         )}
 
         {entry.attendees.length > 0 && (
-          <span className="decision-chip" title={entry.attendees.join("، ")}>
+          <span className="decision-chip" title={entry.attendees.join(t("، ", ", "))}>
             <Users size={12} aria-hidden="true" />
             {entry.attendees.length}
           </span>
@@ -51,8 +57,8 @@ function DecisionCard({ entry }: { entry: DecisionEntry }) {
 
       {/* القرار يُحرَّر في اجتماعه لا هنا، فالرابط يعيدك إلى مصدره. */}
       <Link className="decision-source" href={meetingHref(entry.meetingId)}>
-        <ArrowRight size={13} aria-hidden="true" />
-        {entry.meetingTitle || "الاجتماع"}
+        <Back size={13} aria-hidden="true" />
+        {entry.meetingTitle || t("الاجتماع", "Meeting")}
         {entry.meetingType && <span className="decision-source-type">{entry.meetingType}</span>}
       </Link>
     </article>
@@ -74,20 +80,24 @@ export default function Decisions() {
   const unowned = useMemo(() => unownedCount(all), [all]);
 
   const filtering = query.trim() !== "" || owner !== "";
+  const Back = dir() === "rtl" ? ArrowRight : ArrowLeft;
 
   return (
-    <main className="platform-shell waf-dots" dir="rtl">
+    <main className="platform-shell waf-dots" dir={dir()}>
       <div className="platform-inner">
         <header className="platform-head">
           <Link className="decision-back" href={SERVICES_ROUTE}>
-            <ArrowRight size={14} aria-hidden="true" />
-            خدمات واف
+            <Back size={14} aria-hidden="true" />
+            {t("خدمات واف", "Waf services")}
           </Link>
+          <LangToggle className="decision-back" />
           <p className="service-eyebrow decision-eyebrow">DECISION LOG</p>
-          <h1 className="platform-section-title decision-title">سجلّ القرارات</h1>
+          <h1 className="platform-section-title decision-title">{t("سجلّ القرارات", "Decision log")}</h1>
           <p className="platform-lede">
-            كل قرار اتُّخذ في اجتماع، ومن يملكه ومتى. يُقرأ من الاجتماعات نفسها، فما تكتبه هناك يظهر
-            هنا دون خطوة إضافية.
+            {t(
+              "كل قرار اتُّخذ في اجتماع، ومن يملكه ومتى. يُقرأ من الاجتماعات نفسها، فما تكتبه هناك يظهر هنا دون خطوة إضافية.",
+              "Every decision taken in a meeting, who owns it and when. It is read from the meetings themselves, so what you write there shows up here with no extra step.",
+            )}
           </p>
         </header>
 
@@ -97,18 +107,26 @@ export default function Decisions() {
           </div>
         ) : meetingsQuery.isError ? (
           <div className="empty-state">
-            <h4>تعذّر قراءة الاجتماعات</h4>
-            <p>السجلّ يقرأ من قاعدة الاجتماعات. تحقّق من الاتصال بـ Notion، ثم حدّث الصفحة.</p>
+            <h4>{t("تعذّر قراءة الاجتماعات", "Could not read meetings")}</h4>
+            <p>
+              {t(
+                "السجلّ يقرأ من قاعدة الاجتماعات. تحقّق من الاتصال بـ Notion، ثم حدّث الصفحة.",
+                "The log reads from the meetings database. Check the Notion connection, then refresh the page.",
+              )}
+            </p>
           </div>
         ) : all.length === 0 ? (
           <div className="empty-state">
-            <h4>لا قرارات بعد</h4>
+            <h4>{t("لا قرارات بعد", "No decisions yet")}</h4>
             <p>
-              القرار يُكتب في بند جدول الأعمال أثناء الاجتماع. أول قرار تكتبه هناك يظهر هنا.
+              {t(
+                "القرار يُكتب في بند جدول الأعمال أثناء الاجتماع. أول قرار تكتبه هناك يظهر هنا.",
+                "A decision is written in the agenda item during the meeting. The first one you write there shows up here.",
+              )}
             </p>
             <Link className="decision-source" href={MEETING_ROUTES.prepare}>
-              <ArrowRight size={13} aria-hidden="true" />
-              خدمة الاجتماعات
+              <Back size={13} aria-hidden="true" />
+              {t("خدمة الاجتماعات", "Meetings service")}
             </Link>
           </div>
         ) : (
@@ -120,8 +138,8 @@ export default function Decisions() {
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="ابحث في القرارات…"
-                  aria-label="بحث في القرارات"
+                  placeholder={t("ابحث في القرارات…", "Search decisions…")}
+                  aria-label={t("بحث في القرارات", "Search decisions")}
                 />
               </div>
 
@@ -129,9 +147,9 @@ export default function Decisions() {
                 className="decision-owner"
                 value={owner}
                 onChange={(event) => setOwner(event.target.value)}
-                aria-label="تصفية بالمالك"
+                aria-label={t("تصفية بالمالك", "Filter by owner")}
               >
-                <option value="">كل المالكين</option>
+                <option value="">{t("كل المالكين", "All owners")}</option>
                 {owners.map((name) => (
                   <option key={name} value={name}>
                     {name}
@@ -140,18 +158,18 @@ export default function Decisions() {
               </select>
 
               <p className="decision-count">
-                {shown.length} من {all.length}
+                {t(`${shown.length} من ${all.length}`, `${shown.length} of ${all.length}`)}
                 {/* رقم يستحق الظهور: قرار بلا مالك لن يتحرّك من نفسه. */}
                 {unowned > 0 && !filtering && (
-                  <span className="decision-warn"> · {unowned} بلا مالك</span>
+                  <span className="decision-warn"> · {t(`${unowned} بلا مالك`, `${unowned} with no owner`)}</span>
                 )}
               </p>
             </div>
 
             {shown.length === 0 ? (
               <div className="empty-state">
-                <h4>لا قرارات مطابقة</h4>
-                <p>جرّب كلمة أخرى، أو أزل التصفية.</p>
+                <h4>{t("لا قرارات مطابقة", "No matching decisions")}</h4>
+                <p>{t("جرّب كلمة أخرى، أو أزل التصفية.", "Try another word, or clear the filter.")}</p>
               </div>
             ) : (
               <div className="decision-list">

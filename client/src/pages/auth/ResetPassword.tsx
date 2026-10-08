@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { FORGOT_PASSWORD_ROUTE, LOGIN_ROUTE } from "@/lib/auth-routes";
 import { supabase } from "@/lib/supabase";
+import { t } from "@/lib/i18n";
 import AuthShell, { AuthError, arabicAuthError } from "./AuthShell";
 
 /**
@@ -56,8 +57,8 @@ export default function ResetPassword() {
     if (described) {
       setError(
         /expired/i.test(described)
-          ? "انتهت صلاحية الرابط. اطلب رابطاً جديداً."
-          : "هذا الرابط لم يعد صالحاً. اطلب رابطاً جديداً.",
+          ? t("انتهت صلاحية الرابط. اطلب رابطاً جديداً.", "This link has expired. Request a new one.")
+          : t("هذا الرابط لم يعد صالحاً. اطلب رابطاً جديداً.", "This link is no longer valid. Request a new one."),
       );
     }
 
@@ -75,11 +76,11 @@ export default function ResetPassword() {
     event.preventDefault();
     if (!supabase) return;
     if (password !== confirm) {
-      setError("كلمتا المرور غير متطابقتين.");
+      setError(t("كلمتا المرور غير متطابقتين.", "The passwords do not match."));
       return;
     }
     if (password.length < 8) {
-      setError("كلمة المرور قصيرة — ثمانية أحرف على الأقل.");
+      setError(t("كلمة المرور قصيرة — ثمانية أحرف على الأقل.", "Password is too short. Use at least eight characters."));
       return;
     }
 
@@ -92,7 +93,7 @@ export default function ResetPassword() {
       console.error("[auth] password update failed", failure);
       setError(
         /session|not authenticated/i.test(failure.message)
-          ? "انتهت صلاحية الرابط. اطلب رابطاً جديداً."
+          ? t("انتهت صلاحية الرابط. اطلب رابطاً جديداً.", "This link has expired. Request a new one.")
           : arabicAuthError(failure.message),
       );
       return;
@@ -106,7 +107,7 @@ export default function ResetPassword() {
 
   if (stage === "checking") {
     return (
-      <AuthShell title="لحظة…" lede="نتحقّق من الرابط.">
+      <AuthShell title={t("لحظة…", "One moment…")} lede={t("نتحقّق من الرابط.", "Checking the link.")}>
         <div className="au-loading">
           <div className="loading-orb" />
         </div>
@@ -117,21 +118,26 @@ export default function ResetPassword() {
   if (stage === "no-session") {
     return (
       <AuthShell
-        title="الرابط لم يعد صالحاً."
-        lede="روابط الاستعادة تُستعمل مرّة واحدة وتنتهي بعد مدّة قصيرة."
-        footer={<Link href={FORGOT_PASSWORD_ROUTE}>اطلب رابطاً جديداً</Link>}
+        title={t("الرابط لم يعد صالحاً.", "This link is no longer valid.")}
+        lede={t("روابط الاستعادة تُستعمل مرّة واحدة وتنتهي بعد مدّة قصيرة.", "Reset links work once and expire after a short time.")}
+        footer={<Link href={FORGOT_PASSWORD_ROUTE}>{t("اطلب رابطاً جديداً", "Request a new link")}</Link>}
       >
         <AuthError message={error} />
-        <p className="au-note">افتح الرابط الجديد من نفس الجهاز الذي وصلك فيه البريد.</p>
+        <p className="au-note">
+          {t(
+            "افتح الرابط الجديد من نفس الجهاز الذي وصلك فيه البريد.",
+            "Open the new link on the same device where you received the email.",
+          )}
+        </p>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell title="كلمة مرور جديدة." lede="اخترها ثم ادخل بها.">
+    <AuthShell title={t("كلمة مرور جديدة.", "New password.")} lede={t("اخترها ثم ادخل بها.", "Choose it, then sign in with it.")}>
       <form className="au-form" onSubmit={submit}>
         <label className="tm-field">
-          <span>كلمة المرور الجديدة</span>
+          <span>{t("كلمة المرور الجديدة", "New password")}</span>
           <input
             type="password"
             value={password}
@@ -144,7 +150,7 @@ export default function ResetPassword() {
         </label>
 
         <label className="tm-field">
-          <span>تأكيدها</span>
+          <span>{t("تأكيدها", "Confirm it")}</span>
           <input
             type="password"
             value={confirm}
@@ -159,7 +165,7 @@ export default function ResetPassword() {
 
         <button type="submit" className="tp-btn tp-btn-primary tp-btn-wide" disabled={busy}>
           {busy && <Loader2 size={16} className="tm-spin" aria-hidden="true" />}
-          حفظ كلمة المرور
+          {t("حفظ كلمة المرور", "Save password")}
         </button>
       </form>
     </AuthShell>

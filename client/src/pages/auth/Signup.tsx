@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Link, useLocation, useSearch } from "wouter";
 import { LOGIN_ROUTE, VERIFY_EMAIL_ROUTE, redirectTarget } from "@/lib/auth-routes";
 import { supabase } from "@/lib/supabase";
+import { t } from "@/lib/i18n";
 import AuthShell, { AuthError, arabicAuthError } from "./AuthShell";
 
 /**
@@ -31,15 +32,15 @@ export default function Signup() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!supabase) {
-      setError("المصادقة غير مضبوطة على هذا الخادم.");
+      setError(t("المصادقة غير مضبوطة على هذا الخادم.", "Sign-in is not configured on this server."));
       return;
     }
     if (password !== confirm) {
-      setError("كلمتا المرور غير متطابقتين.");
+      setError(t("كلمتا المرور غير متطابقتين.", "The passwords do not match."));
       return;
     }
     if (password.length < 8) {
-      setError("كلمة المرور قصيرة — ثمانية أحرف على الأقل.");
+      setError(t("كلمة المرور قصيرة — ثمانية أحرف على الأقل.", "Password is too short. Use at least eight characters."));
       return;
     }
 
@@ -69,30 +70,30 @@ export default function Signup() {
 
   return (
     <AuthShell
-      title="ابدأ مع واف."
-      lede="أنشئ حسابك لتستخدم الخدمة وتحفظ أعمالك."
+      title={t("ابدأ مع واف.", "Get started with Waf.")}
+      lede={t("أنشئ حسابك لتستخدم الخدمة وتحفظ أعمالك.", "Create your account to use the service and keep your work.")}
       footer={
         <>
-          <span>لديك حساب؟</span>
+          <span>{t("لديك حساب؟", "Already have an account?")}</span>
           <Link href={`${LOGIN_ROUTE}${search ? `?${new URLSearchParams(search).toString()}` : ""}`}>
-            تسجيل الدخول
+            {t("تسجيل الدخول", "Sign in")}
           </Link>
         </>
       }
     >
       <form className="au-form" onSubmit={submit}>
         <label className="tm-field">
-          <span>الاسم</span>
+          <span>{t("الاسم", "Name")}</span>
           <input type="text" value={name} required maxLength={40} autoComplete="name" onChange={e => setName(e.target.value)} />
         </label>
 
         <label className="tm-field">
-          <span>البريد الإلكتروني</span>
+          <span>{t("البريد الإلكتروني", "Email")}</span>
           <input type="email" value={email} required autoComplete="email" dir="ltr" onChange={e => setEmail(e.target.value)} />
         </label>
 
         <label className="tm-field">
-          <span>كلمة المرور</span>
+          <span>{t("كلمة المرور", "Password")}</span>
           <input
             type="password"
             value={password}
@@ -105,7 +106,7 @@ export default function Signup() {
         </label>
 
         <label className="tm-field">
-          <span>تأكيد كلمة المرور</span>
+          <span>{t("تأكيد كلمة المرور", "Confirm password")}</span>
           <input
             type="password"
             value={confirm}
@@ -120,7 +121,7 @@ export default function Signup() {
 
         <button type="submit" className="tp-btn tp-btn-primary tp-btn-wide" disabled={busy}>
           {busy && <Loader2 size={16} className="tm-spin" aria-hidden="true" />}
-          إنشاء الحساب
+          {t("إنشاء الحساب", "Create account")}
         </button>
       </form>
     </AuthShell>

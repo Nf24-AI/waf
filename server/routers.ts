@@ -1,5 +1,4 @@
 import { authedProcedure } from "./auth";
-import { createProject, listProjects } from "./projects";
 import { workspaceAccess, workspaceProcedure } from "./workspace";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -18,12 +17,9 @@ import {
   closeFocusSession,
   completeTask,
   createTask,
-  listCompletedTasks,
-  listFocusSessions,
   listOpenTasks,
   openFocusSession,
   reopenTask,
-  scheduleTask,
   setTaskArchived,
   tasksAreConfigured,
   updateTask,
@@ -125,30 +121,6 @@ export const appRouter = router({
     }),
   }),
 
-  /**
-   * المهام — مصدر واحد تقرأ منه الطرق الثلاث وتكتب فيه.
-   *
-   * كلها authedProcedure لا workspaceProcedure: المهام ملكُ كل حساب على حدة،
-   * تحرسها RLS على auth.uid(). والاجتماعات وحدها مقيّدة بمالك المساحة لأنها
-   * قاعدة Notion واحدة مشتركة لا صفوفاً مملوكة. ومفتاح
-   * Supabase ورمز المالك لا يغادران الخادم.
-   */
-  /**
-   * المشاريع — حاويات للمهام، وتقدّمها محسوب من مهامها لا مخزّناً.
-   */
-  projects: router({
-    list: authedProcedure.query(({ ctx }) => listProjects(ctx.identity)),
-
-    create: authedProcedure
-      .input(
-        z.object({
-          name: z.string().trim().min(1, "المشروع يحتاج اسماً").max(80),
-          color: z.enum(["accent", "go", "warn", "purple", "danger"]).optional(),
-        }),
-      )
-      .mutation(({ ctx, input }) => createProject(ctx.identity, input)),
-  }),
-
   tasks: router({
     /**
      * `status` وحده عامّ: الصفحات تسأله قبل أن تعرف إن كان هناك مستخدم،
@@ -160,14 +132,6 @@ export const appRouter = router({
     listOpen: authedProcedure
       .input(z.object({ origin: taskOrigin }))
       .query(({ ctx, input }) => listOpenTasks(ctx.identity, input.origin)),
-
-    sessions: authedProcedure
-      .input(z.object({ since: z.string().optional() }).optional())
-      .query(({ ctx, input }) => listFocusSessions(ctx.identity, input?.since)),
-
-    listCompleted: authedProcedure
-      .input(z.object({ since: z.string().optional() }).optional())
-      .query(({ ctx, input }) => listCompletedTasks(ctx.identity, input?.since)),
 
     create: authedProcedure
       .input(
@@ -230,20 +194,6 @@ export const appRouter = router({
       .input(z.object({ id: z.string().uuid(), quadrant: quadrantId }))
       .mutation(({ ctx, input }) =>
         classifyTask(ctx.identity, input.id, input.quadrant as Parameters<typeof classifyTask>[2]),
-      ),
-
-    schedule: authedProcedure
-      .input(
-        z.object({
-          id: z.string().uuid(),
-          start: z.string().datetime(),
-          end: z.string().datetime(),
-          repeatRule: repeatRule.nullable().optional(),
-          repeatDays: repeatDays.nullable().optional(),
-        }),
-      )
-      .mutation(({ ctx, input }) =>
-        scheduleTask(ctx.identity, input.id, input.start, input.end, input.repeatRule, input.repeatDays),
       ),
 
     complete: authedProcedure

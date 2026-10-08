@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { LOGIN_ROUTE } from "@/lib/auth-routes";
 import { supabase } from "@/lib/supabase";
 import { useAuthSession } from "@/contexts/AuthContext";
+import { t } from "@/lib/i18n";
 import AuthShell, { AuthError, arabicAuthError } from "./AuthShell";
 
 /**
@@ -22,7 +23,7 @@ export default function VerifyEmail() {
 
   async function resend() {
     if (!supabase || !user?.email) {
-      setError("تعذّر تحديد بريدك. سجّل دخولك ثم أعد المحاولة.");
+      setError(t("تعذّر تحديد بريدك. سجّل دخولك ثم أعد المحاولة.", "We could not identify your email. Sign in and try again."));
       return;
     }
     setBusy(true);
@@ -39,24 +40,27 @@ export default function VerifyEmail() {
 
   return (
     <AuthShell
-      title="تحقّق من بريدك الإلكتروني."
-      lede="أرسلنا لك رابط التحقّق. افتحه لتفعيل حسابك."
-      footer={<Link href={LOGIN_ROUTE}>العودة لتسجيل الدخول</Link>}
+      title={t("تحقّق من بريدك الإلكتروني.", "Verify your email.")}
+      lede={t("أرسلنا لك رابط التحقّق. افتحه لتفعيل حسابك.", "We sent you a verification link. Open it to activate your account.")}
+      footer={<Link href={LOGIN_ROUTE}>{t("العودة لتسجيل الدخول", "Back to sign in")}</Link>}
     >
       <p className="au-note">
-        إن لم يصل خلال دقائق، تحقّق من مجلّد الرسائل غير المرغوبة قبل إعادة الإرسال.
+        {t(
+          "إن لم يصل خلال دقائق، تحقّق من مجلّد الرسائل غير المرغوبة قبل إعادة الإرسال.",
+          "If it does not arrive within a few minutes, check your spam folder before resending.",
+        )}
       </p>
 
       <AuthError message={error} />
 
       {sent ? (
         <p className="au-note" role="status">
-          أُرسل رابط جديد.
+          {t("أُرسل رابط جديد.", "A new link has been sent.")}
         </p>
       ) : (
         <button type="button" className="tp-btn tp-btn-wide" onClick={resend} disabled={busy}>
           {busy && <Loader2 size={16} className="tm-spin" aria-hidden="true" />}
-          إعادة إرسال البريد
+          {t("إعادة إرسال البريد", "Resend email")}
         </button>
       )}
     </AuthShell>

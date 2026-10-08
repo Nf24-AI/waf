@@ -2587,7 +2587,7 @@ a.service-card:hover .service-go {
   justify-self: start;
   margin-inline-start: 62px;
   width: min(46ch, 52vw);
-  text-align: right;
+  text-align: start;
 }
 .frame-story h2 {
   margin: 0;
@@ -2713,7 +2713,7 @@ a.service-card:hover .service-go {
   color: var(--text-disabled);
   padding-inline-end: 52px;
 }
-.svc-lead { grid-column: 1; grid-row: 1; text-align: right; }
+.svc-lead { grid-column: 1; grid-row: 1; text-align: start; }
 .svc-eyebrow {
   margin: 0;
   font: var(--fw-regular) var(--fs-13)/1.4 var(--font-sans);
@@ -3011,6 +3011,8 @@ a.service-card:hover .service-go {
   transition: transform var(--dur-normal) var(--ease-out), background-color var(--dur-fast) var(--ease-standard);
 }
 .svc-card:hover .svc-arrow { transform: translateX(-5px); background: var(--accent-hover); }
+/* بالإنجليزية السهم يشير يميناً، فينزاح مع اتجاهه لا عكسه. */
+[dir="ltr"] .svc-card:hover .svc-arrow { transform: translateX(5px); }
 .svc-aside {
   display: inline-flex;
   align-items: center;
@@ -3927,5 +3929,21 @@ a.service-card:hover .service-go {
 @media (max-width: 640px) {
   /* على الجوّال يبقى الفعل وحده: الروابط أسفل الصفحة على أي حال. */
   .landing-topbar-in nav { display: none; }
-  .landing-topbar-acts .landing-btn:not(.landing-btn-primary) { display: none; }
+  .landing-topbar-acts .landing-btn:not(.landing-btn-primary):not(button) { display: none; }
+}
+
+/*
+ * زرّ اللغة في رأس سجلّ القرارات وتقرير الحالة: يستعير صنف رابط العودة، وهو
+ * زرّ لا رابط — فيُنزع عنه شكل الزرّ الافتراضي ويُفصل عمّا قبله. ولا يُطبع.
+ */
+button.decision-back {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin-inline-start: var(--space-6);
+  font: inherit;
+  cursor: pointer;
+}
+@media print {
+  button.decision-back { display: none; }
 }

@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Link, useLocation, useSearch } from "wouter";
 import { FORGOT_PASSWORD_ROUTE, SIGNUP_ROUTE, redirectTarget } from "@/lib/auth-routes";
 import { supabase } from "@/lib/supabase";
+import { t } from "@/lib/i18n";
 import AuthShell, { AuthError, arabicAuthError } from "./AuthShell";
 
 /**
@@ -26,7 +27,7 @@ export default function Login() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!supabase) {
-      setError("المصادقة غير مضبوطة على هذا الخادم.");
+      setError(t("المصادقة غير مضبوطة على هذا الخادم.", "Sign-in is not configured on this server."));
       return;
     }
 
@@ -47,20 +48,20 @@ export default function Login() {
 
   return (
     <AuthShell
-      title="أهلًا بك في واف."
-      lede="سجّل دخولك لتكمل من حيث توقّفت."
+      title={t("أهلًا بك في واف.", "Welcome to Waf.")}
+      lede={t("سجّل دخولك لتكمل من حيث توقّفت.", "Sign in to pick up where you left off.")}
       footer={
         <>
-          <span>ليس لديك حساب؟</span>
+          <span>{t("ليس لديك حساب؟", "No account yet?")}</span>
           <Link href={`${SIGNUP_ROUTE}${search ? `?${new URLSearchParams(search).toString()}` : ""}`}>
-            إنشاء حساب
+            {t("إنشاء حساب", "Create an account")}
           </Link>
         </>
       }
     >
       <form className="au-form" onSubmit={submit}>
         <label className="tm-field">
-          <span>البريد الإلكتروني</span>
+          <span>{t("البريد الإلكتروني", "Email")}</span>
           <input
             type="email"
             value={email}
@@ -72,7 +73,7 @@ export default function Login() {
         </label>
 
         <label className="tm-field">
-          <span>كلمة المرور</span>
+          <span>{t("كلمة المرور", "Password")}</span>
           <input
             type="password"
             value={password}
@@ -87,11 +88,11 @@ export default function Login() {
 
         <button type="submit" className="tp-btn tp-btn-primary tp-btn-wide" disabled={busy}>
           {busy && <Loader2 size={16} className="tm-spin" aria-hidden="true" />}
-          تسجيل الدخول
+          {t("تسجيل الدخول", "Sign in")}
         </button>
 
         <Link className="au-quiet" href={FORGOT_PASSWORD_ROUTE}>
-          نسيت كلمة المرور؟
+          {t("نسيت كلمة المرور؟", "Forgot your password?")}
         </Link>
       </form>
     </AuthShell>

@@ -37,6 +37,7 @@ import { useAuthSession } from "@/contexts/AuthContext";
 import { useTouchDrag } from "@/hooks/useTouchDrag";
 import { LABEL_MAX, cleanLabels, loadAccountLabels, saveAccountLabels } from "@/lib/category-labels";
 import { toDateInput } from "@/lib/clock";
+import { errorText } from "@/lib/error-text";
 import { dir, locale, pair, pick, t, type Pair } from "@/lib/i18n";
 import { readName } from "@/lib/preferences";
 import { categoryLabel } from "@/lib/task-labels";
@@ -149,25 +150,6 @@ interface Toast {
   text: string;
   tone?: "error";
   action?: { label: string; run?: () => void; href?: string };
-}
-
-/**
- * نصّ الخطأ كما يُقال لصاحبه.
- *
- * رفضُ التحقق يصل مصفوفة JSON خاماً من zod؛ عرضها كما هي يملأ الإشعار رموزاً
- * لا يفهمها أحد. فتؤخذ رسالة أول مشكلة، وما لا يُقرأ يُستبدل بجملة عامّة.
- */
-function readable(error: unknown): string {
-  const fallback = t("تعذّر تنفيذ العملية. حاول مرة أخرى.", "Could not complete that. Try again.");
-  const message = (error as Error)?.message?.trim();
-  if (!message) return fallback;
-  if (!message.startsWith("[")) return message;
-  try {
-    const first = (JSON.parse(message) as { message?: string }[])[0]?.message;
-    return first && /[؀-ۿ]/.test(first) ? first : fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 function isTyping(target: EventTarget | null): boolean {
@@ -286,7 +268,7 @@ export default function TimeBlocking() {
       await utils.tasks.listOpen.invalidate();
       return result;
     } catch (error) {
-      say(readable(error), { tone: "error" });
+      say(errorText(error), { tone: "error" });
       return null;
     }
   }
@@ -485,7 +467,7 @@ export default function TimeBlocking() {
     try {
       if (await saveAccountLabels(clean)) say(t("حُفظت أسماء الفئات في حسابك", "Category names saved to your account"));
     } catch (error) {
-      say(readable(error), { tone: "error" });
+      say(errorText(error), { tone: "error" });
     }
   }
 

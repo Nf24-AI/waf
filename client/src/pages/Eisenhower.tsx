@@ -7,6 +7,7 @@ import { QUADRANTS, type Quadrant, type Task } from "@shared/tasks";
 import { TIME_MANAGEMENT_ROUTE } from "@shared/routes";
 import LangToggle from "@/components/LangToggle";
 import { useAuthSession } from "@/contexts/AuthContext";
+import { errorText } from "@/lib/error-text";
 import { dir, t } from "@/lib/i18n";
 import { quadrantLabel, quadrantVerbLabel } from "@/lib/task-labels";
 import { trpc } from "@/lib/trpc";
@@ -148,13 +149,13 @@ export default function Eisenhower() {
 
           {open.isError && (
             <p className="tm-empty tm-error" role="alert" style={{ marginBlockStart: "var(--space-9)" }}>
-              {t("تعذّر قراءة المهام.", "Could not load tasks.")} {open.error.message}
+              {t("تعذّر قراءة المهام.", "Could not load tasks.")} {errorText(open.error)}
             </p>
           )}
 
           {failure && (
             <p className="tm-form-error" role="alert" dir="auto">
-              {failure.message}
+              {errorText(failure)}
             </p>
           )}
 
