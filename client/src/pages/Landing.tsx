@@ -12,7 +12,6 @@ import { useSmoothScroll } from "@/lib/smooth-scroll";
 import tanomah from "@/assets/village-at-dusk.jpg";
 import { useAuthSession } from "@/contexts/AuthContext";
 import { LOGIN_ROUTE, SIGNUP_ROUTE } from "@/lib/auth-routes";
-import { PLATFORM_ROUTE } from "@shared/routes";
 import { ABOUT_ROUTE, SERVICES_ROUTE } from "@/lib/auth-routes";
 
 /**
@@ -344,7 +343,7 @@ export default function Landing() {
           */}
           <div className="landing-acts landing-topbar-acts">
             {user ? (
-              <Link className="landing-btn landing-btn-primary" href={PLATFORM_ROUTE}>
+              <Link className="landing-btn landing-btn-primary" href={SERVICES_ROUTE}>
                 الرئيسية
               </Link>
             ) : (

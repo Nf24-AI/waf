@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { AlertTriangle, ArrowRight, CalendarClock, CheckSquare, Gavel, Users } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { PLATFORM_ROUTE, meetingHref } from "@shared/routes";
+import { SERVICES_ROUTE, meetingHref } from "@shared/routes";
 import {
   buildStatusReport,
   lastSevenDays,
@@ -94,7 +94,7 @@ export default function StatusReport() {
     <main className="platform-shell waf-dots" dir="rtl">
       <div className="platform-inner">
         <header className="platform-head">
-          <Link className="decision-back" href={PLATFORM_ROUTE}>
+          <Link className="decision-back" href={SERVICES_ROUTE}>
             <ArrowRight size={14} aria-hidden="true" />
             خدمات واف
           </Link>

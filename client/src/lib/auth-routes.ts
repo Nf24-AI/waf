@@ -3,7 +3,7 @@ import {
   ARCHIVE_ROUTE,
   DECISIONS_ROUTE,
   MEETING_ROUTES,
-  PLATFORM_ROUTE,
+  SERVICES_ROUTE,
   SETTINGS_ROUTE,
   STATISTICS_ROUTE,
   STATUS_REPORT_ROUTE,
@@ -29,7 +29,7 @@ export const FORGOT_PASSWORD_ROUTE = "/forgot-password";
 export const RESET_PASSWORD_ROUTE = "/reset-password";
 export const VERIFY_EMAIL_ROUTE = "/verify-email";
 export const ABOUT_ROUTE = "/about";
-export const SERVICES_ROUTE = "/services";
+export { SERVICES_ROUTE };
 
 /** صفحات المصادقة: لا يراها من سجّل دخوله. */
 export const AUTH_ROUTES = [
@@ -81,6 +81,6 @@ export function loginHref(intended?: string): string {
 /** الوجهة بعد الدخول: ما طُلب، وإلا المنصّة — منها يختار الخدمة. */
 export function redirectTarget(search: string): string {
   const raw = new URLSearchParams(search).get("redirect");
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return PLATFORM_ROUTE;
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return SERVICES_ROUTE;
   return raw;
 }

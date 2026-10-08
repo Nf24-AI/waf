@@ -4,7 +4,7 @@ import {
   LEGACY_LANDING_ROUTE,
   MEETING_PARAM,
   MEETING_ROUTES,
-  PLATFORM_ROUTE,
+  SERVICES_ROUTE,
   meetingHref,
 } from "../shared/routes";
 
@@ -18,9 +18,9 @@ describe("meeting workspace routes", () => {
   it("leaves the root to the public face, and gives the platform its own path", () => {
     // الجذر لمن لم يدخل بعد؛ والمنصّة خلف البوّابة على مسارها.
     expect(LANDING_ROUTE).toBe("/");
-    expect(PLATFORM_ROUTE).not.toBe("/");
-    expect(MEETING_ROUTES.prepare).not.toBe(PLATFORM_ROUTE);
-    expect(MEETING_ROUTES.display).not.toBe(PLATFORM_ROUTE);
+    expect(SERVICES_ROUTE).not.toBe("/");
+    expect(MEETING_ROUTES.prepare).not.toBe(SERVICES_ROUTE);
+    expect(MEETING_ROUTES.display).not.toBe(SERVICES_ROUTE);
   });
 
   it("keeps the old public address working, so a shared link does not break", () => {

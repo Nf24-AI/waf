@@ -10,7 +10,10 @@ export const LANDING_ROUTE = "/";
  * المنصّة: شبكة الخدمات خلف البوّابة. انتقلت عن الجذر ليحلّ محلّها الوجه
  * العام، ومن كان يفتح الجذر يصل إليها بضغطة «ادخل المنصّة».
  */
-export const PLATFORM_ROUTE = "/platform";
+export const SERVICES_ROUTE = "/services";
+
+/** صفحة الخدمات القديمة: حُذفت، وعنوانها يُعاد إلى قسم الخدمات في الرئيسية. */
+export const LEGACY_PLATFORM_ROUTE = "/platform";
 
 /** العنوان القديم للوجه العام؛ يُبقى عاملاً فلا ينكسر رابط حُفظ أو شُورك. */
 export const LEGACY_LANDING_ROUTE = "/welcome";

@@ -26,7 +26,6 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Decisions from "./pages/Decisions";
-import Platform from "./pages/Platform";
 import StatusReport from "./pages/StatusReport";
 import Eisenhower from "./pages/Eisenhower";
 import Focus from "./pages/Focus";
@@ -38,7 +37,7 @@ import {
   LANDING_ROUTE,
   LEGACY_LANDING_ROUTE,
   MEETING_ROUTES,
-  PLATFORM_ROUTE,
+  LEGACY_PLATFORM_ROUTE,
   STATUS_REPORT_ROUTE,
   RETIRED_TIME_ROUTES,
   TIME_MANAGEMENT_ROUTE,
@@ -48,7 +47,6 @@ import {
 function Router() {
   return (
     <Switch>
-      <Route path={PLATFORM_ROUTE} component={Platform} />
       <Route path={DECISIONS_ROUTE} component={Decisions} />
       <Route path={STATUS_REPORT_ROUTE} component={StatusReport} />
       <Route path={TIME_MANAGEMENT_ROUTE} component={TimeManagement} />
@@ -132,6 +130,10 @@ export default function App() {
               نصّين لنفس الشيء يتباعدان.
             */}
             <Route path={SERVICES_ROUTE} component={Landing} />
+            {/* صفحة الخدمات القديمة حُذفت: الخدمات تُختار من الرئيسية نفسها. */}
+            <Route path={LEGACY_PLATFORM_ROUTE}>
+              <Redirect to={SERVICES_ROUTE} replace />
+            </Route>
             <Route path={ABOUT_ROUTE} component={Landing} />
 
             {/*
