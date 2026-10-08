@@ -35,6 +35,7 @@ import BlockModal, { type BlockDraft } from "@/components/timeblock/BlockModal";
 import MusicButton from "@/components/timeblock/MusicButton";
 import TaskComposer, { type ComposerPrefill, type ComposerResult } from "@/components/timeblock/TaskComposer";
 import { useAuthSession } from "@/contexts/AuthContext";
+import { useTouchDrag } from "@/hooks/useTouchDrag";
 import { toDateInput } from "@/lib/clock";
 import { flowHref, useInFlow } from "@/lib/flow";
 import { readName } from "@/lib/preferences";
@@ -260,7 +261,8 @@ export default function TimeBlocking() {
 
   /** من أين يبدأ البحث عن فراغ: الآن إن كان اليوم يومَنا، وإلا التاسعة. */
   const defaultFrom = useCallback(
-    (target: string) => (target === today ? Math.min(nowMin, DAY_END_MIN - 15) : 9 * 60),
+    // مدوَّراً إلى ربع الساعة القادم: حجزٌ يبدأ 4:43 لأن الساعة كانت كذلك يبدو خطأً.
+    (target: string) => (target === today ? Math.min(Math.ceil(nowMin / 15) * 15, DAY_END_MIN - 15) : 9 * 60),
     [today, nowMin],
   );
 
@@ -439,6 +441,15 @@ export default function TimeBlocking() {
     const task = tasks.find(item => item.id === id);
     if (task) void schedule(task, day, from ?? defaultFrom(day));
   }
+
+  // اللمس يُسقط حيث يُسقط الفأر: نفس الدالّة، ونفس الإزاحة إلى أول فراغ.
+  const touch = useTouchDrag({
+    onOver: setOver,
+    onDrop: (id, target) => {
+      const task = tasks.find(item => item.id === id);
+      if (task) void schedule(task, day, target === "zone" ? defaultFrom(day) : target * 60);
+    },
+  });
 
   // الاختصارات: ⌘K معروض على الزرّ فليعمل، والأسهم لمن يقلّب أيامه بلا فأرة.
   useEffect(() => {
@@ -623,9 +634,11 @@ export default function TimeBlocking() {
                     draggable
                     data-current={task.id === preselected}
                     onDragStart={event => {
+                      if (touch.busy()) return event.preventDefault();
                       event.dataTransfer.setData("text/plain", task.id);
                       event.dataTransfer.effectAllowed = "move";
                     }}
+                    onTouchStart={event => touch.start(event, task.id, task.title, TONE[category])}
                     onDoubleClick={() => void schedule(task, day, defaultFrom(day))}
                   >
                     <button type="button" className="tbk-check" aria-label={`إنجاز «${task.title}»`} onClick={() => void finish(task)} />
@@ -652,7 +665,7 @@ export default function TimeBlocking() {
                     <button
                       type="button"
                       className="tbk-drag"
-                      title="اسحبها إلى الجدول، أو اضغط لحجز أول وقت فارغ"
+                      title="اسحبها إلى الجدول (باللمس: اضغط مطوّلاً ثم اسحب)، أو اضغط لحجز أول وقت فارغ"
                       aria-label={`حجز أول وقت فارغ لـ«${task.title}»`}
                       onClick={() => void schedule(task, day, defaultFrom(day))}
                     >
@@ -744,9 +757,15 @@ export default function TimeBlocking() {
                               draggable={!block.ghost}
                               title={block.ghost ? "موعد متكرّر قادم" : "اضغط للتعديل، أو اسحب لتغيير الساعة"}
                               onDragStart={event => {
+                                if (touch.busy()) return event.preventDefault();
                                 event.dataTransfer.setData("text/plain", block.task.id);
                                 event.dataTransfer.effectAllowed = "move";
                               }}
+                              onTouchStart={
+                                block.ghost
+                                  ? undefined
+                                  : event => touch.start(event, block.task.id, block.task.title, TONE[category])
+                              }
                               onClick={() => openEdit(block)}
                             >
                               <span className="tbk-when">
