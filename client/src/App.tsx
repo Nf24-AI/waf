@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import RedirectIfAuthed from "./components/RedirectIfAuthed";
 import RequireAuth from "./components/RequireAuth";
 import { useAuthSession } from "./contexts/AuthContext";
+import { getLang, useLang } from "./lib/i18n";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Login from "./pages/auth/Login";
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -104,7 +105,7 @@ function Gate() {
           secondsLeft={idle.secondsLeft}
           onStay={idle.stay}
           onLockNow={signOut}
-          language="ar"
+          language={getLang()}
         />
       )}
     </RequireAuth>
@@ -122,12 +123,16 @@ function Gate() {
  * يكشف شيئاً: الصفحة لا تطلب أي إجراء محميّ.
  */
 export default function App() {
+  // المفتاح يُعيد بناء الشجرة عند تبديل اللغة: كل نصٍّ يُقرأ من جديد، ولا يبقى
+  // مكوّنٌ على لغته القديمة لأنه لم يُعَد رسمه.
+  const lang = useLang();
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster position="bottom-left" />
-          <Switch>
+          <Switch key={lang}>
             <Route path={LANDING_ROUTE} component={Landing} />
             {/* من حفظ العنوان القديم يصل إلى الوجه نفسه، فلا ينكسر رابط. */}
             <Route path={LEGACY_LANDING_ROUTE} component={Landing} />
