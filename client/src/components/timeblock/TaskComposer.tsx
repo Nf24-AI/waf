@@ -345,7 +345,7 @@ export default function TaskComposer({
             <ArrowUpDown size={15} aria-hidden="true" />
             <div>
               <strong>جدولة مرنة</strong>
-              <small>اتركها بلا وقت ثم اسحبها إلى أي ساعة في الجدول الزمني.</small>
+              <small>اتركها بلا وقت ثم اسحبها إلى أي ساعة في الجدول الزمني. على الجوّال: اضغط عليها مطوّلاً ثم اسحب.</small>
             </div>
           </div>
 

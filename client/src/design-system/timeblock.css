@@ -864,3 +864,34 @@
 /* الحجز زرّ، وما فيه spans: تُصفّ أسطراً كما في المرجع. */
 .tbk-block-main > span { display: block; }
 .tbk-block.is-dim { opacity: .28; }
+
+/* ---- السحب باللمس ---- */
+
+/* الضغطة المطوّلة تبدأ السحب، فلا تُحدِّد نصّاً ولا تفتح قائمة النسخ. */
+.tbk-task, .tbk-block { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.tbk-dragghost {
+  position: fixed;
+  inset-block-start: 0;
+  left: 0;
+  z-index: 120;
+  /* فوق الإصبع لا تحته: ما يغطّيه الإصبع لا يُقرأ. */
+  margin: -58px 0 0 -90px;
+  inline-size: 180px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tone, var(--k-blue)) 60%, transparent);
+  border-inline-start: 4px solid var(--tone, var(--k-blue));
+  background: var(--k-inset);
+  color: var(--k-text);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .45);
+  pointer-events: none;
+  will-change: transform;
+}
+/* والصفحة لا ترتدّ ولا تُحدَّث بالسحب إلى أسفل ما دام الإصبع يحمل مهمة. */
+html.tbk-dragging { overscroll-behavior: none; }
+html.tbk-dragging .tbk-row { transition: none; }
