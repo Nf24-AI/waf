@@ -31,7 +31,7 @@ const meeting: MeetingRecord = {
 const notionRequest = vi.hoisted(() => vi.fn());
 
 vi.mock("./_core/env", () => ({
-  ENV: { isProduction: false, appPassword: "", cookieSecret: "s" },
+  ENV: { isProduction: false },
 }));
 
 describe("finding a meeting by its share token", () => {

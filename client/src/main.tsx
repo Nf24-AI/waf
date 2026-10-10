@@ -10,9 +10,8 @@ import "./index.css";
 
 const queryClient = new QueryClient();
 
-// Errors used to redirect to the Manus OAuth portal, which does not exist
-// outside the Manus platform. Access is now the APP_PASSWORD gate, and an
-// UNAUTHORIZED response is surfaced by the workspace instead of navigating away.
+// A failed query is logged, not acted on here: each page shows its own error,
+// and RequireAuth is what sends a signed-out visitor to sign in.
 queryClient.getQueryCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     console.error("[API Query Error]", event.query.state.error);
