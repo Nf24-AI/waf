@@ -93,10 +93,19 @@ describe("landing page", () => {
   });
 
   it("shows exactly the three services it claims, and invents none", () => {
-    renderLanding();
-    const titles = screen.getAllByRole("heading", { level: 3 }).map(node => node.textContent);
+    const { container } = renderLanding();
+    const titles = Array.from(container.querySelectorAll(".svc-card h3")).map(node => node.textContent);
     expect(titles).toEqual(["خدمة الاجتماعات", "إدارة الوقت", "أي خدمة"]);
-    expect(screen.queryByText("قريباً")).not.toBeInTheDocument();
+  });
+
+  it("names what is coming next without pretending it opens", () => {
+    // «قريباً» سطور تحت البطاقات: تُقرأ من الكتالوج، ولا رابط فيها ولا زرّ.
+    const { container } = renderLanding();
+    const soon = container.querySelector(".svc-soon")!;
+    const names = Array.from(soon.querySelectorAll("h3")).map(node => node.textContent);
+    expect(names).toEqual(SERVICES.filter(service => service.status === "soon").map(service => service.name));
+    expect(names.length).toBeGreaterThan(0);
+    expect(soon.querySelector("a, button")).toBeNull();
   });
 
   it("carries a guest to sign-in without losing which service they wanted", () => {
