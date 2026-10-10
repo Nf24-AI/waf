@@ -275,11 +275,11 @@ async function withSessions(who: Identity, row: Row): Promise<Task> {
  * وأعادت، والمرشِّح يجب أن يسقط معه — وإلا عاد الطلب يشتكي من العمود نفسه.
  * وقبل الترحيل تُرى المهام كلّها في كل إطار، وهو أهون من ألّا يُرى شيء.
  *
- * والمصفوفة ترى ما بلا إطار أيضاً: انظر TASK_ORIGINS.
+ * وما بلا إطار لا يراه أحد: انظر TASK_ORIGINS.
  */
 function scope(origin?: TaskOrigin): string {
   if (!origin || missing.has("origin")) return "";
-  return origin === "eisenhower" ? "&or=(origin.eq.eisenhower,origin.is.null)" : `&origin=eq.${origin}`;
+  return `&origin=eq.${origin}`;
 }
 
 /** المهام المفتوحة: ما لم يُنجَز ولم يُؤرشَف. هي ما تعرضه الواجهات كلها. */

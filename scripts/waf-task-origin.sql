@@ -3,8 +3,9 @@
 -- شغّله على المشروع الذي يشير إليه SUPABASE_URL في Vercel. والكود لا ينتظره:
 -- قبل تشغيله يرى كل إطار المهام كلّها (كما كان)، وبعده يرى مهامه وحدها.
 --
--- ما سبق هذا الملف يبقى بلا إطار (NULL) ويُحسب على المصفوفة: لا صفّ يُمسّ
--- ولا مهمة تختفي.
+-- ما سبق هذا الملف يبقى بلا إطار (NULL) ولا يظهر في أي إطار: لا صفّ يُمسّ
+-- ولا يُحذف. ولإعادة القديم إلى المصفوفة:
+--   update public.eisenhower_tasks set origin = 'eisenhower' where origin is null;
 
 alter table public.eisenhower_tasks
   add column if not exists origin text;

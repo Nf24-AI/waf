@@ -5,15 +5,15 @@ import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { dir, pair, pick, t, type Pair } from "@/lib/i18n";
 import { useServiceHref } from "@/lib/service-access";
-import { rootServices } from "@shared/services";
+import { rootServices, upcomingServices } from "@shared/services";
 import Reveal from "./Reveal";
 
 /**
  * قسم الخدمات في الوجه العام.
  *
  * ثلاث خدمات، وهذا مقصود لا نقص. البطاقات كبيرة والفراغ حولها متروك على
- * حاله بدل حشوه ببطاقات «قريباً» — الخانة المحجوزة إعلان نيّة يخصّ من دخل
- * المنصّة، لا من يقف على بابها.
+ * حاله. وما هو «قريباً» لا يأخذ بطاقة: يُذكر تحتها سطوراً هادئة بلا زرّ،
+ * فيُقرأ إعلانَ نيّة ولا يُحسب خدمةً تُفتح.
  *
  * النصّ هنا نصّ تعريف، وملخّص الكتالوج نصّ استعمال؛ لذلك يختلفان. أمّا
  * الوجهة فتُقرأ من shared/services.ts دائماً، فلا يتباعد رابطان لخدمة واحدة.
@@ -339,6 +339,36 @@ function ServiceCard({ service }: { service: LandingService }) {
   );
 }
 
+/**
+ * ما حُجز اسمه ولم يُبنَ بعد.
+ *
+ * يُقرأ من الكتالوج، فخدمة تصير حيّة تغادر هذه القائمة وحدها. ولا رابط فيها
+ * ولا حركة مؤشّر: ما لا يُفتح لا يتظاهر بأنه يُفتح.
+ */
+function UpcomingList() {
+  const upcoming = upcomingServices();
+  if (upcoming.length === 0) return null;
+
+  return (
+    <Reveal className="svc-soon" delay={0.12}>
+      <header className="svc-soon-head">
+        <span className="svc-soon-title">{t("قريباً", "Coming next")}</span>
+        <i className="svc-rule" aria-hidden="true" />
+        <span className="svc-category">COMING NEXT</span>
+      </header>
+      <ul className="svc-soon-list">
+        {upcoming.map(service => (
+          <li key={service.id} className="svc-soon-item">
+            <span className="svc-category">{service.eyebrow}</span>
+            <h3>{t(service.name, service.nameEn)}</h3>
+            <p>{t(service.summary, service.summaryEn)}</p>
+          </li>
+        ))}
+      </ul>
+    </Reveal>
+  );
+}
+
 export default function ServicesSection() {
   const counted = COUNT_AR[LANDING_SERVICES.length];
   const count = counted
@@ -388,6 +418,8 @@ export default function ServicesSection() {
             <ServiceCard key={service.id} service={service} />
           ))}
         </Reveal>
+
+        <UpcomingList />
 
         <footer className="svc-foot">
           <span>{t("أدوات اليوم .. لبناء غدٍ أفضل.", "Today's tools, for a better tomorrow.")}</span>
