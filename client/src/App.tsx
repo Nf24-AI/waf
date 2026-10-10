@@ -25,6 +25,7 @@ import IdleWarning from "./components/IdleWarning";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
+import Shared from "./pages/Shared";
 import Decisions from "./pages/Decisions";
 import StatusReport from "./pages/StatusReport";
 import Eisenhower from "./pages/Eisenhower";
@@ -159,6 +160,11 @@ export default function App() {
             </Route>
             <Route path={RESET_PASSWORD_ROUTE} component={ResetPassword} />
             <Route path={VERIFY_EMAIL_ROUTE} component={VerifyEmail} />
+            {/*
+              رابط المشاركة يقرؤه من لا حساب له، فيُلتقط قبل البوّابة: الرمز في
+              العنوان هو الإذن، ولا يفتح إلا اجتماعاً واحداً للقراءة.
+            */}
+            <Route path={MEETING_ROUTES.shared} component={Shared} />
             <Route>
               <Gate />
             </Route>

@@ -25,7 +25,7 @@ function meeting(partial: Partial<MeetingRecord>): MeetingRecord {
   return {
     id: "m1", title: "اجتماع", date: "2026-09-16", time: "", type: "داخلي",
     status: "تم الاجتماع", attendees: [], summary: "", agenda: [], actions: [],
-    note: "", link: "", image: "", ...partial,
+    note: "", link: "", image: "", share: "", ...partial,
   };
 }
 

@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   notionUpdateMutation: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
   notionCreateMutation: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
   notionRemoveMutation: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
+  notionShareMutation: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
+  notionUnshareMutation: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
   setData: vi.fn(),
   invalidate: vi.fn(),
   listInvalidate: vi.fn(),
@@ -34,6 +36,8 @@ vi.mock("@/lib/trpc", () => ({
       update: { useMutation: mocks.notionUpdateMutation },
       create: { useMutation: mocks.notionCreateMutation },
       remove: { useMutation: mocks.notionRemoveMutation },
+      share: { useMutation: mocks.notionShareMutation },
+      unshare: { useMutation: mocks.notionUnshareMutation },
     },
   },
 }));
@@ -208,6 +212,42 @@ describe("meeting workspace interactions", () => {
     await waitFor(() => expect(print).toHaveBeenCalled());
     window.dispatchEvent(new Event("afterprint"));
     expect(document.title).toBe(beforeExport);
+  });
+
+
+  it("issues a read-only link for the selected meeting", async () => {
+    const mutate = vi.fn();
+    mocks.notionShareMutation.mockReturnValue({ isPending: false, mutate });
+    render(<Home />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
+
+    fireEvent.click(await screen.findByRole("button", { name: /إنشاء الرابط/ }));
+    expect(mutate).toHaveBeenCalledWith({ id: "notion-q3" });
+  });
+
+  it("refuses to issue a link for a meeting with no date", async () => {
+    // Expiry is derived from the meeting date, so an undated meeting has no
+    // window — the button is disabled rather than issuing a dead link.
+    mocks.notionListQuery.mockReturnValue(
+      notionSuccess([{ ...notionMeetings[0], date: "اختر التاريخ" }])
+    );
+    render(<Home />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
+
+    expect(await screen.findByRole("button", { name: /إنشاء الرابط/ })).toBeDisabled();
+    expect(screen.getByText(/أضف تاريخ الاجتماع أولًا/)).toBeInTheDocument();
+  });
+
+  it("shows the live link and offers to retire it once shared", async () => {
+    mocks.notionListQuery.mockReturnValue(
+      notionSuccess([{ ...notionMeetings[0], share: "tok-123" }])
+    );
+    render(<Home />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "القائمة" })).toBeInTheDocument());
+
+    const field = (await screen.findByDisplayValue(/\/s\/tok-123$/)) as HTMLInputElement;
+    expect(field.readOnly).toBe(true);
+    expect(screen.getByRole("button", { name: /إيقاف المشاركة/ })).toBeInTheDocument();
   });
 
   it("keeps the workspace visible while Notion is syncing", async () => {
