@@ -53,10 +53,13 @@ export const RETIRED_TIME_ROUTES = [
 
 export const DECISIONS_ROUTE = "/decisions";
 export const STATUS_REPORT_ROUTE = "/status";
+import { SHARE_ROUTE } from "./meeting-share";
 
 export const MEETING_ROUTES = {
   prepare: "/meetings",
   display: "/display",
+  /** Read-only, outside the password gate. The token is the credential. */
+  shared: `${SHARE_ROUTE}/:token`,
 } as const;
 
 /** المعامِل الذي يفتح به مسار الاجتماعات اجتماعاً بعينه. */

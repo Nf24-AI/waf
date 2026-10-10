@@ -30,4 +30,21 @@ export interface MeetingRecord {
   link: string;
   /** Optional image shown on the meeting page: a partner logo, a diagram. */
   image: string;
+
+  /**
+   * Token for the read-only share link, or "" when the meeting is not shared.
+   *
+   * Owner-side only. It never travels to a link holder — see toSharedMeeting
+   * in meeting-share.ts, which rebuilds the record without it.
+   */
+  share: string;
 }
+
+/**
+ * A meeting as the workspace edits it.
+ *
+ * No id, because Notion assigns it, and no share token, because the
+ * workspace never writes one — that goes through meetings.share alone, so an
+ * ordinary save can never mint or drop a live link.
+ */
+export type MeetingDraft = Omit<MeetingRecord, "id" | "share">;
