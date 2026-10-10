@@ -2,19 +2,13 @@
 
 ## Current deployment
 
-Project `waf` on the `NF` team, from the private repo `Nf24-AI/waf`.
+Project `waf` on Vercel, from the repo `Nf24-AI/waf`, served at
+<https://waf-silk.vercel.app>. Every merge to `main` deploys to production;
+every other branch gets a preview.
 
-**Vercel Deployment Protection is on**, so every request redirects to Vercel SSO
-and only someone with access to the account can open the site. It is what
-protects the meetings before `APP_PASSWORD` is set. Turning it off makes the
-site genuinely public — do not, until the blocker below is settled.
-
-## Before you deploy — one thing that is not optional
-
-**Set `APP_PASSWORD`.**
-Without it the workspace is open and anyone with the URL can read, edit and
-archive your meetings. The gate only appears when this is set, and the idle
-lock below only runs when the gate exists.
+The site is public: the home page and sign-in are open, and everything else
+needs an account. Vercel Deployment Protection must stay off for production,
+or sign-up emails and share links lead to a Vercel login instead of the app.
 
 ## The fonts — settled, no longer a blocker
 
@@ -32,39 +26,28 @@ git rev-list --all --objects | grep assets/fonts   # must print nothing
 
 ## The idle lock
 
-Past the gate, the workspace locks itself after `IDLE_MINUTES` (shared/const.ts)
-with nothing happening on the page, asking first for the last `IDLE_WARN_MS`.
+A signed-in page locks itself after `IDLE_MINUTES` (shared/const.ts) with
+nothing happening on it, asking first for the last `IDLE_WARN_MS`. Locking
+signs the account out, so the next visit starts at sign-in.
 
-Two clocks have to agree for this to be safe. The server expires the session
-token after the same window and slides it forward on every authenticated
-request; the browser watches for activity. They disagree while someone types a
-long note, because saving here is a button and not an autosave — so the page
-pings `auth.touch` on activity, at most twice a window, to keep them in step.
-Without that ping, Save fails as UNAUTHORIZED with the note still unsaved.
-
-## Environment variables to add in Vercel
+## Environment variables in Vercel
 
 | Variable | Value |
 | --- | --- |
+| `SUPABASE_URL` | the Supabase project URL |
+| `SUPABASE_ANON_KEY` | its anon key |
+| `VITE_SUPABASE_URL` | the same URL, for the browser |
+| `VITE_SUPABASE_ANON_KEY` | the same anon key, for the browser |
 | `NOTION_API_TOKEN` | the integration secret (`ntn_…`) |
-| `NOTION_DATABASE_ID` | the Meeting Prep database id |
-| `APP_PASSWORD` | a password you choose |
-| `JWT_SECRET` | a long random string, used to sign the session cookie |
-| `NODE_ENV` | `production` |
+| `NOTION_DATABASE_ID` | the meetings database id |
 
 Never commit these. `.env` is git-ignored.
 
-## Steps
+## Database changes
 
-```bash
-vercel login          # interactive — run this yourself
-vercel link           # link this directory to a new project
-vercel env add NOTION_API_TOKEN production
-vercel env add NOTION_DATABASE_ID production
-vercel env add APP_PASSWORD production
-vercel env add JWT_SECRET production
-vercel --prod
-```
+SQL lives in `scripts/waf-*.sql` and is run by hand in the Supabase SQL editor.
+Each file can be run again safely, and the code keeps working before a new
+column exists, so the order of "merge" and "run the SQL" does not matter.
 
 ## How it is wired
 
@@ -72,7 +55,7 @@ Vercel does not run a long-lived server, so the Express app is split:
 
 - `server/_core/app.ts` builds the API and binds no port.
 - `server/_core/index.ts` adds Vite or static files and calls `listen` — local only.
-- `api/index.ts` exports the same app as a serverless function.
+- `server/vercel-entry.ts` exports the same app; the build bundles it to `api/index.js`.
 - `vercel.json` sends `/api/trpc/*` to that function and everything else to the
   built client in `dist/public`.
 

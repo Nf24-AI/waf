@@ -3,32 +3,8 @@ import "dotenv/config";
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
-// shared/const.ts
-var COOKIE_NAME = "app_session_id";
-var ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1e3;
-var IDLE_MINUTES = 10;
-var IDLE_MS = IDLE_MINUTES * 60 * 1e3;
-var IDLE_WARN_MS = 60 * 1e3;
-
-// server/_core/cookies.ts
-function isSecureRequest(req) {
-  if (req.protocol === "https") return true;
-  const forwardedProto = req.headers["x-forwarded-proto"];
-  if (!forwardedProto) return false;
-  const protoList = Array.isArray(forwardedProto) ? forwardedProto : forwardedProto.split(",");
-  return protoList.some((proto) => proto.trim().toLowerCase() === "https");
-}
-function getSessionCookieOptions(req) {
-  return {
-    httpOnly: true,
-    path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req)
-  };
-}
-
-// server/_core/systemRouter.ts
-import { z } from "zod";
+// server/auth.ts
+import { TRPCError } from "@trpc/server";
 
 // server/_core/trpc.ts
 import { initTRPC } from "@trpc/server";
@@ -39,7 +15,88 @@ var t = initTRPC.context().create({
 var router = t.router;
 var publicProcedure = t.procedure;
 
+// server/auth.ts
+function bearerToken(req) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) return null;
+  const token = header.slice(7).trim();
+  return token || null;
+}
+function userIdFromToken(token) {
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+  try {
+    const json = Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const claims = JSON.parse(json);
+    if (!claims.sub) return null;
+    if (claims.exp && claims.exp * 1e3 < Date.now()) return null;
+    return claims.sub;
+  } catch {
+    return null;
+  }
+}
+function identityOf(req) {
+  const token = bearerToken(req);
+  if (!token) return null;
+  const userId = userIdFromToken(token);
+  return userId ? { userId, token } : null;
+}
+var authedProcedure = publicProcedure.use(({ ctx, next }) => {
+  const identity = identityOf(ctx.req);
+  if (!identity) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "\u064A\u0644\u0632\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644." });
+  }
+  return next({ ctx: { ...ctx, identity } });
+});
+
+// server/workspace.ts
+import { TRPCError as TRPCError2 } from "@trpc/server";
+
+// server/_core/env.ts
+var ENV = {
+  isProduction: process.env.NODE_ENV === "production",
+  notionApiToken: process.env.NOTION_API_TOKEN ?? "",
+  notionDatabaseId: process.env.NOTION_DATABASE_ID ?? "",
+  // Supabase: الحسابات والمهام. الخادم يخاطبه برمز المستخدم نفسه، فسياسات
+  // الصفوف (RLS) هي التي تحدّد ما يراه كل حساب — لا مفتاح خدمة هنا.
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? ""
+};
+
+// server/workspace.ts
+async function ownsWorkspace(who) {
+  const url = ENV.supabaseUrl.replace(/\/$/, "");
+  if (!url || !ENV.supabaseAnonKey) return false;
+  const response = await fetch(
+    `${url}/rest/v1/profiles?id=eq.${who.userId}&select=can_access_meetings`,
+    {
+      headers: {
+        apikey: ENV.supabaseAnonKey,
+        // برمز المستخدم: RLS تسمح له بقراءة ملفّه وحده، فلا يُقرأ ملفّ غيره.
+        Authorization: `Bearer ${who.token}`
+      }
+    }
+  );
+  if (!response.ok) {
+    console.error("[workspace] profile read failed", response.status);
+    return false;
+  }
+  const rows = await response.json();
+  return rows[0]?.can_access_meetings === true;
+}
+var workspaceAccess = authedProcedure.query(({ ctx }) => ownsWorkspace(ctx.identity).then((owner) => ({ owner })));
+var workspaceProcedure = authedProcedure.use(async ({ ctx, next }) => {
+  if (!await ownsWorkspace(ctx.identity)) {
+    throw new TRPCError2({
+      code: "FORBIDDEN",
+      message: "\u062E\u062F\u0645\u0629 \u0627\u0644\u0627\u062C\u062A\u0645\u0627\u0639\u0627\u062A \u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0645\u0633\u0627\u062D\u0629 \u0639\u0645\u0644 \u0648\u0627\u062D\u062F\u0629\u060C \u0648\u062D\u0633\u0627\u0628\u0643 \u0644\u064A\u0633 \u0645\u0627\u0644\u0643\u0647\u0627 \u0628\u0639\u062F."
+    });
+  }
+  return next({ ctx });
+});
+
 // server/_core/systemRouter.ts
+import { z } from "zod";
 var systemRouter = router({
   health: publicProcedure.input(
     z.object({
@@ -52,80 +109,8 @@ var systemRouter = router({
 
 // server/routers.ts
 import { z as z2 } from "zod";
-
-// server/access.ts
-import { TRPCError } from "@trpc/server";
-import { parse as parseCookieHeader } from "cookie";
-import { SignJWT, jwtVerify } from "jose";
-
-// server/_core/env.ts
-var ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
-  isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  notionApiToken: process.env.NOTION_API_TOKEN ?? "",
-  notionDatabaseId: process.env.NOTION_DATABASE_ID ?? "",
-  // Single-user gate. Empty means open, which is only safe on localhost.
-  appPassword: process.env.APP_PASSWORD ?? ""
-};
-
-// server/access.ts
-var ACCESS_COOKIE = "meeting-prep-session";
-function secret() {
-  const value = ENV.cookieSecret || ENV.appPassword;
-  if (!value) throw new Error("JWT_SECRET must be set when APP_PASSWORD is used.");
-  return new TextEncoder().encode(value);
-}
-function accessIsOpen() {
-  return !ENV.appPassword;
-}
-async function createSessionToken() {
-  return new SignJWT({ scope: "owner" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${IDLE_MINUTES}m`).sign(secret());
-}
-async function hasValidSession(cookieHeader) {
-  if (accessIsOpen()) return true;
-  const token = parseCookieHeader(cookieHeader ?? "")[ACCESS_COOKIE];
-  if (!token) return false;
-  try {
-    await jwtVerify(token, secret());
-    return true;
-  } catch {
-    return false;
-  }
-}
-function sessionCookieOptions(secure) {
-  return {
-    httpOnly: true,
-    sameSite: "lax",
-    secure,
-    path: "/"
-  };
-}
-function passwordMatches(candidate) {
-  const expected = ENV.appPassword;
-  if (!expected) return true;
-  if (candidate.length !== expected.length) return false;
-  let diff = 0;
-  for (let index = 0; index < expected.length; index += 1) {
-    diff |= expected.charCodeAt(index) ^ candidate.charCodeAt(index);
-  }
-  return diff === 0;
-}
-async function touchSession(res) {
-  res.cookie(ACCESS_COOKIE, await createSessionToken(), sessionCookieOptions(ENV.isProduction));
-}
-var appProcedure = publicProcedure.use(async ({ ctx, next }) => {
-  if (!await hasValidSession(ctx.req.headers.cookie)) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "This workspace is locked." });
-  }
-  if (!accessIsOpen()) await touchSession(ctx.res);
-  return next({ ctx });
-});
+import { nanoid } from "nanoid";
+import { TRPCError as TRPCError4 } from "@trpc/server";
 
 // shared/meeting-date.ts
 var ARABIC_MONTHS = [
@@ -226,6 +211,51 @@ function fromIsoDate(iso, language = "ar") {
   return `${ARABIC_WEEKDAYS[weekday]}\u060C ${toArabicDigits(day)} ${ARABIC_MONTHS[month]} ${toArabicDigits(year)}`;
 }
 
+// shared/meeting-share.ts
+var SHARE_GRACE_DAYS = 1;
+var SHARE_TIME_ZONE = "Asia/Riyadh";
+var isoDay = new Intl.DateTimeFormat("en-CA", {
+  timeZone: SHARE_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit"
+});
+function shareToday(now = /* @__PURE__ */ new Date()) {
+  return isoDay.format(now);
+}
+function shareExpiresOn(meetingDate) {
+  const iso = toIsoDate(meetingDate);
+  if (!iso) return null;
+  const day = /* @__PURE__ */ new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(day.getTime())) return null;
+  day.setUTCDate(day.getUTCDate() + SHARE_GRACE_DAYS);
+  return day.toISOString().slice(0, 10);
+}
+function isShareExpired(meetingDate, now = /* @__PURE__ */ new Date()) {
+  const last = shareExpiresOn(meetingDate);
+  if (!last) return true;
+  return shareToday(now) > last;
+}
+function canShare(meeting) {
+  return shareExpiresOn(meeting.date) !== null;
+}
+function toSharedMeeting(meeting) {
+  return {
+    id: meeting.id,
+    title: meeting.title,
+    date: meeting.date,
+    time: meeting.time,
+    type: meeting.type,
+    status: meeting.status,
+    attendees: meeting.attendees,
+    summary: meeting.summary,
+    agenda: meeting.agenda,
+    actions: meeting.actions,
+    link: meeting.link,
+    image: meeting.image
+  };
+}
+
 // server/notion.ts
 var NOTION_VERSION = "2022-06-28";
 var NOTION_API = "https://api.notion.com/v1";
@@ -251,12 +281,12 @@ function parseAgendaLine(line) {
 var NotionConfigError = class extends Error {
 };
 function getConfig() {
-  const missing = [
+  const missing2 = [
     !ENV.notionApiToken && "NOTION_API_TOKEN",
     !ENV.notionDatabaseId && "NOTION_DATABASE_ID"
   ].filter(Boolean);
-  if (missing.length > 0) {
-    throw new NotionConfigError(`Notion is not configured. Missing: ${missing.join(", ")}.`);
+  if (missing2.length > 0) {
+    throw new NotionConfigError(`Notion is not configured. Missing: ${missing2.join(", ")}.`);
   }
   return { token: ENV.notionApiToken, databaseId: ENV.notionDatabaseId };
 }
@@ -309,7 +339,8 @@ var ALIASES = {
   attendees: ["attendees", "\u0627\u0644\u062D\u0636\u0648\u0631", "participants", "\u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0648\u0646"],
   status: ["status", "\u0627\u0644\u062D\u0627\u0644\u0629"],
   summary: ["summary", "\u0627\u0644\u0645\u0644\u062E\u0635", "\u0627\u0644\u0645\u0644\u062E\u0635 \u0627\u0644\u062A\u0646\u0641\u064A\u0630\u064A"],
-  link: ["external link", "link", "url", "\u0627\u0644\u0631\u0627\u0628\u0637", "\u0645\u0631\u062C\u0639 \u062E\u0627\u0631\u062C\u064A"]
+  link: ["external link", "link", "url", "\u0627\u0644\u0631\u0627\u0628\u0637", "\u0645\u0631\u062C\u0639 \u062E\u0627\u0631\u062C\u064A"],
+  share: ["share", "\u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0629", "\u0645\u0634\u0627\u0631\u0643\u0629", "\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0629"]
 };
 var ACCEPTED_TYPES = {
   title: ["title"],
@@ -320,9 +351,10 @@ var ACCEPTED_TYPES = {
   attendees: ["rich_text", "multi_select", "people"],
   status: ["status", "select"],
   summary: ["rich_text"],
-  link: ["url"]
+  link: ["url"],
+  share: ["rich_text"]
 };
-var ALIAS_ONLY = /* @__PURE__ */ new Set(["time", "image"]);
+var ALIAS_ONLY = /* @__PURE__ */ new Set(["time", "image", "share"]);
 var SCHEMA_TTL_MS = 5 * 60 * 1e3;
 var schemaCache = null;
 function resolveSchema(raw) {
@@ -343,6 +375,7 @@ function resolveSchema(raw) {
   const date = pick("date");
   const time = pick("time");
   const image = pick("image");
+  const share = pick("share");
   const link = pick("link");
   const status = pick("status");
   const type = pick("type");
@@ -363,6 +396,7 @@ function resolveSchema(raw) {
     summary,
     link,
     image,
+    share,
     statusOptions: optionsOf(status),
     typeOptions: optionsOf(type)
   };
@@ -478,7 +512,8 @@ async function mapPage(page, schema) {
     actions: content.actions,
     note: content.note,
     link: readField(page, schema.link) || page.url || "",
-    image: readField(page, schema.image)
+    image: readField(page, schema.image),
+    share: readField(page, schema.share)
   };
 }
 async function listNotionMeetings() {
@@ -534,6 +569,9 @@ function buildProperties(meeting, schema) {
   }
   if (schema.link && meeting.link !== void 0) {
     properties[schema.link.name] = { url: meeting.link || null };
+  }
+  if (schema.share && meeting.share !== void 0) {
+    properties[schema.share.name] = { rich_text: text(meeting.share) };
   }
   if (schema.image?.type === "url" && meeting.image !== void 0) {
     properties[schema.image.name] = { url: meeting.image || null };
@@ -605,15 +643,467 @@ async function createNotionMeeting(meeting) {
       properties: buildProperties(meeting, schema)
     })
   });
-  const created = { ...meeting, id: page.id };
+  const created = { ...meeting, id: page.id, share: "" };
   await replaceManagedContent(created, Boolean(schema.time));
   return { ...created, link: created.link || page.url || "" };
 }
 async function deleteNotionMeeting(id) {
   await notionRequest(`/pages/${id}`, { method: "PATCH", body: JSON.stringify({ archived: true }) });
 }
+async function findNotionMeetingByShareToken(token) {
+  if (!token) return null;
+  const { databaseId } = getConfig();
+  const schema = await getDatabaseSchema();
+  if (!schema.share) return null;
+  const response = await notionRequest(`/databases/${databaseId}/query`, {
+    method: "POST",
+    body: JSON.stringify({
+      page_size: 2,
+      filter: { property: schema.share.name, rich_text: { equals: token } }
+    })
+  });
+  if (response.results.length !== 1) return null;
+  const page = response.results[0];
+  const meeting = await mapPage(page, schema);
+  return { ...meeting, link: meeting.link === page.url ? "" : meeting.link };
+}
+async function setNotionMeetingShare(id, token) {
+  let schema = await getDatabaseSchema();
+  if (!schema.share && token) {
+    try {
+      const { databaseId } = getConfig();
+      await notionRequest(`/databases/${databaseId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ properties: { Share: { rich_text: {} } } })
+      });
+      schema = await getDatabaseSchema(true);
+    } catch (error) {
+      console.error("[notion] could not add the Share property", error);
+    }
+  }
+  if (!schema.share) {
+    if (!token) return;
+    throw new Error(
+      "\u0642\u0627\u0639\u062F\u0629 Notion \u062A\u0646\u0642\u0635\u0647\u0627 \u062E\u0627\u0635\u064A\u0629 Share. \u0634\u063A\u0651\u0644: pnpm setup:notion"
+    );
+  }
+  await notionRequest(`/pages/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      properties: { [schema.share.name]: { rich_text: text(token) } }
+    })
+  });
+}
+async function getNotionMeetingDate(id) {
+  const schema = await getDatabaseSchema();
+  const page = await notionRequest(`/pages/${id}`);
+  const iso = readField(page, schema.date);
+  return iso ? fromIsoDate(iso) : null;
+}
+
+// server/tasks.ts
+import { TRPCError as TRPCError3 } from "@trpc/server";
+
+// shared/tasks.ts
+var QUADRANTS = [
+  { id: "important_urgent", importance: "important", urgency: "urgent", title: "\u0645\u0647\u0645 \u0648\u0639\u0627\u062C\u0644", verb: "\u0627\u0641\u0639\u0644 \u0627\u0644\u0622\u0646", titleEn: "Important & urgent", verbEn: "Do it now" },
+  { id: "important_not_urgent", importance: "important", urgency: "not-urgent", title: "\u0645\u0647\u0645 \u0648\u063A\u064A\u0631 \u0639\u0627\u062C\u0644", verb: "\u062E\u0637\u0651\u0637 \u0644\u0647", titleEn: "Important, not urgent", verbEn: "Plan it" },
+  { id: "not_important_urgent", importance: "not-important", urgency: "urgent", title: "\u063A\u064A\u0631 \u0645\u0647\u0645 \u0648\u0639\u0627\u062C\u0644", verb: "\u0641\u0648\u0651\u0636", titleEn: "Urgent, not important", verbEn: "Delegate" },
+  { id: "not_important_not_urgent", importance: "not-important", urgency: "not-urgent", title: "\u063A\u064A\u0631 \u0645\u0647\u0645 \u0648\u063A\u064A\u0631 \u0639\u0627\u062C\u0644", verb: "\u0627\u062D\u0630\u0641", titleEn: "Neither urgent nor important", verbEn: "Drop it" }
+];
+var REPEAT_RULES = ["daily", "weekdays", "weekly", "custom"];
+var WORK_DAYS = [0, 1, 2, 3, 4];
+var TASK_CATEGORIES = [
+  { id: "deep", label: "\u0639\u0645\u0644 \u0639\u0645\u064A\u0642", labelEn: "Deep work", tone: "purple" },
+  { id: "meeting", label: "\u0627\u062C\u062A\u0645\u0627\u0639\u0627\u062A", labelEn: "Meetings", tone: "blue" },
+  { id: "personal", label: "\u0634\u062E\u0635\u064A", labelEn: "Personal", tone: "teal" },
+  { id: "project", label: "\u0639\u0645\u0644 \u0639\u0644\u0649 \u0645\u0634\u0631\u0648\u0639", labelEn: "Project work", tone: "orange" },
+  { id: "other", label: "\u0623\u062E\u0631\u0649", labelEn: "Other", tone: "gray" }
+];
+var DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+var TASK_ORIGINS = ["eisenhower", "timeblock", "focus"];
+var TASK_PRIORITIES = ["low", "medium", "high"];
+function quadrantOf(importance, urgency) {
+  const found = QUADRANTS.find((q) => q.importance === importance && q.urgency === urgency);
+  if (!found) throw new Error(`\u0644\u0627 \u0631\u064F\u0628\u0639 \u0644\u0640 ${importance}/${urgency}`);
+  return found.id;
+}
+function splitQuadrant(quadrant) {
+  const found = QUADRANTS.find((q) => q.id === quadrant);
+  if (!found) throw new Error(`\u0631\u064F\u0628\u0639 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641: ${quadrant}`);
+  return { importance: found.importance, urgency: found.urgency };
+}
+function stateOf(task) {
+  if (task.completedAt) return "completed";
+  if (task.scheduledStart && task.scheduledEnd) return "scheduled";
+  if (task.quadrant) return "classified";
+  return "new";
+}
+var DAY_MS = 864e5;
+function nextOccurrence(startIso, endIso, rule, days = []) {
+  const anchor = weekdayOf(startIso);
+  let step = 7;
+  for (let offset = 1; offset <= 7; offset += 1) {
+    if (repeatsOn(rule, (anchor + offset) % 7, anchor, days)) {
+      step = offset;
+      break;
+    }
+  }
+  return {
+    start: new Date(new Date(startIso).getTime() + step * DAY_MS).toISOString(),
+    end: new Date(new Date(endIso).getTime() + step * DAY_MS).toISOString()
+  };
+}
+var RIYADH_OFFSET_MS = 3 * 36e5;
+function weekdayOf(iso) {
+  return new Date(new Date(iso).getTime() + RIYADH_OFFSET_MS).getUTCDay();
+}
+function repeatsOn(rule, weekday, anchor, days = []) {
+  if (rule === "daily") return true;
+  if (rule === "weekdays") return WORK_DAYS.includes(weekday);
+  if (rule === "weekly") return weekday === anchor;
+  return days.includes(weekday);
+}
+
+// server/tasks.ts
+var TABLE = "eisenhower_tasks";
+var SESSIONS = "waf_focus_sessions";
+function tasksAreConfigured() {
+  return Boolean(ENV.supabaseUrl && ENV.supabaseAnonKey);
+}
+function credentials() {
+  const missing2 = [
+    !ENV.supabaseUrl && "SUPABASE_URL",
+    !ENV.supabaseAnonKey && "SUPABASE_ANON_KEY"
+  ].filter(Boolean);
+  if (missing2.length) {
+    throw new TRPCError3({
+      code: "PRECONDITION_FAILED",
+      // الرسالة تسمّي الناقص: خطأ الإعداد يُقرأ مرة واحدة ويُصلَح، ولا يُخمَّن.
+      message: `\u0627\u0644\u0645\u0647\u0627\u0645 \u063A\u064A\u0631 \u0645\u0636\u0628\u0648\u0637\u0629. \u0627\u0644\u0646\u0627\u0642\u0635: ${missing2.join("\u060C ")}`
+    });
+  }
+  return { url: ENV.supabaseUrl.replace(/\/$/, ""), key: ENV.supabaseAnonKey };
+}
+var SupabaseError = class extends TRPCError3 {
+  detail;
+  constructor(status, detail) {
+    super({
+      code: status === 404 ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR",
+      message: status === 404 ? "\u0644\u0645 \u0646\u062C\u062F \u0645\u0627 \u062A\u0628\u062D\u062B \u0639\u0646\u0647." : "\u062A\u0639\u0630\u0651\u0631 \u062A\u0646\u0641\u064A\u0630 \u0627\u0644\u0639\u0645\u0644\u064A\u0629. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."
+    });
+    this.detail = detail;
+  }
+};
+async function rest(who, path, init = {}) {
+  const { url, key } = credentials();
+  const response = await fetch(`${url}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: key,
+      // رمز المستخدم لا المفتاح المجهول: هو ما يجعل auth.uid() له.
+      Authorization: `Bearer ${who.token}`,
+      "Content-Type": "application/json",
+      ...init.headers
+    }
+  });
+  if (!response.ok) {
+    const detail = (await response.text()).slice(0, 400);
+    console.error("[supabase]", response.status, path.split("?")[0], detail);
+    throw new SupabaseError(response.status, detail);
+  }
+  const body = await response.text();
+  return body ? JSON.parse(body) : void 0;
+}
+function toTask(row, sessions = 0) {
+  const quadrant = row.classified_at && row.importance && row.urgency ? quadrantOf(row.importance, row.urgency) : void 0;
+  const completedAt = row.completed_at ?? (row.is_done ? row.created_at : void 0);
+  const core = {
+    id: row.id,
+    title: row.name,
+    description: row.description ?? void 0,
+    quadrant,
+    scheduledStart: row.scheduled_start ?? void 0,
+    scheduledEnd: row.scheduled_end ?? void 0,
+    estimatedMinutes: row.estimated_minutes ?? void 0,
+    repeatRule: row.repeat_rule ?? void 0,
+    reminderMinutes: row.reminder_minutes ?? void 0,
+    projectId: row.project_id ?? void 0,
+    category: row.category ?? void 0,
+    priority: row.priority ?? void 0,
+    dueDate: row.due_date ?? void 0,
+    repeatDays: row.repeat_days ?? void 0,
+    origin: row.origin ?? void 0,
+    completedSessions: sessions,
+    createdAt: row.created_at,
+    completedAt: completedAt ?? void 0
+  };
+  return { ...core, state: stateOf(core) };
+}
+var OPTIONAL_COLUMNS = [
+  "repeat_rule",
+  "reminder_minutes",
+  "project_id",
+  "category",
+  "priority",
+  "due_date",
+  "repeat_days",
+  "origin"
+];
+var BASE_COLUMNS = "id,name,description,importance,urgency,classified_at,scheduled_start,scheduled_end,estimated_minutes,completed_at,is_done,created_at";
+var missing = /* @__PURE__ */ new Set();
+function columns() {
+  const extra = OPTIONAL_COLUMNS.filter((column) => !missing.has(column));
+  return extra.length ? `${BASE_COLUMNS},${extra.join(",")}` : BASE_COLUMNS;
+}
+function absentColumn(error) {
+  const detail = String(error?.detail ?? "");
+  if (!/42703|does not exist/.test(detail)) return null;
+  return OPTIONAL_COLUMNS.find((column) => detail.includes(column)) ?? null;
+}
+function optional(values) {
+  const body = {};
+  for (const [column, value] of Object.entries(values)) {
+    if (!missing.has(column)) body[column] = value;
+  }
+  return body;
+}
+async function withSchemaFallback(run) {
+  for (let attempt = 0; attempt <= OPTIONAL_COLUMNS.length; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      if (/repeat_rule_check/.test(String(error?.detail ?? ""))) {
+        throw new TRPCError3({
+          code: "BAD_REQUEST",
+          message: "\u0647\u0630\u0627 \u0627\u0644\u062A\u0643\u0631\u0627\u0631 \u064A\u062D\u062A\u0627\u062C \u062A\u0631\u062D\u064A\u0644 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (waf-timeblock.sql). \u0627\u062E\u062A\u0631 \xAB\u0643\u0644 \u064A\u0648\u0645\xBB \u0623\u0648 \xAB\u0643\u0644 \u0623\u0633\u0628\u0648\u0639\xBB \u0627\u0644\u0622\u0646."
+        });
+      }
+      const column = absentColumn(error);
+      if (!column || missing.has(column)) throw error;
+      missing.add(column);
+    }
+  }
+  return run();
+}
+async function sessionCounts(who, taskIds) {
+  const counts = /* @__PURE__ */ new Map();
+  if (!taskIds.length) return counts;
+  const list = taskIds.map((id) => `"${id}"`).join(",");
+  const rows = await rest(
+    who,
+    `${SESSIONS}?select=task_id&completed=is.true&task_id=in.(${list})`
+  );
+  for (const row of rows) counts.set(row.task_id, (counts.get(row.task_id) ?? 0) + 1);
+  return counts;
+}
+async function withSessions(who, row) {
+  const counts = await sessionCounts(who, [row.id]);
+  return toTask(row, counts.get(row.id) ?? 0);
+}
+function scope(origin) {
+  if (!origin || missing.has("origin")) return "";
+  return `&origin=eq.${origin}`;
+}
+async function listOpenTasks(who, origin) {
+  const rows = await withSchemaFallback(
+    () => rest(
+      who,
+      `${TABLE}?select=${columns()}&completed_at=is.null&is_done=eq.false&is_archived=eq.false${scope(origin)}&order=created_at.desc`
+    )
+  );
+  const counts = await sessionCounts(who, rows.map((row) => row.id));
+  return rows.map((row) => toTask(row, counts.get(row.id) ?? 0));
+}
+async function createTask(who, input, guard = false) {
+  if (guard && input.scheduledStart && input.scheduledEnd) {
+    await assertFree(who, input.scheduledStart, input.scheduledEnd, void 0, input.origin);
+  }
+  const split = input.quadrant ? splitQuadrant(input.quadrant) : null;
+  const [row] = await withSchemaFallback(
+    () => rest(who, `${TABLE}?select=${columns()}`, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        id: crypto.randomUUID(),
+        user_id: who.userId,
+        name: input.title.trim(),
+        description: input.description?.trim() || null,
+        // الجدول القديم يشترط العمودين. مهمة بلا تصنيف تبدأ في «غير مهم وغير
+        // عاجل» لو تُركت للقيد، وهذا حكم لم يصدره أحد — فالافتراض «مهم وعاجل»
+        // خطأ مثله. نكتب ما اختاره المستخدم، وإن لم يختر فأقلّها ادّعاءً.
+        importance: split?.importance ?? "not-important",
+        urgency: split?.urgency ?? "not-urgent",
+        classified_at: split ? (/* @__PURE__ */ new Date()).toISOString() : null,
+        scheduled_start: input.scheduledStart ?? null,
+        scheduled_end: input.scheduledEnd ?? null,
+        estimated_minutes: input.estimatedMinutes ?? null,
+        ...optional({
+          repeat_rule: input.repeatRule ?? null,
+          reminder_minutes: input.reminderMinutes ?? null,
+          project_id: input.projectId ?? null,
+          category: input.category ?? null,
+          priority: input.priority ?? null,
+          due_date: input.dueDate ?? null,
+          repeat_days: input.repeatDays?.length ? input.repeatDays : null,
+          origin: input.origin ?? null
+        })
+      })
+    })
+  );
+  return withSessions(who, row);
+}
+async function classifyTask(who, id, quadrant) {
+  const { importance, urgency } = splitQuadrant(quadrant);
+  const [row] = await withSchemaFallback(
+    () => rest(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ importance, urgency, classified_at: (/* @__PURE__ */ new Date()).toISOString() })
+    })
+  );
+  if (!row) throw new TRPCError3({ code: "NOT_FOUND", message: "\u0644\u0627 \u0645\u0647\u0645\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0645\u0639\u0631\u0651\u0641" });
+  return withSessions(who, row);
+}
+async function originOf(who, id) {
+  if (missing.has("origin")) return void 0;
+  try {
+    const [row] = await rest(who, `${TABLE}?select=origin&id=eq.${id}`);
+    return row?.origin ?? void 0;
+  } catch (error) {
+    if (absentColumn(error) !== "origin") throw error;
+    missing.add("origin");
+    return void 0;
+  }
+}
+async function assertFree(who, startIso, endIso, except, origin) {
+  if (new Date(endIso) <= new Date(startIso)) {
+    throw new TRPCError3({ code: "BAD_REQUEST", message: "\u0648\u0642\u062A \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0644\u064A \u0648\u0642\u062A \u0627\u0644\u0628\u062F\u0627\u064A\u0629" });
+  }
+  const window = `scheduled_start=lt.${encodeURIComponent(endIso)}&scheduled_end=gt.${encodeURIComponent(startIso)}`;
+  const self = except ? `&id=neq.${except}` : "";
+  const clashes = await withSchemaFallback(
+    () => rest(
+      who,
+      `${TABLE}?select=id,name&completed_at=is.null&is_archived=eq.false&${window}${self}${scope(origin)}`
+    )
+  );
+  if (clashes.length) {
+    throw new TRPCError3({
+      code: "CONFLICT",
+      message: `\u064A\u0648\u062C\u062F \u062A\u0639\u0627\u0631\u0636 \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0648\u0642\u062A \u0645\u0639 \xAB${clashes[0].name}\xBB`
+    });
+  }
+}
+async function updateTask(who, id, patch) {
+  if (patch.schedule) {
+    await assertFree(who, patch.schedule.start, patch.schedule.end, id, await originOf(who, id));
+  }
+  const body = {};
+  if (patch.title !== void 0) body.name = patch.title.trim();
+  if (patch.description !== void 0) body.description = patch.description?.trim() || null;
+  if (patch.estimatedMinutes !== void 0) body.estimated_minutes = patch.estimatedMinutes;
+  if (patch.schedule !== void 0) {
+    body.scheduled_start = patch.schedule?.start ?? null;
+    body.scheduled_end = patch.schedule?.end ?? null;
+  }
+  const [row] = await withSchemaFallback(
+    () => rest(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        ...body,
+        ...optional({
+          ...patch.category === void 0 ? {} : { category: patch.category },
+          ...patch.priority === void 0 ? {} : { priority: patch.priority },
+          ...patch.dueDate === void 0 ? {} : { due_date: patch.dueDate },
+          ...patch.repeatRule === void 0 ? {} : { repeat_rule: patch.repeatRule },
+          ...patch.repeatDays === void 0 ? {} : { repeat_days: patch.repeatDays?.length ? patch.repeatDays : null }
+        })
+      })
+    })
+  );
+  if (!row) throw new TRPCError3({ code: "NOT_FOUND", message: "\u0644\u0627 \u0645\u0647\u0645\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0645\u0639\u0631\u0651\u0641" });
+  return withSessions(who, row);
+}
+async function setTaskArchived(who, id, archived) {
+  const [row] = await withSchemaFallback(
+    () => rest(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ is_archived: archived })
+    })
+  );
+  if (!row) throw new TRPCError3({ code: "NOT_FOUND", message: "\u0644\u0627 \u0645\u0647\u0645\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0645\u0639\u0631\u0651\u0641" });
+  return withSessions(who, row);
+}
+async function reopenTask(who, id) {
+  const [row] = await withSchemaFallback(
+    () => rest(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ completed_at: null, is_done: false })
+    })
+  );
+  if (!row) throw new TRPCError3({ code: "NOT_FOUND", message: "\u0644\u0627 \u0645\u0647\u0645\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0645\u0639\u0631\u0651\u0641" });
+  return withSessions(who, row);
+}
+async function completeTask(who, id) {
+  const [row] = await withSchemaFallback(
+    () => rest(who, `${TABLE}?id=eq.${id}&select=${columns()}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ completed_at: (/* @__PURE__ */ new Date()).toISOString(), is_done: true })
+    })
+  );
+  if (!row) throw new TRPCError3({ code: "NOT_FOUND", message: "\u0644\u0627 \u0645\u0647\u0645\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0645\u0639\u0631\u0651\u0641" });
+  if (row.repeat_rule && row.scheduled_start && row.scheduled_end) {
+    const when = nextOccurrence(row.scheduled_start, row.scheduled_end, row.repeat_rule, row.repeat_days ?? []);
+    await createTask(who, {
+      title: row.name,
+      description: row.description ?? void 0,
+      quadrant: row.classified_at && row.importance && row.urgency ? quadrantOf(row.importance, row.urgency) : void 0,
+      scheduledStart: when.start,
+      scheduledEnd: when.end,
+      estimatedMinutes: row.estimated_minutes ?? void 0,
+      repeatRule: row.repeat_rule,
+      origin: row.origin ?? void 0,
+      repeatDays: row.repeat_days ?? void 0,
+      category: row.category ?? void 0,
+      priority: row.priority ?? void 0
+    });
+  }
+  return withSessions(who, row);
+}
+async function openFocusSession(who, taskId, plannedMinutes) {
+  const id = crypto.randomUUID();
+  await rest(who, SESSIONS, {
+    method: "POST",
+    body: JSON.stringify({
+      id,
+      user_id: who.userId,
+      task_id: taskId,
+      planned_minutes: plannedMinutes,
+      started_at: (/* @__PURE__ */ new Date()).toISOString()
+    })
+  });
+  return id;
+}
+async function closeFocusSession(who, id, completed) {
+  await rest(who, `${SESSIONS}?id=eq.${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ ended_at: (/* @__PURE__ */ new Date()).toISOString(), completed })
+  });
+}
 
 // server/routers.ts
+var quadrantId = z2.enum(QUADRANTS.map((q) => q.id));
+var repeatRule = z2.enum(REPEAT_RULES);
+var repeatDays = z2.array(z2.number().int().min(0).max(6)).max(7);
+var taskCategory = z2.enum(TASK_CATEGORIES.map((c) => c.id));
+var taskPriority = z2.enum(TASK_PRIORITIES);
+var taskOrigin = z2.enum(TASK_ORIGINS);
+var dayString = z2.string().regex(DAY_PATTERN, "\u062A\u0627\u0631\u064A\u062E \u063A\u064A\u0631 \u0635\u0627\u0644\u062D");
 var agendaItem = z2.object({
   title: z2.string(),
   context: z2.string(),
@@ -636,72 +1126,165 @@ var meetingFields = {
   link: z2.string(),
   image: z2.string().default("")
 };
+var SHARE_TOKEN_LENGTH = 32;
 var meetingInput = z2.object(meetingFields);
 var meetingWithId = z2.object({ id: z2.string(), ...meetingFields });
 var appRouter = router({
   system: systemRouter,
-  auth: router({
-    /** Reports lock state rather than a Manus identity. */
-    me: publicProcedure.query(async ({ ctx }) => ({
-      locked: !accessIsOpen(),
-      unlocked: await hasValidSession(ctx.req.headers.cookie)
-    })),
-    unlock: publicProcedure.input(z2.object({ password: z2.string() })).mutation(async ({ ctx, input }) => {
-      if (!passwordMatches(input.password)) {
-        return { success: false };
-      }
-      const token = await createSessionToken();
-      ctx.res.cookie(ACCESS_COOKIE, token, sessionCookieOptions(ENV.isProduction));
-      return { success: true };
-    }),
-    /**
-     * Slide the idle window forward without asking for anything.
-     *
-     * The server counts a session idle when no request arrives; the browser
-     * counts it idle when nobody touches the page. Those disagree while
-     * someone types a long note, because saving is a button and not an
-     * autosave — the page is busy and the server hears nothing. Ten minutes
-     * in, Save would fail as UNAUTHORIZED with the note still unsaved.
-     *
-     * appProcedure re-issues the cookie, so the call needs no body of its own.
-     */
-    touch: appProcedure.mutation(() => ({ ok: true })),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
-      ctx.res.clearCookie(ACCESS_COOKIE, sessionCookieOptions(ENV.isProduction));
-      return { success: true };
-    })
-  }),
+  /**
+   * بقايا البوّابة القديمة ذهبت مع البوّابة.
+   *
+   * `unlock` كان يصدر كعكة جلسة لمن يعرف كلمة المرور المشتركة. تركُه بعد
+   * حلول المصادقة الحقيقية يعني باباً ثانياً إلى نفس التطبيق، يُصدر هويّة
+   * لا تخصّ أحداً بعينه — ولا يُغلق بتسجيل الخروج من Supabase لأنه لا
+   * يعرف به. وباب لا أحد يتذكّره هو الباب الذي يبقى مفتوحاً.
+   *
+   * والخروج الآن عند Supabase: `signOut` في المتصفّح يُنهي الجلسة في كل
+   * الألسنة، ولا كعكة من عندنا تُمحى.
+   */
   meetings: router({
+    /**
+     * هل يملك هذا الحساب مساحة الاجتماعات؟
+     *
+     * سؤالٌ يُطرح قبل العرض: الشريط يُخفي البند لمن لا يملكها، والصفحة تشرح
+     * بدل أن تسقط بخطأ. ولا يكشف شيئاً — جوابه نعم أو لا عن السائل نفسه.
+     */
+    access: workspaceAccess,
     /** Lets the workspace explain *why* Notion is unavailable instead of failing blankly. */
-    status: appProcedure.query(async () => {
+    status: workspaceProcedure.query(async () => {
       if (!isNotionConfigured()) {
-        const missing = [
+        const missing2 = [
           !ENV.notionApiToken && "NOTION_API_TOKEN",
           !ENV.notionDatabaseId && "NOTION_DATABASE_ID"
         ].filter(Boolean);
-        return { configured: false, reachable: false, error: `Not configured. Missing: ${missing.join(", ")}.` };
+        return { configured: false, reachable: false, error: `Not configured. Missing: ${missing2.join(", ")}.` };
       }
       try {
         const info = await getNotionDatabaseInfo();
-        const missing = ["title", "date", "type", "attendees", "status", "summary", "link"].filter((field) => !info.schema[field]);
-        return { configured: true, reachable: true, title: info.title, missing };
+        const missing2 = ["title", "date", "type", "attendees", "status", "summary", "link"].filter((field) => !info.schema[field]);
+        return { configured: true, reachable: true, title: info.title, missing: missing2 };
       } catch (error) {
         return { configured: true, reachable: false, error: error instanceof Error ? error.message : String(error) };
       }
     }),
-    list: appProcedure.query(async () => ({
+    list: workspaceProcedure.query(async () => ({
       source: "notion",
       meetings: await listNotionMeetings()
     })),
-    create: appProcedure.input(meetingInput).mutation(({ input }) => createNotionMeeting(input)),
-    update: appProcedure.input(meetingWithId).mutation(async ({ input }) => {
+    create: workspaceProcedure.input(meetingInput).mutation(({ input }) => createNotionMeeting(input)),
+    update: workspaceProcedure.input(meetingWithId).mutation(async ({ input }) => {
       await updateNotionMeeting(input);
       return { success: true };
     }),
-    remove: appProcedure.input(z2.object({ id: z2.string() })).mutation(async ({ input }) => {
+    remove: workspaceProcedure.input(z2.object({ id: z2.string() })).mutation(async ({ input }) => {
       await deleteNotionMeeting(input.id);
+      return { success: true };
+    }),
+    /**
+     * Issue a read-only link for one meeting, or replace the one it has.
+     *
+     * The token is the whole secret, so it is generated here and never
+     * derived from anything guessable about the meeting. Re-sharing mints a
+     * fresh one, which is also how a leaked link is retired: the old address
+     * stops resolving the moment the new one exists.
+     */
+    share: workspaceProcedure.input(z2.object({ id: z2.string() })).mutation(async ({ input }) => {
+      const date = await getNotionMeetingDate(input.id);
+      if (!date || !canShare({ date })) {
+        throw new TRPCError4({
+          code: "BAD_REQUEST",
+          message: "\u0623\u0636\u0641 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u062C\u062A\u0645\u0627\u0639 \u0623\u0648\u0644\u064B\u0627 \u2014 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0631\u0627\u0628\u0637 \u062A\u064F\u062D\u0633\u0628 \u0645\u0646\u0647."
+        });
+      }
+      const token = nanoid(SHARE_TOKEN_LENGTH);
+      await setNotionMeetingShare(input.id, token);
+      return { token, expiresOn: shareExpiresOn(date) };
+    }),
+    /** Retire the link. The address stops resolving immediately. */
+    unshare: workspaceProcedure.input(z2.object({ id: z2.string() })).mutation(async ({ input }) => {
+      await setNotionMeetingShare(input.id, "");
+      return { success: true };
+    }),
+    /**
+     * Read one shared meeting. The only procedure outside the password gate.
+     *
+     * publicProcedure by design: the token is the credential, and it names
+     * exactly one meeting — there is no list here and no id to substitute, so
+     * holding one link is not a way to reach a second meeting.
+     *
+     * What comes back is rebuilt by toSharedMeeting, which drops the private
+     * preparation notes and the token itself.
+     */
+    shared: publicProcedure.input(z2.object({ token: z2.string().min(1).max(128) })).query(async ({ input }) => {
+      const meeting = await findNotionMeetingByShareToken(input.token);
+      if (!meeting) {
+        throw new TRPCError4({ code: "NOT_FOUND", message: "\u0647\u0630\u0627 \u0627\u0644\u0631\u0627\u0628\u0637 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D." });
+      }
+      if (isShareExpired(meeting.date)) {
+        throw new TRPCError4({
+          code: "FORBIDDEN",
+          message: "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0647\u0630\u0627 \u0627\u0644\u0631\u0627\u0628\u0637."
+        });
+      }
+      return { meeting: toSharedMeeting(meeting) };
+    })
+  }),
+  tasks: router({
+    /**
+     * `status` وحده عامّ: الصفحات تسأله قبل أن تعرف إن كان هناك مستخدم،
+     * وجوابه إعداد الخادم لا بيانات أحد.
+     */
+    status: publicProcedure.query(() => ({ configured: tasksAreConfigured() })),
+    // كل إطار يسأل عن مهامه وحدها؛ انظر TASK_ORIGINS.
+    listOpen: authedProcedure.input(z2.object({ origin: taskOrigin })).query(({ ctx, input }) => listOpenTasks(ctx.identity, input.origin)),
+    create: authedProcedure.input(
+      z2.object({
+        title: z2.string().trim().min(1, "\u0627\u0644\u0645\u0647\u0645\u0629 \u062A\u062D\u062A\u0627\u062C \u0639\u0646\u0648\u0627\u0646\u0627\u064B"),
+        description: z2.string().trim().optional(),
+        quadrant: quadrantId.optional(),
+        scheduledStart: z2.string().datetime().optional(),
+        scheduledEnd: z2.string().datetime().optional(),
+        estimatedMinutes: z2.number().int().positive().optional(),
+        repeatRule: repeatRule.optional(),
+        repeatDays: repeatDays.optional(),
+        reminderMinutes: z2.number().int().min(0).max(1440).optional(),
+        projectId: z2.string().uuid().optional(),
+        category: taskCategory.optional(),
+        priority: taskPriority.optional(),
+        dueDate: dayString.optional(),
+        origin: taskOrigin
+      })
+    ).mutation(
+      ({ ctx, input }) => createTask(ctx.identity, input, true)
+    ),
+    update: authedProcedure.input(
+      z2.object({
+        id: z2.string().uuid(),
+        title: z2.string().trim().min(1, "\u0627\u0644\u0645\u0647\u0645\u0629 \u062A\u062D\u062A\u0627\u062C \u0639\u0646\u0648\u0627\u0646\u0627\u064B").optional(),
+        description: z2.string().trim().nullable().optional(),
+        estimatedMinutes: z2.number().int().positive().nullable().optional(),
+        category: taskCategory.nullable().optional(),
+        priority: taskPriority.nullable().optional(),
+        dueDate: dayString.nullable().optional(),
+        repeatRule: repeatRule.nullable().optional(),
+        repeatDays: repeatDays.nullable().optional(),
+        schedule: z2.object({ start: z2.string().datetime(), end: z2.string().datetime() }).nullable().optional()
+      })
+    ).mutation(
+      ({ ctx, input: { id, ...patch } }) => updateTask(ctx.identity, id, patch)
+    ),
+    archive: authedProcedure.input(z2.object({ id: z2.string().uuid() })).mutation(({ ctx, input }) => setTaskArchived(ctx.identity, input.id, true)),
+    restore: authedProcedure.input(z2.object({ id: z2.string().uuid() })).mutation(({ ctx, input }) => setTaskArchived(ctx.identity, input.id, false)),
+    reopen: authedProcedure.input(z2.object({ id: z2.string().uuid() })).mutation(({ ctx, input }) => reopenTask(ctx.identity, input.id)),
+    classify: authedProcedure.input(z2.object({ id: z2.string().uuid(), quadrant: quadrantId })).mutation(
+      ({ ctx, input }) => classifyTask(ctx.identity, input.id, input.quadrant)
+    ),
+    complete: authedProcedure.input(z2.object({ id: z2.string().uuid() })).mutation(({ ctx, input }) => completeTask(ctx.identity, input.id)),
+    startFocus: authedProcedure.input(z2.object({ taskId: z2.string().uuid(), minutes: z2.number().int().positive().max(240) })).mutation(async ({ ctx, input }) => ({
+      sessionId: await openFocusSession(ctx.identity, input.taskId, input.minutes)
+    })),
+    endFocus: authedProcedure.input(z2.object({ sessionId: z2.string().uuid(), completed: z2.boolean() })).mutation(async ({ ctx, input }) => {
+      await closeFocusSession(ctx.identity, input.sessionId, input.completed);
       return { success: true };
     })
   })

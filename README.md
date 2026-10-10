@@ -1,77 +1,67 @@
-# Meeting Prep Tool
+# Waf — واف
 
-Arabic/English RTL meeting workspace. Prepare a meeting, then present it.
+Tools for the project manager and product owner, in Arabic and English.
+Live at <https://waf-silk.vercel.app>.
 
-**Notion is the database.** Meetings are Notion pages; there is no separate
-application database. Nothing is stored in the browser except UI preferences.
+## What is in it
+
+| Service | Route | Data |
+|---|---|---|
+| Meetings: prepare, present, decision log, status report | `/meetings`, `/display`, `/decisions`, `/status` | Notion |
+| Time management: three separate frameworks | `/time-management` | Supabase |
+| Service directory | separate app, linked from the home page | its own |
+
+The three time frameworks are used on their own. Each keeps its own tasks
+(`origin` on the row) and its own design; none links to another.
+
+- Eisenhower matrix — `/time-management/eisenhower`
+- Time blocking — `/time-management/time-blocking`
+- Focus session — `/time-management/focus`
+
+## Accounts
+
+Sign-in is Supabase Auth (email and password). The server calls Supabase with
+the signed-in user's own token, so row-level security decides what each
+account reads — there is no service key in the app.
+
+Meetings live in one Notion database with no owner column, so they are limited
+to accounts with `profiles.can_access_meetings = true`. A read-only share link
+is the only way in without an account, and it opens one meeting.
 
 ## Setup
 
-### 1. Create a Notion integration
-
-Go to [notion.so/my-integrations](https://www.notion.so/my-integrations) →
-**New integration** → copy the *Internal Integration Secret* (starts with `ntn_`).
-
-Put it in `.env`:
-
-```
-NOTION_API_TOKEN=ntn_...
-```
-
-### 2. Create the database
-
-Open the Notion page that should hold the database. Connect your integration to
-it via the `•••` menu → **Connections**. Copy the 32-character id from the page
-URL into `.env` as `NOTION_PARENT_PAGE_ID`, then run:
-
 ```bash
-pnpm setup:notion
+corepack pnpm install
+cp .env.example .env     # fill in the values below
+corepack pnpm dev        # http://localhost:3000
 ```
 
-It creates a **Meeting Prep** database with the exact schema the adapter needs
-and prints the `NOTION_DATABASE_ID` to add to `.env`.
+**Supabase.** Create a project, put its URL and anon key in `.env` (both the
+plain and the `VITE_` names), then run the SQL files in `scripts/` in this
+order: `waf-auth.sql`, `waf-tasks.sql`, `waf-task-options.sql`,
+`waf-workspace.sql`, `waf-timeblock.sql`, `waf-task-origin.sql`. Each one can
+be run again safely. The code does not wait for the later ones: a column that
+is not there yet is left out of the request until it is.
 
-Re-run it any time with `NOTION_DATABASE_ID` already set and it repairs the
-existing database instead, adding only the properties that are missing.
-
-To use an existing database instead, skip this and set `NOTION_DATABASE_ID`
-yourself — but connect the integration to that database first, or every request
-returns 404. The adapter matches properties **by type**, so Arabic or English
-names both work. It needs: a `title`, a `date`, a `url`, a `select` or `status`,
-plus `rich_text` fields for the summary and attendees. A `rich_text` property
-named **Time** is matched by name only — add it and the meeting time becomes
-sortable and filterable in Notion instead of living in the page body.
-
-### 3. Run
-
-```bash
-pnpm install
-pnpm dev          # http://localhost:3000
-```
-
-## Access control
-
-Single user, gated by one password:
-
-| `APP_PASSWORD` | Behaviour |
-|---|---|
-| empty | Open. Correct for `pnpm dev` on localhost. |
-| set | A signed session cookie is required for every meeting request. |
-
-**Set `APP_PASSWORD` and `JWT_SECRET` before deploying to any public URL.**
-Without it, anyone with the address can read and edit your meetings.
-
-The original Manus OAuth flow was removed — it only resolves inside the Manus
-platform, where it made every meeting request fail with `UNAUTHORIZED`.
+**Notion.** Create an integration at
+[notion.so/my-integrations](https://www.notion.so/my-integrations), connect it
+to the page that should hold the database, set `NOTION_API_TOKEN` and
+`NOTION_PARENT_PAGE_ID`, and run `corepack pnpm setup:notion`. It creates the
+database and prints the `NOTION_DATABASE_ID` to add. Run it again later and it
+adds only the properties that are missing. An existing database works too: the
+adapter matches properties by type, so Arabic or English names both work.
 
 ## Layout
 
-- `client/src/` — React workspace: preparation mode, display mode, UI customization
-- `server/notion.ts` — the Notion adapter (schema mapping, CRUD, rate limiting)
-- `server/access.ts` — single-user password gate
+- `client/src/pages` — one file per page; `auth/` holds sign-in and its relatives
+- `client/src/design-system` — tokens and the stylesheets of each framework
+- `client/src/lib/i18n.ts` — the language option (`t(ar, en)`)
 - `server/routers.ts` — tRPC procedures
-- `shared/meeting-date.ts` — Arabic display date ↔ ISO conversion
-- `scripts/setup-notion.ts` — one-time database creation
+- `server/tasks.ts` — tasks and focus sessions on Supabase
+- `server/notion.ts` — the Notion adapter for meetings
+- `server/workspace.ts` — who may open the meetings
+- `shared/` — models and pure logic used by both sides
+- `scripts/` — SQL migrations, Notion setup, font embedding
 
 ## How meetings map to Notion
 
@@ -135,13 +125,12 @@ A4, 14mm/12mm margins.
 ## Commands
 
 ```bash
-pnpm dev            # development with live reload
-pnpm check          # TypeScript, no emit
-pnpm test           # Vitest
-pnpm build          # production bundle
-pnpm start          # run the production build
-pnpm setup:notion   # create the Meeting Prep database
+corepack pnpm dev            # development with live reload
+corepack pnpm check          # TypeScript, no emit
+corepack pnpm test           # Vitest
+corepack pnpm build          # production bundle
+corepack pnpm setup:notion   # create or repair the meetings database
 ```
 
 `pnpm test` skips the live Notion connection tests until `NOTION_API_TOKEN` and
-`NOTION_DATABASE_ID` are set.
+`NOTION_DATABASE_ID` are set. Deployment is described in `DEPLOY.md`.
