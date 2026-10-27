@@ -1,0 +1,296 @@
+/* واف — نظام التصميم.
+   الألوان مأخوذة من صورة تنومة عند الغروب: سماء ليلية، أفق زعفراني، ضوء ذهبي في الحجر.
+   الخطّ الأفقي «خط اليوم» هو العنصر المميّز: الأفق يصير مسطرة الوقت. */
+
+@import "tailwindcss";
+@import "@fontsource-variable/readex-pro";
+@import "@fontsource-variable/reem-kufi";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-ui: "Readex Pro Variable", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Reem Kufi Variable", "Readex Pro Variable", system-ui, sans-serif;
+
+  --color-bg: var(--bg);
+  --color-sheet: var(--sheet);
+  --color-sunk: var(--sunk);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-inverse: var(--inverse);
+  --color-on-inverse: var(--on-inverse);
+  --color-saffron: var(--saffron);
+  --color-saffron-ink: var(--saffron-ink);
+  --color-saffron-wash: var(--saffron-wash);
+  --color-on-saffron: var(--on-saffron);
+  --color-dusk: var(--dusk);
+  --color-dusk-wash: var(--dusk-wash);
+  --color-palm: var(--palm);
+  --color-palm-wash: var(--palm-wash);
+  --color-ember: var(--ember);
+  --color-ember-wash: var(--ember-wash);
+  --color-plum: var(--plum);
+  --color-plum-wash: var(--plum-wash);
+  --color-slate: var(--slate);
+  --color-slate-wash: var(--slate-wash);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+
+  /* سلّم الخط: نسبة ١٫٢٥ تقريباً، والأساس ١٦ */
+  --text-2xs: 0.75rem;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-base: 1rem;
+  --text-lg: 1.1875rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.5rem;
+  --text-4xl: 3.5rem;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+}
+
+/* ضباب الصباح */
+:root {
+  color-scheme: light;
+  --bg: #edf0f3;
+  --sheet: #f9fafb;
+  --sunk: #e3e7ec;
+  --line: #d3d9e1;
+  --line-strong: #b5bfcc;
+  --ink: #111a2d;
+  --ink-2: #445067;
+  --ink-3: #636e84;
+  --inverse: #111a2d;
+  --on-inverse: #f3f5f8;
+  --saffron: #efa431;
+  --saffron-ink: #8a560a;
+  --saffron-wash: #f8e4c2;
+  --on-saffron: #1d1405;
+  --dusk: #2c4a6e;
+  --dusk-wash: #d9e2ee;
+  --palm: #2c6a54;
+  --palm-wash: #d6e8df;
+  --ember: #b1402b;
+  --ember-wash: #f3dcd6;
+  --plum: #6a4a85;
+  --plum-wash: #e5ddee;
+  --slate: #66707f;
+  --slate-wash: #e1e4e9;
+  --focus: #2c4a6e;
+  --shadow-float: 0 1px 0 rgb(17 26 45 / 0.04), 0 12px 32px -12px rgb(17 26 45 / 0.22);
+}
+
+/* ليل تنومة */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b1322;
+    --sheet: #121c31;
+    --sunk: #080f1c;
+    --line: #223050;
+    --line-strong: #34456a;
+    --ink: #e8ecf3;
+    --ink-2: #a9b3c6;
+    --ink-3: #8390a8;
+    --inverse: #e8ecf3;
+    --on-inverse: #0b1322;
+    --saffron: #f2b04a;
+    --saffron-ink: #f4be66;
+    --saffron-wash: #3a2c14;
+    --on-saffron: #1d1405;
+    --dusk: #8db0db;
+    --dusk-wash: #1b2c48;
+    --palm: #74c2a3;
+    --palm-wash: #14322b;
+    --ember: #ec8a72;
+    --ember-wash: #3b1d19;
+    --plum: #bc9ddb;
+    --plum-wash: #2b2140;
+    --slate: #9aa5b8;
+    --slate-wash: #1d273b;
+    --focus: #f2b04a;
+    --shadow-float: 0 1px 0 rgb(0 0 0 / 0.3), 0 16px 40px -12px rgb(0 0 0 / 0.6);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1322;
+  --sheet: #121c31;
+  --sunk: #080f1c;
+  --line: #223050;
+  --line-strong: #34456a;
+  --ink: #e8ecf3;
+  --ink-2: #a9b3c6;
+  --ink-3: #8390a8;
+  --inverse: #e8ecf3;
+  --on-inverse: #0b1322;
+  --saffron: #f2b04a;
+  --saffron-ink: #f4be66;
+  --saffron-wash: #3a2c14;
+  --on-saffron: #1d1405;
+  --dusk: #8db0db;
+  --dusk-wash: #1b2c48;
+  --palm: #74c2a3;
+  --palm-wash: #14322b;
+  --ember: #ec8a72;
+  --ember-wash: #3b1d19;
+  --plum: #bc9ddb;
+  --plum-wash: #2b2140;
+  --slate: #9aa5b8;
+  --slate-wash: #1d273b;
+  --focus: #f2b04a;
+  --shadow-float: 0 1px 0 rgb(0 0 0 / 0.3), 0 16px 40px -12px rgb(0 0 0 / 0.6);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    font-feature-settings: "kern";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+  }
+  #root {
+    min-height: 100dvh;
+    isolation: isolate;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0;
+  }
+  p {
+    text-wrap: pretty;
+    margin: 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+  ::selection {
+    background: var(--saffron-wash);
+    color: var(--ink);
+  }
+  button, [role="button"], a, label[for], select, summary {
+    touch-action: manipulation;
+  }
+  button:not(:disabled), [role="button"], select {
+    cursor: pointer;
+  }
+  /* حقول الجوّال: ١٦ بكسل على الأقل حتى لا يكبّر iOS الصفحة */
+  input, textarea, select {
+    font: inherit;
+    font-size: max(16px, 1em);
+    color: inherit;
+  }
+  @media (min-width: 48rem) {
+    input, textarea, select { font-size: inherit; }
+  }
+  /* الأرقام في الوقت والعدّادات لا تتراقص */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  /* عناوين الأزرار والتسميات لا تُحدَّد بالضغط المطوّل */
+  button, [role="tab"], .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+@layer components {
+  .sheet {
+    background: var(--sheet);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .press {
+    transition: transform 160ms var(--ease-out);
+  }
+  .press:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--sunk) 0%, var(--line) 50%, var(--sunk) 100%);
+    background-size: 200% 100%;
+    animation: skeleton 1.4s linear infinite;
+    border-radius: var(--radius-sm);
+  }
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+
+@keyframes skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  .press:active:not(:disabled) { transform: none; }
+}
+
+@media print {
+  body { background: #fff; color: #000; }
+  .no-print { display: none !important; }
+}
+
+/* ───────── الحوار واللوح ───────── */
+.waf-overlay[data-state="open"] { animation: fade-in 200ms var(--ease-out); }
+.waf-overlay[data-state="closed"] { animation: fade-out 150ms var(--ease-out); }
+.waf-dialog[data-state="open"] { animation: sheet-up 380ms var(--ease-drawer); }
+.waf-dialog[data-state="closed"] { animation: sheet-down 200ms var(--ease-out); }
+@media (min-width: 40rem) {
+  .waf-dialog { transform: translate(-50%, -50%); }
+  .waf-dialog[data-state="open"] { animation: dialog-in 220ms var(--ease-out); }
+  .waf-dialog[data-state="closed"] { animation: dialog-out 150ms var(--ease-out); }
+}
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@keyframes dialog-in { from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); } }
+@keyframes dialog-out { to { opacity: 0; transform: translate(-50%, -49%) scale(0.98); } }
+@media (prefers-reduced-motion: reduce) {
+  .waf-dialog[data-state="open"], .waf-dialog[data-state="closed"] { animation-name: fade-in; }
+  .waf-dialog[data-state="closed"] { animation-name: fade-out; }
+}
+
+/* ───────── خط اليوم ───────── */
+.dayline-fill { transform-origin: var(--dayline-origin, right); }
+[dir="ltr"] .dayline-fill { --dayline-origin: left; }
+.dayline-draw .dayline-fill { animation: dayline-draw 1100ms var(--ease-in-out) both; }
+.dayline-draw .dayline-now { animation: fade-in 300ms var(--ease-out) 1000ms both; }
+@keyframes dayline-draw { from { transform: scaleX(0); } }
