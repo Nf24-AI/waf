@@ -6,11 +6,21 @@
 @import "@fontsource-variable/readex-pro";
 @import "@fontsource-variable/reem-kufi";
 
+/* أرقام العناوين من Readex Pro: «1» في الخط الكوفي تشبه الألف */
+@font-face {
+  font-family: "Waf Digits";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 160 700;
+  src: url("@fontsource-variable/readex-pro/files/readex-pro-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0030-0039, U+0025, U+003A, U+002E;
+}
+
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
   --font-ui: "Readex Pro Variable", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Reem Kufi Variable", "Readex Pro Variable", system-ui, sans-serif;
+  --font-display: "Waf Digits", "Reem Kufi Variable", "Readex Pro Variable", system-ui, sans-serif;
 
   --color-bg: var(--bg);
   --color-sheet: var(--sheet);
@@ -294,3 +304,9 @@
 .dayline-draw .dayline-fill { animation: dayline-draw 1100ms var(--ease-in-out) both; }
 .dayline-draw .dayline-now { animation: fade-in 300ms var(--ease-out) 1000ms both; }
 @keyframes dayline-draw { from { transform: scaleX(0); } }
+
+/* القوائم المنبثقة تخرج من زرّها */
+.waf-pop { transform-origin: var(--radix-dropdown-menu-content-transform-origin, var(--radix-popover-content-transform-origin)); }
+.waf-pop[data-state="open"] { animation: pop-in 160ms var(--ease-out); }
+.waf-pop[data-state="closed"] { animation: fade-out 120ms var(--ease-out); }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.97); } }

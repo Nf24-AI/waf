@@ -1,0 +1,49 @@
+/* سحب المهام والحجوزات: نسخة طافية تتبع الإصبع أو المؤشّر، والأصل يبقى مكانه باهتاً. */
+
+.waf-drag-clone {
+  position: fixed;
+  z-index: 70;
+  margin: 0;
+  pointer-events: none;
+  will-change: transform;
+  transform-origin: 0 0;
+}
+.waf-drag-clone * {
+  pointer-events: none !important;
+}
+.waf-drag-lift {
+  width: 100%;
+  height: 100%;
+  background: var(--sheet);
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+}
+.waf-drag-lift > * {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+body.waf-dragging,
+body.waf-dragging * {
+  cursor: grabbing !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.waf-draggable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (pointer: fine) {
+  .waf-draggable { cursor: grab; }
+}
+/* الأصل أثناء السحب */
+.waf-drag-source {
+  opacity: 0.35;
+}

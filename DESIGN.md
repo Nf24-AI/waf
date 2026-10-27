@@ -40,6 +40,9 @@ theme follows the device unless the user picks one. Check both.
 - `font-display` = Reem Kufi (geometric Kufi): page titles, section titles,
   big numbers (timer, stats), the wordmark. Keep display text short.
 - `font-ui` = Readex Pro (default): everything else.
+- Reem Kufi only for strings we wrote and checked. It forms a «لله» ligature
+  from «ط له» and nearly drops the space after non-joining letters, so user
+  content (task and meeting titles in dialogs, lists) stays in Readex Pro.
 - Scale (`text-2xs … text-4xl`): 12, 13, 15, 16, 19, 24, 30, 40, 56 px.
 - Numbers that change (times, counts, timers) use the `tnum` class.
 - No ALL-CAPS labels, no eyebrow label above every heading, no single word

@@ -1,0 +1,97 @@
+/* صفحات الاجتماعات: حركة القوائم المنبثقة، وصفحة العرض، وقواعد الطباعة. */
+
+/* ───────── القوائم المنبثقة: تخرج من زرّها ───────── */
+.mt-pop {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin, var(--radix-popover-content-transform-origin, top));
+}
+.mt-pop[data-state="open"] {
+  animation: mt-pop-in 170ms var(--ease-out);
+}
+.mt-pop[data-state="closed"] {
+  animation: mt-pop-out 120ms var(--ease-out);
+}
+@keyframes mt-pop-in {
+  from { opacity: 0; transform: scale(0.97); }
+}
+@keyframes mt-pop-out {
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+/* ───────── شريط التقدّم في العرض ───────── */
+.mt-seg {
+  transition: background-color 200ms var(--ease-out), opacity 200ms var(--ease-out);
+}
+
+/* المحور النشط في العرض: علامة الزعفران تظهر بلا قفز */
+.mt-topic-mark {
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+  transform-origin: top;
+}
+.mt-topic:not([data-active="true"]) .mt-topic-mark {
+  opacity: 0;
+  transform: scaleY(0.4);
+}
+
+/* المحور المنتهي يهدأ ولا يختفي */
+.mt-topic[data-covered="true"]:not([data-active="true"]) .mt-topic-body {
+  opacity: 0.62;
+}
+.mt-topic-body {
+  transition: opacity 200ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-pop[data-state="open"], .mt-pop[data-state="closed"] { animation-name: fade-in; }
+  .mt-pop[data-state="closed"] { animation-name: fade-out; }
+  .mt-topic-mark { transform: none !important; }
+}
+
+/* حقل يلبس شكل النص: عنوان الاجتماع في المحرّر */
+.mt-bare {
+  background: transparent;
+  border: 0;
+  outline: none;
+  width: 100%;
+  padding: 0;
+}
+.mt-bare::placeholder { color: var(--ink-3); }
+
+/* ───────── الطباعة: ورقة فاتحة دائماً، بلا أدوات ───────── */
+@media print {
+  @page { margin: 16mm 14mm; }
+  /* الورق فاتح ولو كانت الشاشة داكنة: قيم «ضباب الصباح» نفسها */
+  :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+    color-scheme: light;
+    --bg: #ffffff;
+    --sheet: #ffffff;
+    --sunk: #f2f4f7;
+    --line: #d3d9e1;
+    --line-strong: #b5bfcc;
+    --ink: #111a2d;
+    --ink-2: #445067;
+    --ink-3: #636e84;
+    --saffron: #efa431;
+    --saffron-ink: #8a560a;
+    --saffron-wash: #f8e4c2;
+    --dusk: #2c4a6e;
+    --dusk-wash: #d9e2ee;
+    --palm: #2c6a54;
+    --palm-wash: #d6e8df;
+    --slate: #66707f;
+    --slate-wash: #e1e4e9;
+  }
+  body { background: #fff !important; color: var(--ink) !important; }
+  .mt-doc { max-width: none !important; padding: 0 !important; }
+  .mt-topic { break-inside: avoid; }
+  .mt-topic-mark { display: none !important; }
+  .mt-topic[data-covered="true"] .mt-topic-body { opacity: 1 !important; }
+  a[href^="http"] { color: var(--ink) !important; }
+}
+
+/* شاشة القاعة الكبيرة: يكبر كل شيء قليلاً ليُقرأ من آخر الغرفة */
+@media screen and (min-width: 1600px) {
+  html:has(.mt-stage) { font-size: 112.5%; }
+}
+@media screen and (min-width: 1900px) {
+  html:has(.mt-stage) { font-size: 125%; }
+}

@@ -1,0 +1,227 @@
+/* صفحة التركيز: مسرح هادئ، الأرقام كبيرة، والأفق يمتلئ بالزعفران حتى «الآن». */
+
+.focus-page {
+  background: var(--bg);
+  color: var(--ink);
+  overflow-x: clip;
+}
+
+/* إطار يقصّ ما يخرج من الخط (مسار النقطة) ويترك متّسعاً للتوهّج */
+.fh-clip {
+  overflow: clip;
+  padding: 14px 18px;
+  margin: -14px -18px;
+}
+
+/* ───────── الأفق: خط الجلسة ───────── */
+.fh {
+  --fh-tone: var(--saffron);
+  position: relative;
+  height: 28px;
+}
+.fh[data-tone="palm"] { --fh-tone: var(--palm); }
+.fh-track,
+.fh-fill {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 2px;
+}
+.fh-track { background: var(--line); }
+.fh-fill {
+  background: var(--fh-tone);
+  transform-origin: right;
+  transform: scaleX(var(--f, 0));
+  box-shadow: 0 0 14px 0 color-mix(in oklab, var(--fh-tone) 55%, transparent);
+  transition: transform 250ms linear;
+}
+[dir="ltr"] .fh-fill { transform-origin: left; }
+.fh-rail {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translateX(calc(var(--f, 0) * -100%));
+  transition: transform 250ms linear;
+}
+[dir="ltr"] .fh-rail { transform: translateX(calc(var(--f, 0) * 100%)); }
+.fh-dot {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 0;
+  width: 13px;
+  height: 13px;
+  margin-top: -6.5px;
+  margin-inline-start: -6.5px;
+  border-radius: 999px;
+  background: var(--fh-tone);
+  box-shadow:
+    0 0 0 5px color-mix(in oklab, var(--fh-tone) 18%, transparent),
+    0 0 24px 3px color-mix(in oklab, var(--fh-tone) 50%, transparent);
+  transition: box-shadow 200ms var(--ease-out);
+}
+.fh[data-running="false"] .fh-dot {
+  box-shadow: 0 0 0 5px color-mix(in oklab, var(--fh-tone) 14%, transparent);
+}
+/* هالة تتنفّس ببطء ما دام المؤقّت يعمل */
+.fh[data-running="true"] .fh-dot::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--fh-tone) 22%, transparent);
+  animation: fh-breathe 3.2s var(--ease-in-out) infinite;
+}
+@keyframes fh-breathe {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
+}
+.fh-tick {
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 10px;
+  margin-top: -5px;
+  background: var(--line-strong);
+}
+
+/* تغيّر المرحلة أو الوضع: ظهور هادئ قصير */
+.focus-swap { animation: focus-swap 240ms var(--ease-out) both; }
+@keyframes focus-swap { from { opacity: 0; transform: translateY(6px); } }
+
+/* ───────── أرقام المؤقّت ───────── */
+.focus-digits {
+  font-size: clamp(4.5rem, 29vw, 13rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  transition: opacity 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+.focus-digits[data-long="true"] { font-size: clamp(3.6rem, 20vw, 10.5rem); }
+.focus-hms.focus-digits { font-size: clamp(3.4rem, 16vw, 10.5rem); }
+/* صندوق الحروف في ريم كوفي أعلى من سطره، فلا نتركه يلتقط الضغطات فوق ما حوله */
+p.focus-digits { pointer-events: none; }
+.focus-digits[data-paused="true"] { opacity: 0.55; }
+
+/* نقطتا ريم كوفي تجلسان أخفض من أرقامه، فنرفعهما قليلاً */
+.focus-colon { display: inline-block; transform: translateY(-0.12em); }
+
+/* حقول الساعات والدقائق والثواني بحجم الأرقام */
+.focus-hms input {
+  width: 2.15ch;
+  height: 1.1em;
+  line-height: 1.1;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  text-align: center;
+  font: inherit;
+  font-size: inherit;
+  color: inherit;
+  caret-color: var(--saffron);
+  appearance: textfield;
+  -moz-appearance: textfield;
+  transition: background-color 150ms var(--ease-out);
+}
+.focus-hms input::-webkit-outer-spin-button,
+.focus-hms input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.focus-hms input:focus { outline: none; background: var(--sunk); }
+.focus-hms > span { line-height: 1.1; }
+.focus-hms input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .focus-hms input:hover { background: var(--sunk); }
+}
+
+/* ───────── التبويبات ───────── */
+.focus-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--saffron);
+  box-shadow: 0 0 8px 1px color-mix(in oklab, var(--saffron) 60%, transparent);
+}
+
+/* ───────── المنبثقات واللوح الجانبي ───────── */
+.focus-pop { transform-origin: var(--radix-popover-content-transform-origin); }
+.focus-pop[data-state="open"] { animation: focus-pop-in 160ms var(--ease-out); }
+.focus-pop[data-state="closed"] { animation: fade-out 120ms var(--ease-out); }
+@keyframes focus-pop-in { from { opacity: 0; transform: scale(0.97); } }
+
+.focus-drawer {
+  position: fixed;
+  z-index: 50;
+  inset-inline: 0;
+  bottom: 0;
+  max-height: 88dvh;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.focus-drawer[data-state="open"] { animation: sheet-up 380ms var(--ease-drawer); }
+.focus-drawer[data-state="closed"] { animation: sheet-down 200ms var(--ease-out); }
+@media (min-width: 40rem) {
+  .focus-drawer {
+    --drawer-from: -100%;
+    inset-block: 0;
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    width: min(26rem, 100vw);
+    max-height: none;
+    border-radius: 0;
+  }
+  [dir="ltr"] .focus-drawer { --drawer-from: 100%; }
+  .focus-drawer[data-state="open"] { animation: focus-drawer-in 380ms var(--ease-drawer); }
+  .focus-drawer[data-state="closed"] { animation: focus-drawer-out 200ms var(--ease-out); }
+}
+@keyframes focus-drawer-in { from { transform: translateX(var(--drawer-from)); } }
+@keyframes focus-drawer-out { to { transform: translateX(var(--drawer-from)); } }
+
+.focus-range {
+  accent-color: var(--saffron);
+  height: 44px;
+}
+
+/* ───────── وضع «تركيز»: غسق تنومة ───────── */
+.focus-page.is-immersive {
+  /* ألوان Tailwind تُحسب على الجذر، فتُعاد هنا باسميها */
+  --ink: #f3f5f8;
+  --ink-2: rgb(243 245 248 / 0.74);
+  --ink-3: rgb(243 245 248 / 0.52);
+  --line: rgb(255 255 255 / 0.2);
+  --line-strong: rgb(255 255 255 / 0.32);
+  --sunk: rgb(255 255 255 / 0.08);
+  --sheet: rgb(255 255 255 / 0.06);
+  --saffron: #f2b04a;
+  --saffron-ink: #f4be66;
+  --saffron-wash: #3a2c14;
+  --palm: #74c2a3;
+  --inverse: #f3f5f8;
+  --on-inverse: #0b1322;
+  --focus: #f2b04a;
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-sunk: var(--sunk);
+  --color-sheet: var(--sheet);
+  --color-saffron: var(--saffron);
+  --color-saffron-ink: var(--saffron-ink);
+  --color-saffron-wash: var(--saffron-wash);
+  --color-palm: var(--palm);
+  --color-inverse: var(--inverse);
+  --color-on-inverse: var(--on-inverse);
+  color-scheme: dark;
+  background:
+    radial-gradient(120% 70% at 50% 100%, rgb(239 164 49 / 0.3) 0%, rgb(239 164 49 / 0.08) 38%, transparent 62%),
+    linear-gradient(180deg, #0a1120 0%, #13284a 55%, #2a3f5f 100%);
+  color: var(--ink);
+}
+.focus-page.is-immersive ::selection { background: rgb(242 176 74 / 0.35); color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-swap { animation-name: fade-in; }
+  .fh-fill, .fh-rail { transition: none; }
+  .focus-pop[data-state="open"] { animation-name: fade-in; }
+  .focus-drawer[data-state="open"], .focus-drawer[data-state="closed"] { animation-name: fade-in; }
+  .focus-drawer[data-state="closed"] { animation-name: fade-out; }
+}

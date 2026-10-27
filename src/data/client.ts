@@ -21,7 +21,14 @@ function demoRequested(): boolean {
   }
 }
 
-export const isDemo: boolean = !url || !key || demoRequested();
+/**
+ * يُقلب إلى true بعد تشغيل supabase/waf2-schema.sql على قاعدة Supabase.
+ * قبل ذلك تعمل النسخة على العرض التجريبي حتى لو كان Supabase مضبوطاً،
+ * لأن جداول waf2_ غير موجودة بعد.
+ */
+export const WAF2_TABLES_READY = false;
+
+export const isDemo: boolean = !WAF2_TABLES_READY || !url || !key || demoRequested();
 
 export const supabase: SupabaseClient | null = isDemo
   ? null

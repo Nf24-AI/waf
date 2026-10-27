@@ -28,7 +28,8 @@ export interface PrepareStep {
 export function prepareSteps(m: MeetingLike): PrepareStep[] {
   return [
     { id: "basics", done: m.title.trim().length > 0 && m.day !== null && m.startTime !== null },
-    { id: "goal", done: m.goal.trim().length >= 15 },
+    // الهدف جملة نتيجة، لا سؤال القالب الذي لم يُجَب بعد
+    { id: "goal", done: m.goal.trim().length >= 15 && !/[?؟]$/.test(m.goal.trim()) },
     { id: "agenda", done: m.agenda.length > 0 && m.agenda.every((a) => a.title.trim()) },
     { id: "people", done: m.attendees.length > 0 },
     { id: "followups", done: m.followups.some((f) => f.text.trim()) },

@@ -128,7 +128,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 export function PageHead({ title, lede, actions, back }: { title: ReactNode; lede?: ReactNode; actions?: ReactNode; back?: { href: string; label: string } }) {
   return (
     <div className="mb-6 flex flex-wrap items-end gap-x-6 gap-y-3">
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-72">
         {back && (
           <Link href={back.href} className="mb-2 inline-flex text-sm text-ink-2 hover:text-ink">
             <span aria-hidden className="me-1 inline-block rtl:rotate-180">←</span>

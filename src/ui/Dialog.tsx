@@ -41,7 +41,7 @@ export function Dialog({
           <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden />
           <header className="flex items-start gap-3 px-5 pt-4 sm:pt-5">
             <div className="min-w-0 flex-1">
-              <RD.Title className="font-display text-lg font-semibold">{title}</RD.Title>
+              <RD.Title className="text-lg font-semibold">{title}</RD.Title>
               {description ? <RD.Description className="mt-1 text-sm text-ink-2">{description}</RD.Description> : <RD.Description className="sr-only">{typeof title === "string" ? title : ""}</RD.Description>}
             </div>
             <RD.Close asChild>

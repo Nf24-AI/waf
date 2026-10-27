@@ -1,0 +1,69 @@
+/* تقرير الحالة مطبوعاً: صفحة واحدة، أبيض وأسود، بلا أزرار ولا شريط تنقّل. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 14mm 16mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme="dark"] {
+    --bg: #fff !important;
+    --sheet: #fff !important;
+    --sunk: #f2f2f2 !important;
+    --line: #d4d4d4 !important;
+    --line-strong: #a3a3a3 !important;
+    --ink: #000 !important;
+    --ink-2: #333 !important;
+    --ink-3: #555 !important;
+    --saffron-ink: #000 !important;
+    --ember: #000 !important;
+    --ember-wash: #fff !important;
+    --dusk: #000 !important;
+    --dusk-wash: #fff !important;
+    --slate: #333 !important;
+    --slate-wash: #fff !important;
+    --palm: #000 !important;
+    color-scheme: light;
+  }
+  #main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .status-report a[href^="/meetings"] {
+    color: inherit;
+    text-decoration: none;
+  }
+  .status-report .status-stats {
+    margin-top: 4mm !important;
+  }
+  .status-report h1 {
+    font-size: 20pt;
+  }
+  .status-report .status-stats dd {
+    font-size: 20pt;
+  }
+  .status-report .status-tag {
+    border: 1px solid #a3a3a3;
+    padding-block: 0;
+  }
+  .status-report .status-section {
+    break-inside: avoid-page;
+    margin-top: 4mm !important;
+  }
+  .status-report .status-section ul > li > a {
+    min-height: 0;
+    padding-block: 1mm;
+    font-size: 9.5pt;
+  }
+  .status-report .status-section h2 {
+    font-size: 12pt;
+  }
+  /* «→ الاجتماعات» والوصف لا معنى لهما على الورق */
+  .status-report > div:first-child a[href="/meetings"] {
+    display: none;
+  }
+}
